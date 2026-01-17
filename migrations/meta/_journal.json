@@ -8,6 +8,13 @@
       "when": 1768620193674,
       "tag": "0000_jazzy_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768625962472,
+      "tag": "0001_true_black_bolt",
+      "breakpoints": true
     }
   ]
 }

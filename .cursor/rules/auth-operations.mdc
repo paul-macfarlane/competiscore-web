@@ -1,0 +1,15 @@
+---
+description: Working with Authentication
+alwaysApply: false
+---
+
+# Overview
+
+We use Better Auth for authentication.
+
+Consult the [Better Auth Documentation](https://better-auth.com/docs) for the available operations. Always follow best practices and documentation.
+
+## Server vs Client
+When working with auth on the server, use src/lib/auth.ts to authenticate requests.
+
+When working with auth on the client, use src/lib/auth-client.ts to authenticate requests.

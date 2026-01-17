@@ -1,5 +1,5 @@
 ---
-description: ShadCN's Component Library for styling.
+description: Working with Styling and UI Components
 alwaysApply: false
 ---
 # Overview
@@ -7,3 +7,7 @@ alwaysApply: false
 We use ShadCN's Component Library for styling. We should be use components form the library where possible, and avoid creating custom components unless absolutely necessary.
 
 Consult the [ShadCN Component Library](https://ui.shadcn.com/docs/components) for the available components.
+
+## Theming and Color Usage
+
+Arbitrary colors should not be used. Instead, use the theme colors defined in the `globals.css` file. If a new color is needed, add it to the `globals.css` file.

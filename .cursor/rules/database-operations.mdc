@@ -1,0 +1,10 @@
+---
+description: Working with Database Related Operations
+alwaysApply: false
+---
+
+# Overview
+
+We use Drizzle ORM for database operations, specifically for the SQLite database.
+
+See https://orm.drizzle.team/docs/tutorials/drizzle-with-turso for more information.

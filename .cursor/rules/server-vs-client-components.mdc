@@ -1,0 +1,12 @@
+---
+description: When to use Server Components vs Client Components
+alwaysApply: false
+---
+
+# Overview
+
+We use Server Components for components that need to be rendered on the server.
+
+We use Client Components for components that need to be rendered on the client.
+
+In general, we should use Server Components where possible. Anytime client reactivity is needed, we should use Client Components, but instead of making a large component a client component, we should split it into smaller components that are server components.
