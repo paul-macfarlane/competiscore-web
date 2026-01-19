@@ -319,9 +319,9 @@ The season leaderboard shows accumulated points, ranking, and breakdown by compe
 Supported sign-in methods:
 
 - Google Sign-In
-- Apple Sign-In
+- Apple Sign-In (stretch goal, non-MVP)
 - Discord Sign-In
-- Magic Link Email (stretch goal)
+- Magic Link Email (stretch goal, non-MVP)
 
 ### 9.2 Profile Attributes
 
@@ -478,7 +478,7 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 
 ### Phase 1: Foundation
 
-1. Authentication (Google, Apple, Discord)
+1. Authentication (Google, Discord)
 2. User profiles
 3. League creation and management
 4. Member management (including placeholder members)

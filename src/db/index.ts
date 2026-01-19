@@ -22,6 +22,8 @@ export type DBTx = PgTransaction<
   ExtractTablesWithRelations<typeof schema>
 >;
 
+export type DBOrTx = DB | DBTx;
+
 let db: DB;
 if (process.env.NODE_ENV === "production") {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL! });

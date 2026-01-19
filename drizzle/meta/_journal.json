@@ -8,6 +8,13 @@
       "when": 1768794957316,
       "tag": "0000_mighty_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768842269196,
+      "tag": "0001_brave_frank_castle",
+      "breakpoints": true
     }
   ]
 }

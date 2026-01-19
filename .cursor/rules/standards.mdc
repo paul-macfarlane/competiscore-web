@@ -1,4 +1,7 @@
-# Claude.md
+---
+alwaysApply: true
+description: This file contains the standards for the codebase.
+---
 
 ## The product vision
 
@@ -11,6 +14,7 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 - Components that are only used in a single page should be colocated with the page in the `src/app` directory.
 - Database operations should be in the `src/db` directory.
 - Business logic functions should be in the `src/services` directory.
+- Shared validation schemas (used by both UI forms and services) should be in the `src/validators` directory.
 - Server Actions should be colocated with the page in the `src/app` directory, unless the action is used in multiple pages, in which case it should be in the `src/actions` directory.
 
 ## General Standards
@@ -65,6 +69,16 @@ Business logic functions should be in the `src/services` directory.
 - Services may take in an "unknown" type for the input and then use zod to validate the input.
 - The idea behind this is to put as much business logic in the service layer, so that if we ever want to change to a separate API layer, we can do so with minimal changes to the business logic.
 
+## Validation Standards
+
+We use Zod for validation. Validation schemas that are shared between the UI (forms) and the backend (services) should be placed in the `src/validators` directory.
+
+- Shared schemas should be in `src/validators`, organized by domain (e.g., `users.ts`, `leagues.ts`).
+- Define base field schemas (e.g., `usernameSchema`, `nameSchema`) that can be composed into larger schemas.
+- Services can extend shared schemas (e.g., adding `.transform()` or `.optional()`) as needed.
+- UI forms should import and use the shared schemas directly for react-hook-form validation.
+- Validation schemas that are only used in one place (e.g., only in a service or only in a form) do not need to be in `src/validators`.
+
 ## Styling Standards
 
 We use ShadCN's Component Library for styling.
@@ -72,3 +86,4 @@ We use ShadCN's Component Library for styling.
 - We should be use components from the library where possible, and avoid creating custom components unless absolutely necessary.
 - consult the [ShadCN Component Library](https://ui.shadcn.com/docs/components) for the available components.
 - Arbitrary colors should not be used. Instead, use the theme colors defined in the `globals.css` file. If a new color is needed, add it to the `globals.css` file.
+- The entire app should be mobile-first, and should be responsive to different screen sizes.
