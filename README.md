@@ -1,6 +1,8 @@
-# JG Arcade
+# Competiscore Web
 
-JG Arcade is a social competitive platform designed to track match results, manage peer-to-peer challenges, and maintain leaderboards for various arcade and office games
+Competiscore is the best way to keep score of all the different games you play with your friends. Whether it’s Ping Pong, Pool, Pacman, Poker, or any other competition, Competiscore lets you track records, calculate rankings, run tournaments, and build friendly rivalries within your community.
+
+See [docs/product-vision.md](docs/product-vision.md) for more details.
 
 ## Codebase Standards
 
