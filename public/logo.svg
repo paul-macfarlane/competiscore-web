@@ -1,4 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <style>
+    path {
+      stroke: #6d28d9;
+    }
+    @media (prefers-color-scheme: dark) {
+      path {
+        stroke: #a78bfa;
+      }
+    }
+  </style>
   <path d="M18 20V10" />
   <path d="M12 20V4" />
   <path d="M6 20v-6" />
