@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { ServiceResult } from "@/services/shared";
 import {
   checkUsernameAvailability as checkUsernameAvailabilityService,
+  deleteUserAccount as deleteUserAccountService,
   updateUserProfile as updateUserProfileService,
 } from "@/services/users";
 import { headers } from "next/headers";
@@ -33,4 +34,17 @@ export async function checkUsernameAction(
   }
 
   return checkUsernameAvailabilityService(username, session.user.id);
+}
+
+export async function deleteAccountAction(): Promise<
+  ServiceResult<{ deleted: boolean }>
+> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    return { error: "Unauthorized" };
+  }
+
+  return deleteUserAccountService(session.user.id);
 }

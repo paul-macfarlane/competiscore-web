@@ -15,6 +15,13 @@
       "when": 1768842269196,
       "tag": "0001_brave_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768950084218,
+      "tag": "0002_abnormal_warpath",
+      "breakpoints": true
     }
   ]
 }

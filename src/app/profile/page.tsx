@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { DeleteAccountSection } from "./delete-account-section";
 import { ProfileForm } from "./profile-form";
 import { ProfileSkeleton } from "./profile-skeleton";
 
@@ -26,6 +27,7 @@ export default async function ProfilePage() {
       <Suspense fallback={<ProfileSkeleton />}>
         <ProfileContent userId={session.user.id} />
       </Suspense>
+      <DeleteAccountSection />
     </div>
   );
 }

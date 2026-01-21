@@ -16,6 +16,7 @@ export const user = pgTable(
       .defaultNow()
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => [index("user_username_idx").on(table.username)],
 );

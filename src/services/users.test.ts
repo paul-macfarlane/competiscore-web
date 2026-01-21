@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   checkUsernameAvailability,
+  deleteUserAccount,
   generateUniqueUsername,
   getUserById,
   updateUserProfile,
@@ -12,6 +13,7 @@ vi.mock("@/db/users", () => ({
   getUserById: vi.fn(),
   updateUser: vi.fn(),
   checkUsernameExists: vi.fn(),
+  deleteUser: vi.fn(),
 }));
 
 const mockUser = {
@@ -24,6 +26,7 @@ const mockUser = {
   bio: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+  deletedAt: null,
 };
 
 describe("users service", () => {
@@ -177,6 +180,56 @@ describe("users service", () => {
       const result = await generateUniqueUsername(longName);
 
       expect(result.length).toBeLessThanOrEqual(20);
+    });
+  });
+
+  describe("deleteUserAccount", () => {
+    it("successfully deletes user account", async () => {
+      vi.mocked(dbUsers.getUserById).mockResolvedValue(mockUser);
+      vi.mocked(dbUsers.deleteUser).mockResolvedValue({
+        ...mockUser,
+        name: "Deleted User",
+        email: "deleted_123@deleted.local",
+        username: "deleted_123",
+        bio: null,
+        image: null,
+        deletedAt: new Date(),
+      });
+
+      const result = await deleteUserAccount("123");
+
+      expect(result).toEqual({ data: { deleted: true } });
+      expect(dbUsers.deleteUser).toHaveBeenCalledWith("123");
+    });
+
+    it("returns error when user not found", async () => {
+      vi.mocked(dbUsers.getUserById).mockResolvedValue(undefined);
+
+      const result = await deleteUserAccount("nonexistent");
+
+      expect(result).toEqual({ error: "User not found" });
+      expect(dbUsers.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it("returns error when user already deleted", async () => {
+      vi.mocked(dbUsers.getUserById).mockResolvedValue({
+        ...mockUser,
+        deletedAt: new Date(),
+      });
+
+      const result = await deleteUserAccount("123");
+
+      expect(result).toEqual({ error: "Account has already been deleted" });
+      expect(dbUsers.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it("returns error when delete fails", async () => {
+      vi.mocked(dbUsers.getUserById).mockResolvedValue(mockUser);
+      vi.mocked(dbUsers.deleteUser).mockResolvedValue(undefined);
+
+      const result = await deleteUserAccount("123");
+
+      expect(result).toEqual({ error: "Failed to delete account" });
     });
   });
 });

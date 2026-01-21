@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { getUserById } from "@/db/users";
 import { generateUniqueUsername } from "@/services/users";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -24,6 +25,11 @@ export const auth = betterAuth({
         type: "string",
         required: false,
       },
+      deletedAt: {
+        type: "date",
+        required: false,
+        input: false,
+      },
     },
   },
   databaseHooks: {
@@ -31,7 +37,18 @@ export const auth = betterAuth({
       create: {
         before: async (user) => {
           const username = await generateUniqueUsername(user.name, user.email);
-          return { data: { ...user, username } };
+          return { data: { ...user, username, image: null } };
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          const user = await getUserById(session.userId);
+          if (user?.deletedAt) {
+            return false;
+          }
+          return { data: session };
         },
       },
     },

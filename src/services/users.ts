@@ -1,6 +1,7 @@
 import { User } from "@/db/schema";
 import {
   checkUsernameExists as dbCheckUsernameExists,
+  deleteUser as dbDeleteUser,
   getUserById as dbGetUserById,
   updateUser as dbUpdateUser,
 } from "@/db/users";
@@ -139,4 +140,24 @@ export async function generateUniqueUsername(
 
   const fallback = `${cleanBase}${Date.now()}`;
   return fallback.slice(0, USERNAME_MAX_LENGTH);
+}
+
+export async function deleteUserAccount(
+  userId: string,
+): Promise<ServiceResult<{ deleted: boolean }>> {
+  const existingUser = await dbGetUserById(userId);
+  if (!existingUser) {
+    return { error: "User not found" };
+  }
+
+  if (existingUser.deletedAt) {
+    return { error: "Account has already been deleted" };
+  }
+
+  const deletedUser = await dbDeleteUser(userId);
+  if (!deletedUser) {
+    return { error: "Failed to delete account" };
+  }
+
+  return { data: { deleted: true } };
 }

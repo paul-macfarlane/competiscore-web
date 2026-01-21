@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
-import { User, user } from "./schema";
+import { User, account, session, user } from "./schema";
 
 export async function getUserById(
   id: string,
@@ -45,4 +45,28 @@ export async function checkUsernameExists(
     .limit(1);
 
   return result.length > 0;
+}
+
+export async function deleteUser(
+  id: string,
+  dbOrTx: DBOrTx = db,
+): Promise<User | undefined> {
+  await dbOrTx.delete(session).where(eq(session.userId, id));
+
+  await dbOrTx.delete(account).where(eq(account.userId, id));
+
+  const result = await dbOrTx
+    .update(user)
+    .set({
+      name: "Deleted User",
+      email: `deleted_${id}@deleted.local`,
+      username: `deleted_${id}`,
+      bio: null,
+      image: null,
+      deletedAt: new Date(),
+    })
+    .where(eq(user.id, id))
+    .returning();
+
+  return result[0];
 }
