@@ -374,7 +374,17 @@ Search results display league name, description, featured game type, and member 
 
 ### 10.4 Inviting Members
 
-Managers and Executives can invite users to the league. Invitations specify the role (Member, Manager, or Executive). Users can be searched by name or username. When inviting, an existing placeholder member can be linked so the invitee inherits their history upon joining.
+Managers and Executives can invite users to the league via two methods:
+
+**In-App Invitation:** Search for existing users by name or username and send them an invitation directly. The invitee will see the invitation in their notifications.
+
+**Invite Link:** Generate a shareable invite link that can be sent via any channel (email, text, etc.). The link handles three scenarios:
+
+- **Authenticated user:** Shows the league details and allows them to join immediately
+- **Unauthenticated user with existing account:** Prompts sign-in, then shows league details and allows joining
+- **New user without account:** Prompts sign-up flow, then automatically joins the league upon completion
+
+Invitations specify the role (Member, Manager, or Executive). When inviting, an existing placeholder member can be linked so the invitee inherits their history upon joining. Invite links can be configured to expire after a set time or number of uses.
 
 ### 10.5 Managing Members
 

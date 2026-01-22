@@ -2,3 +2,8 @@ export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 30;
 export const BIO_MAX_LENGTH = 500;
 export const NAME_MAX_LENGTH = 100;
+
+export const LEAGUE_NAME_MAX_LENGTH = 100;
+export const LEAGUE_DESCRIPTION_MAX_LENGTH = 500;
+export const MAX_LEAGUES_PER_USER = 3;
+export const MAX_MEMBERS_PER_LEAGUE = 20;

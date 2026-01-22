@@ -1,0 +1,19 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { unarchiveLeague } from "@/services/leagues";
+import { ServiceResult } from "@/services/shared";
+import { headers } from "next/headers";
+
+export async function unarchiveLeagueAction(
+  leagueId: string,
+): Promise<ServiceResult<{ unarchived: boolean }>> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    return { error: "Not authenticated" };
+  }
+
+  return unarchiveLeague(leagueId, session.user.id);
+}

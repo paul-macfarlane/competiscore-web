@@ -52,6 +52,7 @@ We use Drizzle ORM for database operations and integration with Postgres and Neo
 
 - All Next.js pages should be server components.
 - All Next.js components should be server components unless client reactivity is needed.
+- Query and Path parameters should be validated using zod and handled gracefully if the validation fails.
 - Server components when fetching data should not make direct database calls, but should call a business logic function that will handle the database call.
 - Server components that fetch data should be async functions and utilize [Streaming](https://nextjs.org/docs/app/getting-started/fetching-data#streaming) to fetch data from the server. A `loading.ts` file can be used for route segements (layouts and pages), but if the loading is more granular, Suspense can be used to handle the loading state.
 - In general, we should use Server Components where possible. Anytime client reactivity is needed, we should use Client Components, but instead of making a large component a client component, we should split it into smaller components that are client components where the interactivity is needed, but still maintain a server component that uses the client components to render the page.
@@ -78,6 +79,7 @@ We use Zod for validation. Validation schemas that are shared between the UI (fo
 - Services can extend shared schemas (e.g., adding `.transform()` or `.optional()`) as needed.
 - UI forms should import and use the shared schemas directly for react-hook-form validation.
 - Validation schemas that are only used in one place (e.g., only in a service or only in a form) do not need to be in `src/validators`.
+- **Form validation schemas MUST be shared between the client form and the service function** to ensure validation is consistent and avoid drift. If a form submits to a server action that calls a service, both the form and the service should use the same schema from `src/validators`.
 
 ## Styling Standards
 

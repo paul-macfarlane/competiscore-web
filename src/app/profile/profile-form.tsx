@@ -1,14 +1,8 @@
 "use client";
 
+import { IconSelector } from "@/components/icon-selector";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -21,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { User } from "@/db/schema";
-import { cn } from "@/lib/utils";
 import {
   BIO_MAX_LENGTH,
   NAME_MAX_LENGTH,
@@ -52,7 +45,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const [success, setSuccess] = useState(false);
   const [asyncCheckResult, setAsyncCheckResult] =
     useState<AsyncCheckResult>(null);
-  const [isAvatarOpen, setIsAvatarOpen] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -159,44 +151,23 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 </AvatarFallback>
               </Avatar>
 
-              <Dialog open={isAvatarOpen} onOpenChange={setIsAvatarOpen}>
-                <DialogTrigger asChild>
+              <IconSelector
+                options={AVATARS}
+                value={field.value}
+                onChange={field.onChange}
+                trigger={
                   <Button variant="outline" type="button" size="sm">
                     Change Avatar
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto sm:max-w-lg md:max-w-xl">
-                  <DialogHeader>
-                    <DialogTitle>Select an Avatar</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-4 gap-2 py-2 sm:gap-3 sm:py-4 md:grid-cols-5">
-                    {AVATARS.map((avatar) => (
-                      <div
-                        key={avatar.name}
-                        className={cn(
-                          "hover:bg-accent flex cursor-pointer flex-col items-center gap-1 rounded-lg p-1.5 transition-all sm:gap-2 sm:p-2",
-                          field.value === avatar.src &&
-                            "bg-accent ring-primary ring-2",
-                        )}
-                        onClick={() => {
-                          field.onChange(avatar.src);
-                          setIsAvatarOpen(false);
-                        }}
-                      >
-                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14">
-                          <AvatarImage src={avatar.src} alt={avatar.name} />
-                          <AvatarFallback>
-                            {avatar.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-center text-[10px] font-medium leading-tight sm:text-xs">
-                          {avatar.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
+                }
+                title="Select an Avatar"
+                renderIcon={(option) => (
+                  <Avatar className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14">
+                    <AvatarImage src={option.src} alt={option.name} />
+                    <AvatarFallback>{option.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                )}
+              />
               <FormMessage />
             </FormItem>
           )}

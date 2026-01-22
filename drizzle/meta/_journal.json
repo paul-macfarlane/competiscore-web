@@ -22,6 +22,13 @@
       "when": 1768950084218,
       "tag": "0002_abnormal_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1768966471175,
+      "tag": "0003_harsh_quicksilver",
+      "breakpoints": true
     }
   ]
 }

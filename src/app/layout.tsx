@@ -1,7 +1,10 @@
+import { BottomNav } from "@/components/bottom-nav";
 import { Header } from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 
 import "./globals.css";
 
@@ -20,11 +23,15 @@ export const metadata: Metadata = {
   description: "Track your competitions with friends",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -37,9 +44,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Header />
-          <main className="flex-1 container mx-auto px-4 py-4 md:px-6 md:py-6">
+          <main
+            className={`flex-1 container mx-auto px-4 py-4 md:px-6 md:py-6 ${session ? "pb-20 md:pb-6" : ""}`}
+          >
             {children}
           </main>
+          {session && <BottomNav />}
         </ThemeProvider>
       </body>
     </html>

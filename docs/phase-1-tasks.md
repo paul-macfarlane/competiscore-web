@@ -56,33 +56,36 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 
 ## 3. League Creation & Management
 
-**Status: ⏳ Not Started**
+**Status: 🚧 In Progress**
 
 ### Database Schema
 
-- [ ] League table (id, name, description, visibility, logo, createdAt, updatedAt)
-- [ ] League visibility enum (public, private)
+- [x] League table (id, name, description, visibility, logo, createdAt, updatedAt)
+- [x] League visibility enum (public, private)
 
 ### League CRUD
 
-- [ ] Create league form (name, description, visibility, optional logo)
-- [ ] League settings page (edit name, description, visibility, logo)
-- [ ] Archive league functionality
-- [ ] Delete league functionality (with confirmation)
-- [ ] League dashboard/home page
+- [x] Create league form (name, description, visibility, optional logo)
+- [x] League settings page (edit name, description, visibility, logo)
+- [x] Archive league functionality
+- [x] View archived leagues (for former executives)
+- [x] Unarchive/reactivate league functionality
+- [x] Delete league functionality (with confirmation)
+- [x] League dashboard/home page
 
 ### League Discovery
 
-- [ ] Public league search (by name, game type)
-- [ ] Search results display (name, description, member count)
-- [ ] Join public league functionality
+- [x] Public league search (by name)
+- [ ] Public league search by game type (requires Phase 2: Game Types)
+- [x] Search results display (name, description, member count)
+- [x] Join public league functionality
 
 ### UI/UX
 
-- [ ] League list view (user's leagues)
-- [ ] League card component
-- [ ] League header/navigation
-- [ ] Empty state for no leagues
+- [x] League list view (user's leagues)
+- [x] League card component
+- [x] League header/navigation
+- [x] Empty state for no leagues
 
 ---
 
@@ -99,7 +102,11 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 ### Member Operations
 
 - [ ] View all league members
-- [ ] Invite user to league (by email or username)
+- [ ] Invite user to league (by username search)
+- [ ] Generate shareable invite link
+- [ ] Invite link handling for authenticated users
+- [ ] Invite link handling for unauthenticated users with accounts
+- [ ] Invite link handling for new users (sign-up flow)
 - [ ] Accept/decline league invitation
 - [ ] Leave league functionality
 - [ ] Remove member from league

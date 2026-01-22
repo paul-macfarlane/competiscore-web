@@ -33,3 +33,9 @@ if (process.env.NODE_ENV === "production") {
 }
 
 export { db };
+
+export async function withTransaction<T>(
+  callback: (tx: DBTx) => Promise<T>,
+): Promise<T> {
+  return db.transaction(callback);
+}
