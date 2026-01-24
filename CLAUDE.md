@@ -13,6 +13,10 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 - Business logic functions should be in the `src/services` directory.
 - Shared validation schemas (used by both UI forms and services) should be in the `src/validators` directory.
 - Server Actions should be colocated with the page in the `src/app` directory, unless the action is used in multiple pages, in which case it should be in the `src/actions` directory.
+- Shared library code should be in the `src/lib` directory, organized by execution context:
+  - `src/lib/client/` - Code that runs only on the client (React hooks, browser APIs, client-side auth)
+  - `src/lib/server/` - Code that runs only on the server (database calls, server-side auth, API integrations)
+  - `src/lib/shared/` - Pure functions and constants that can run in both contexts (utilities, type helpers, constants)
 
 ## General Standards
 
@@ -30,8 +34,8 @@ We use Better Auth for authentication. Consult the [Better Auth Documentation](h
 
 In this codebase in particular:
 
-- When working with auth on the server, use src/lib/auth.ts to authenticate requests.
-- When working with auth on the client, use src/lib/auth-client.ts to authenticate requests.
+- When working with auth on the server, use `src/lib/server/auth.ts` to authenticate requests.
+- When working with auth on the client, use `src/lib/client/auth.ts` to authenticate requests.
 
 ## Database Standards
 

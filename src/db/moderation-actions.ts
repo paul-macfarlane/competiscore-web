@@ -1,4 +1,4 @@
-import { ModerationActionType } from "@/lib/constants";
+import { ModerationActionType } from "@/lib/shared/constants";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";

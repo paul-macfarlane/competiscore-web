@@ -1,7 +1,7 @@
 "use client";
 
-import { mainNavItems } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { mainNavItems } from "@/lib/shared/navigation";
+import { cn } from "@/lib/shared/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { joinViaInviteLink } from "@/services/invitations";
 import { headers } from "next/headers";
 

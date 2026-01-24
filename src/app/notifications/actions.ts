@@ -1,7 +1,10 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { NotificationAction, NotificationType } from "@/lib/notifications";
+import { auth } from "@/lib/server/auth";
+import {
+  NotificationAction,
+  NotificationType,
+} from "@/lib/shared/notifications";
 import { acceptInvitation, declineInvitation } from "@/services/invitations";
 import { acknowledgeModerationAction } from "@/services/moderation";
 import { getNotifications } from "@/services/notifications";

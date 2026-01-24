@@ -6,9 +6,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
-import { getAssignableRoles } from "@/lib/roles";
+import { auth } from "@/lib/server/auth";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { getAssignableRoles } from "@/lib/shared/roles";
 import { getLeaguePendingInvitations } from "@/services/invitations";
 import { getLeagueWithRole } from "@/services/leagues";
 import { idParamSchema } from "@/validators/shared";

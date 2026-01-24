@@ -1,4 +1,4 @@
-import { LeagueMemberRole } from "@/lib/constants";
+import { LeagueMemberRole } from "@/lib/shared/constants";
 import { NAME_MAX_LENGTH } from "@/services/constants";
 import { z } from "zod";
 

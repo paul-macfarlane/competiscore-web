@@ -1,7 +1,7 @@
 "use server";
 
 import { League } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import {
   archiveLeague as archiveLeagueService,
   deleteLeague as deleteLeagueService,

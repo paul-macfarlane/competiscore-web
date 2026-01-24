@@ -12,9 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserSearchResult } from "@/db/users";
-import { getInitials } from "@/lib/client-utils";
-import { LeagueMemberRole } from "@/lib/constants";
-import { ROLE_LABELS } from "@/lib/roles";
+import { getInitials } from "@/lib/client/utils";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { ROLE_LABELS } from "@/lib/shared/roles";
 import { Check, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 

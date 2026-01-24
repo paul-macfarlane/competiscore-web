@@ -10,9 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LeagueMemberWithUser } from "@/db/league-members";
-import { getInitials } from "@/lib/client-utils";
-import { LeagueMemberRole } from "@/lib/constants";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, canActOnRole } from "@/lib/roles";
+import { getInitials } from "@/lib/client/utils";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import {
+  ROLE_BADGE_VARIANTS,
+  ROLE_LABELS,
+  canActOnRole,
+} from "@/lib/shared/roles";
 import { Flag, MoreHorizontal, Shield, UserMinus, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";

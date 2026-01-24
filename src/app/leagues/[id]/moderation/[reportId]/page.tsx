@@ -2,15 +2,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { getInitials } from "@/lib/client-utils";
+import { getInitials } from "@/lib/client/utils";
+import { auth } from "@/lib/server/auth";
 import {
   MODERATION_ACTION_LABELS,
   ModerationActionType,
   REPORT_REASON_LABELS,
   ReportReason,
-} from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+} from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import { getReportDetail } from "@/services/moderation";
 import { idParamSchema } from "@/validators/shared";

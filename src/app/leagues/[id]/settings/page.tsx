@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { LeagueMemberRole } from "@/lib/constants";
-import { LeaguePage, canAccessPage } from "@/lib/permissions";
+import { auth } from "@/lib/server/auth";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { LeaguePage, canAccessPage } from "@/lib/shared/permissions";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import { idParamSchema } from "@/validators/shared";
 import { headers } from "next/headers";

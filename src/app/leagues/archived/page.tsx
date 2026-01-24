@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";

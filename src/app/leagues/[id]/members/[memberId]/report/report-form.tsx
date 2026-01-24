@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { LeagueMemberWithUser } from "@/db/league-members";
-import { getInitials } from "@/lib/client-utils";
-import { REPORT_REASON_LABELS, ReportReason } from "@/lib/constants";
+import { getInitials } from "@/lib/client/utils";
+import { REPORT_REASON_LABELS, ReportReason } from "@/lib/shared/constants";
 import {
   REPORT_DESCRIPTION_MAX_LENGTH,
   REPORT_EVIDENCE_MAX_LENGTH,

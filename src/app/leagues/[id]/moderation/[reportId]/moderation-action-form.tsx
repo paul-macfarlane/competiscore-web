@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ModerationActionType } from "@/lib/constants";
+import { ModerationActionType } from "@/lib/shared/constants";
 import {
   MAX_SUSPENSION_DAYS,
   MODERATION_REASON_MAX_LENGTH,

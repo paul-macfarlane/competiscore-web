@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { getUserById } from "@/services/users";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";

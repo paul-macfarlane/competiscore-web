@@ -1,4 +1,4 @@
-import { InvitationStatus } from "@/lib/constants";
+import { InvitationStatus } from "@/lib/shared/constants";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 

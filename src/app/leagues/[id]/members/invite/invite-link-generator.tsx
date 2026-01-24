@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LeagueMemberRole } from "@/lib/constants";
-import { ROLE_LABELS } from "@/lib/roles";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { ROLE_LABELS } from "@/lib/shared/roles";
 import { Check, Copy, Link, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 

@@ -7,9 +7,9 @@ import {
   getMemberCountByRole,
 } from "@/db/league-members";
 import { UserSearchResult, searchUsersByQuery } from "@/db/users";
-import { LeagueMemberRole } from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
-import { canActOnRole, getAssignableRoles } from "@/lib/roles";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { canActOnRole, getAssignableRoles } from "@/lib/shared/roles";
 import { updateMemberRoleSchema } from "@/validators/members";
 import { z } from "zod";
 

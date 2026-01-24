@@ -1,8 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ReportWithUsers } from "@/db/reports";
-import { getInitials } from "@/lib/client-utils";
-import { REPORT_REASON_LABELS, ReportReason } from "@/lib/constants";
+import { getInitials } from "@/lib/client/utils";
+import { REPORT_REASON_LABELS, ReportReason } from "@/lib/shared/constants";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";

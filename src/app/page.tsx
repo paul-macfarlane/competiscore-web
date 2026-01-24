@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { Medal, Trophy, Users } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";

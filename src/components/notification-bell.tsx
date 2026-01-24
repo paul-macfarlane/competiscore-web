@@ -14,15 +14,15 @@ import {
 import {
   MODERATION_ACTION_LABELS,
   ModerationActionType,
-} from "@/lib/constants";
+} from "@/lib/shared/constants";
 import {
   LeagueInvitationNotification,
   ModerationActionNotification,
   Notification,
   NotificationAction,
   NotificationType,
-} from "@/lib/notifications";
-import { ROLE_LABELS } from "@/lib/roles";
+} from "@/lib/shared/notifications";
+import { ROLE_LABELS } from "@/lib/shared/roles";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,

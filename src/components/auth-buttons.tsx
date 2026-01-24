@@ -3,8 +3,8 @@
 import { DiscordIcon } from "@/components/icons/discord";
 import { GoogleIcon } from "@/components/icons/google";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/client/auth";
+import { cn } from "@/lib/shared/utils";
 import { useRouter } from "next/navigation";
 
 type SocialProvider = "discord" | "google";

@@ -9,7 +9,7 @@ import {
   getRetiredPlaceholderMembersByLeague,
 } from "@/db/placeholder-members";
 import { PlaceholderMember } from "@/db/schema";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import {
   createPlaceholderSchema,
   displayNameSchema,

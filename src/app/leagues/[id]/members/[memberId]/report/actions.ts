@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { createReport } from "@/services/moderation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";

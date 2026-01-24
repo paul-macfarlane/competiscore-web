@@ -1,8 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { UsageIndicator } from "@/components/usage-indicator";
+import { auth } from "@/lib/server/auth";
+import { getLeagueMemberLimitInfo } from "@/lib/server/limits";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import { getLeagueMembers } from "@/services/members";
 import {
@@ -87,38 +95,77 @@ async function MembersContent({
   );
   const canReport = canPerformAction(league.role, LeagueAction.REPORT_MEMBER);
 
-  const [membersResult, placeholdersResult, retiredPlaceholdersResult] =
-    await Promise.all([
-      getLeagueMembers(leagueId, userId),
-      getPlaceholders(leagueId, userId),
-      canManagePlaceholders
-        ? getRetiredPlaceholders(leagueId, userId)
-        : Promise.resolve({ data: [] }),
-    ]);
+  const [
+    membersResult,
+    placeholdersResult,
+    retiredPlaceholdersResult,
+    memberLimitInfo,
+  ] = await Promise.all([
+    getLeagueMembers(leagueId, userId),
+    getPlaceholders(leagueId, userId),
+    canManagePlaceholders
+      ? getRetiredPlaceholders(leagueId, userId)
+      : Promise.resolve({ data: [] }),
+    getLeagueMemberLimitInfo(leagueId),
+  ]);
 
   const members = membersResult.data ?? [];
   const placeholders = placeholdersResult.data ?? [];
   const retiredPlaceholders = retiredPlaceholdersResult.data ?? [];
 
+  const isAtMemberLimit = memberLimitInfo.isAtLimit;
+
   return (
     <div className="space-y-6">
       {canInvite && (
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href={`/leagues/${leagueId}/members/invite`}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite Members
-            </Link>
-          </Button>
+        <div className="flex items-center gap-4">
+          {isAtMemberLimit ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button disabled>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Invite Members
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    This league has reached its limit of {memberLimitInfo.max}{" "}
+                    members
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button asChild>
+              <Link href={`/leagues/${leagueId}/members/invite`}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Invite Members
+              </Link>
+            </Button>
+          )}
         </div>
       )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Members ({members.length})
-          </CardTitle>
+          <div className="flex flex-col gap-1">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Members ({members.length})
+            </CardTitle>
+            {memberLimitInfo.max !== null && (
+              <UsageIndicator
+                current={memberLimitInfo.current}
+                max={memberLimitInfo.max}
+                label="capacity"
+                showProgressBar={false}
+                className="text-xs"
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <MembersList

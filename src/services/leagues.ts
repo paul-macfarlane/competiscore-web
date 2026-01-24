@@ -1,5 +1,4 @@
 import { withTransaction } from "@/db";
-import { acceptAllPendingInvitationsForLeague } from "@/db/invitations";
 import {
   LeagueWithRole,
   createLeagueMember,
@@ -7,9 +6,7 @@ import {
   getArchivedLeaguesByUserId,
   getLeagueMember,
   getLeaguesByUserId,
-  getMemberCount,
   getMemberCountByRole,
-  getUserLeagueCount,
 } from "@/db/league-members";
 import {
   archiveLeague as dbArchiveLeague,
@@ -22,15 +19,16 @@ import {
   updateLeague as dbUpdateLeague,
 } from "@/db/leagues";
 import { League } from "@/db/schema";
-import { LeagueMemberRole, LeagueVisibility } from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import { canUserJoinAnotherLeague } from "@/lib/server/limits";
+import { LeagueMemberRole, LeagueVisibility } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import {
   createLeagueFormSchema,
   updateLeagueFormSchema,
 } from "@/validators/leagues";
 import { z } from "zod";
 
-import { MAX_LEAGUES_PER_USER, MAX_MEMBERS_PER_LEAGUE } from "./constants";
+import { addUserToLeague } from "./join-league";
 import { ServiceResult, formatZodErrors } from "./shared";
 
 export type LeagueWithMemberCount = League & { memberCount: number };
@@ -47,11 +45,9 @@ export async function createLeague(
     };
   }
 
-  const userLeagueCount = await getUserLeagueCount(userId);
-  if (userLeagueCount >= MAX_LEAGUES_PER_USER) {
-    return {
-      error: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
-    };
+  const limitCheck = await canUserJoinAnotherLeague(userId);
+  if (!limitCheck.allowed) {
+    return { error: limitCheck.message };
   }
 
   const result = await withTransaction(async (tx) => {
@@ -269,11 +265,6 @@ export async function joinPublicLeague(
   leagueId: string,
   userId: string,
 ): Promise<ServiceResult<{ joined: boolean }>> {
-  const existingMembership = await getLeagueMember(userId, leagueId);
-  if (existingMembership) {
-    return { error: "You are already a member of this league" };
-  }
-
   const league = await dbGetLeagueById(leagueId);
   if (!league) {
     return { error: "League not found" };
@@ -287,29 +278,7 @@ export async function joinPublicLeague(
     return { error: "This league has been archived" };
   }
 
-  const userLeagueCount = await getUserLeagueCount(userId);
-  if (userLeagueCount >= MAX_LEAGUES_PER_USER) {
-    return {
-      error: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
-    };
-  }
-
-  const memberCount = await getMemberCount(leagueId);
-  if (memberCount >= MAX_MEMBERS_PER_LEAGUE) {
-    return {
-      error: `This league has reached its maximum of ${MAX_MEMBERS_PER_LEAGUE} members`,
-    };
-  }
-
-  await createLeagueMember({
-    userId,
-    leagueId,
-    role: LeagueMemberRole.MEMBER,
-  });
-
-  await acceptAllPendingInvitationsForLeague(leagueId, userId);
-
-  return { data: { joined: true } };
+  return addUserToLeague(userId, leagueId, LeagueMemberRole.MEMBER);
 }
 
 export async function leaveLeague(

@@ -5,7 +5,7 @@ import {
   LeagueMemberRole,
   ModerationActionType,
   ReportReason,
-} from "@/lib/constants";
+} from "@/lib/shared/constants";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

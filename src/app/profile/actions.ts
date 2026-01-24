@@ -1,7 +1,7 @@
 "use server";
 
 import { User } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { ServiceResult } from "@/services/shared";
 import {
   checkUsernameAvailability as checkUsernameAvailabilityService,

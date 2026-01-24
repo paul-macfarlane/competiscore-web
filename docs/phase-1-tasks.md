@@ -224,37 +224,37 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 
 ### Default Limits (Free Tier)
 
-- [ ] Max 3 leagues per user (as creator or member)
-- [ ] Max 20 active members per league
-- [ ] Max 20 game types per league
+- [x] Max 3 leagues per user (as creator or member)
+- [x] Max 20 active members per league
+- [x] Max 20 game types per league
 
 ### Limit Tracking
 
-- [ ] Track user's league count
-- [ ] Track league's active member count
-- [ ] Track league's game type count
-- [ ] Display usage in UI ("X of Y used")
+- [x] Track user's league count
+- [x] Track league's active member count
+- [ ] Track league's game type count (deferred to future phase since games are not implemented yet)
+- [x] Display usage in UI ("X of Y used")
 
 ### Limit Enforcement
 
-- [ ] Prevent creating league when at limit
-- [ ] Prevent joining league when at limit
-- [ ] Prevent inviting when league at member limit
-- [ ] Prevent creating game type when at limit
-- [ ] Clear error messages when limits reached
+- [x] Prevent creating league when at limit
+- [x] Prevent joining league when at limit
+- [x] Prevent inviting when league at member limit
+- [ ] Prevent creating game type when at limit (deferred to future phase when creating game types is a feature)
+- [x] Clear error messages when limits reached
 
 ### Admin Override System
 
-- [ ] Admin user role/flag
-- [ ] Override table (userId/leagueId, limitType, overrideValue)
-- [ ] Admin UI to manage overrides
-- [ ] Grant "Pro" status to user/league
+- [ ] Admin user role/flag (deferred to future phase)
+- [x] Override table (userId/leagueId, limitType, overrideValue)
+- [ ] Admin UI to manage overrides (deferred to future phase)
+- [ ] Grant "Pro" status to user/league (deferred to future phase)
 
 ### UI/UX
 
-- [ ] Usage indicators in relevant UIs
-- [ ] Warning when approaching limits
-- [ ] Clear messaging about limits and future paid tier
+- [x] Usage indicators in relevant UIs
+- [x] Warning when approaching limits
+- [ ] Clear messaging about limits and future paid tier (deferred to future phase)
 
 ---
 

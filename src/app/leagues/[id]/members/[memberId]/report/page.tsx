@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLeagueMemberWithUser } from "@/db/league-members";
-import { auth } from "@/lib/auth";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import { auth } from "@/lib/server/auth";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import { idParamSchema } from "@/validators/shared";
 import { Flag } from "lucide-react";

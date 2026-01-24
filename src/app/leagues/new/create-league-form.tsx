@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { LEAGUE_LOGOS } from "@/lib/constants";
+import { LEAGUE_LOGOS } from "@/lib/shared/constants";
 import {
   LEAGUE_DESCRIPTION_MAX_LENGTH,
   LEAGUE_NAME_MAX_LENGTH,

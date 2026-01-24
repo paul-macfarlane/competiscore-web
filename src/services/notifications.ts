@@ -1,6 +1,6 @@
 import { getUnacknowledgedModerationActions } from "@/db/moderation-actions";
-import { ModerationActionType } from "@/lib/constants";
-import { Notification, NotificationType } from "@/lib/notifications";
+import { ModerationActionType } from "@/lib/shared/constants";
+import { Notification, NotificationType } from "@/lib/shared/notifications";
 
 import { getUserPendingInvitations } from "./invitations";
 import { ServiceResult } from "./shared";

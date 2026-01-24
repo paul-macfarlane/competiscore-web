@@ -7,6 +7,15 @@ export const LEAGUE_NAME_MAX_LENGTH = 100;
 export const LEAGUE_DESCRIPTION_MAX_LENGTH = 500;
 export const MAX_LEAGUES_PER_USER = 3;
 export const MAX_MEMBERS_PER_LEAGUE = 20;
+export const MAX_GAME_TYPES_PER_LEAGUE = 20;
+
+export const NEAR_LIMIT_THRESHOLD = 1;
+
+export const LimitType = {
+  MAX_LEAGUES_PER_USER: "max_leagues_per_user",
+  MAX_MEMBERS_PER_LEAGUE: "max_members_per_league",
+  MAX_GAME_TYPES_PER_LEAGUE: "max_game_types_per_league",
+} as const;
 
 export const REPORT_DESCRIPTION_MAX_LENGTH = 2000;
 export const REPORT_EVIDENCE_MAX_LENGTH = 2000;

@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InvitationWithDetails } from "@/db/invitations";
-import { ROLE_LABELS } from "@/lib/roles";
+import { ROLE_LABELS } from "@/lib/shared/roles";
 import { Check, Copy, Link, Trash2, User } from "lucide-react";
 import { useState, useTransition } from "react";
 

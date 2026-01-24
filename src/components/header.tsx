@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserMenu } from "@/components/user-menu";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { getNotificationCount } from "@/services/notifications";
 import { headers } from "next/headers";
 import Link from "next/link";

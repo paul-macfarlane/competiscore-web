@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LeagueMemberWithUser } from "@/db/league-members";
-import { getInitials } from "@/lib/client-utils";
+import { getInitials } from "@/lib/client/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { Clock, Loader2, Shield, Unlock } from "lucide-react";
 import { useState, useTransition } from "react";

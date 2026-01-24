@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { getArchivedLeagueById } from "@/services/leagues";
 import { idParamSchema } from "@/validators/shared";
 import { Archive, Users } from "lucide-react";

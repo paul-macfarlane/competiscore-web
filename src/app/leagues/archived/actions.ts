@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { unarchiveLeague } from "@/services/leagues";
 import { ServiceResult } from "@/services/shared";
 import { headers } from "next/headers";

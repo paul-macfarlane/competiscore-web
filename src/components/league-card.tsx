@@ -5,8 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LeagueMemberRole } from "@/lib/constants";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/roles";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/shared/roles";
 import { Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";

@@ -15,7 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/client/auth";
 import { Laptop, LogOut, Moon, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";

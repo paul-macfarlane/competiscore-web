@@ -1,6 +1,5 @@
 import {
   InvitationWithDetails,
-  acceptAllPendingInvitationsForLeague,
   checkExistingPendingInvitation,
   createInvitation as dbCreateInvitation,
   getPendingInvitationsForLeague as dbGetPendingInvitationsForLeague,
@@ -12,26 +11,21 @@ import {
   incrementInvitationUseCount,
   updateInvitationStatus,
 } from "@/db/invitations";
-import {
-  createLeagueMember,
-  getLeagueMember,
-  getMemberCount,
-  getUserLeagueCount,
-} from "@/db/league-members";
+import { getLeagueMember } from "@/db/league-members";
 import { getLeagueById as dbGetLeagueById } from "@/db/leagues";
-import { League } from "@/db/schema";
-import { LeagueMember } from "@/db/schema";
+import { League, LeagueMember } from "@/db/schema";
 import { getUserById } from "@/db/users";
-import { InvitationStatus, LeagueMemberRole } from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
-import { getAssignableRoles } from "@/lib/roles";
+import { canLeagueAddMember } from "@/lib/server/limits";
+import { InvitationStatus, LeagueMemberRole } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { getAssignableRoles } from "@/lib/shared/roles";
 import {
   generateInviteLinkSchema,
   inviteUserSchema,
 } from "@/validators/members";
 import { z } from "zod";
 
-import { MAX_LEAGUES_PER_USER, MAX_MEMBERS_PER_LEAGUE } from "./constants";
+import { addUserToLeague } from "./join-league";
 import { ServiceResult, formatZodErrors } from "./shared";
 
 type ValidatedInviter = {
@@ -58,37 +52,6 @@ async function validateInvitePermissions(
   }
 
   return { data: { membership } };
-}
-
-async function joinLeague(
-  userId: string,
-  leagueId: string,
-  role: LeagueMemberRole,
-): Promise<ServiceResult<{ joined: boolean }>> {
-  const existingMembership = await getLeagueMember(userId, leagueId);
-  if (existingMembership) {
-    return { error: "You are already a member of this league" };
-  }
-
-  const userLeagueCount = await getUserLeagueCount(userId);
-  if (userLeagueCount >= MAX_LEAGUES_PER_USER) {
-    return {
-      error: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
-    };
-  }
-
-  const memberCount = await getMemberCount(leagueId);
-  if (memberCount >= MAX_MEMBERS_PER_LEAGUE) {
-    return {
-      error: `This league has reached its maximum of ${MAX_MEMBERS_PER_LEAGUE} members`,
-    };
-  }
-
-  await createLeagueMember({ userId, leagueId, role });
-
-  await acceptAllPendingInvitationsForLeague(leagueId, userId);
-
-  return { data: { joined: true } };
 }
 
 const inviteInputSchema = inviteUserSchema.extend({
@@ -132,11 +95,9 @@ export async function inviteUser(
     return { error: "User already has a pending invitation to this league" };
   }
 
-  const memberCount = await getMemberCount(leagueId);
-  if (memberCount >= MAX_MEMBERS_PER_LEAGUE) {
-    return {
-      error: `This league has reached its maximum of ${MAX_MEMBERS_PER_LEAGUE} members`,
-    };
+  const leagueLimitCheck = await canLeagueAddMember(leagueId);
+  if (!leagueLimitCheck.allowed) {
+    return { error: leagueLimitCheck.message };
   }
 
   const invitation = await dbCreateInvitation({
@@ -259,7 +220,7 @@ export async function acceptInvitation(
     return { error: "This invitation has expired" };
   }
 
-  const joinResult = await joinLeague(
+  const joinResult = await addUserToLeague(
     userId,
     invitation.leagueId,
     invitation.role,
@@ -332,7 +293,7 @@ export async function joinViaInviteLink(
     return { error: "This league has been archived" };
   }
 
-  const joinResult = await joinLeague(
+  const joinResult = await addUserToLeague(
     userId,
     invitation.leagueId,
     invitation.role,

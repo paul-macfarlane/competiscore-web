@@ -1,4 +1,4 @@
-import { LEAGUE_LOGOS, LeagueVisibility } from "@/lib/constants";
+import { LEAGUE_LOGOS, LeagueVisibility } from "@/lib/shared/constants";
 import {
   LEAGUE_DESCRIPTION_MAX_LENGTH,
   LEAGUE_NAME_MAX_LENGTH,

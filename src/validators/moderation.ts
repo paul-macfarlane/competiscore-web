@@ -2,7 +2,7 @@ import {
   ModerationActionType,
   ReportReason,
   ReportStatus,
-} from "@/lib/constants";
+} from "@/lib/shared/constants";
 import {
   MAX_SUSPENSION_DAYS,
   MODERATION_REASON_MAX_LENGTH,

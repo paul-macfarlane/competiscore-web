@@ -2,11 +2,12 @@ import * as dbInvitations from "@/db/invitations";
 import * as dbLeagueMembers from "@/db/league-members";
 import * as dbLeagues from "@/db/leagues";
 import * as dbUsers from "@/db/users";
+import * as limits from "@/lib/server/limits";
 import {
   InvitationStatus,
   LeagueMemberRole,
   LeagueVisibility,
-} from "@/lib/constants";
+} from "@/lib/shared/constants";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MAX_LEAGUES_PER_USER } from "./constants";
@@ -39,8 +40,6 @@ vi.mock("@/db/invitations", () => ({
 
 vi.mock("@/db/league-members", () => ({
   getLeagueMember: vi.fn(),
-  getMemberCount: vi.fn(),
-  getUserLeagueCount: vi.fn(),
   createLeagueMember: vi.fn(),
 }));
 
@@ -50,6 +49,11 @@ vi.mock("@/db/leagues", () => ({
 
 vi.mock("@/db/users", () => ({
   getUserById: vi.fn(),
+}));
+
+vi.mock("@/lib/server/limits", () => ({
+  canUserJoinAnotherLeague: vi.fn(),
+  canLeagueAddMember: vi.fn(),
 }));
 
 const mockLeague = {
@@ -238,6 +242,7 @@ describe("invitations service", () => {
         username: "invitee",
         bio: null,
         image: null,
+        isAdmin: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -245,7 +250,15 @@ describe("invitations service", () => {
       vi.mocked(dbInvitations.checkExistingPendingInvitation).mockResolvedValue(
         undefined,
       );
-      vi.mocked(dbLeagueMembers.getMemberCount).mockResolvedValue(5);
+      vi.mocked(limits.canLeagueAddMember).mockResolvedValue({
+        allowed: true,
+        limitInfo: {
+          current: 5,
+          max: 20,
+          isAtLimit: false,
+          isNearLimit: false,
+        },
+      });
       vi.mocked(dbInvitations.createInvitation).mockResolvedValue(
         mockInvitation,
       );
@@ -360,9 +373,16 @@ describe("invitations service", () => {
         mockInvitationWithDetails,
       );
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
-      vi.mocked(dbLeagueMembers.getUserLeagueCount).mockResolvedValue(
-        MAX_LEAGUES_PER_USER,
-      );
+      vi.mocked(limits.canUserJoinAnotherLeague).mockResolvedValue({
+        allowed: false,
+        limitInfo: {
+          current: MAX_LEAGUES_PER_USER,
+          max: MAX_LEAGUES_PER_USER,
+          isAtLimit: true,
+          isNearLimit: false,
+        },
+        message: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
+      });
 
       const result = await acceptInvitation("inv-123", "user-456");
 
@@ -376,8 +396,19 @@ describe("invitations service", () => {
         mockInvitationWithDetails,
       );
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
-      vi.mocked(dbLeagueMembers.getUserLeagueCount).mockResolvedValue(0);
-      vi.mocked(dbLeagueMembers.getMemberCount).mockResolvedValue(5);
+      vi.mocked(limits.canUserJoinAnotherLeague).mockResolvedValue({
+        allowed: true,
+        limitInfo: { current: 1, max: 3, isAtLimit: false, isNearLimit: false },
+      });
+      vi.mocked(limits.canLeagueAddMember).mockResolvedValue({
+        allowed: true,
+        limitInfo: {
+          current: 5,
+          max: 20,
+          isAtLimit: false,
+          isNearLimit: false,
+        },
+      });
       vi.mocked(dbLeagueMembers.createLeagueMember).mockResolvedValue(
         mockMember,
       );
@@ -449,8 +480,19 @@ describe("invitations service", () => {
       });
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
       vi.mocked(dbLeagues.getLeagueById).mockResolvedValue(mockLeague);
-      vi.mocked(dbLeagueMembers.getUserLeagueCount).mockResolvedValue(0);
-      vi.mocked(dbLeagueMembers.getMemberCount).mockResolvedValue(5);
+      vi.mocked(limits.canUserJoinAnotherLeague).mockResolvedValue({
+        allowed: true,
+        limitInfo: { current: 1, max: 3, isAtLimit: false, isNearLimit: false },
+      });
+      vi.mocked(limits.canLeagueAddMember).mockResolvedValue({
+        allowed: true,
+        limitInfo: {
+          current: 5,
+          max: 20,
+          isAtLimit: false,
+          isNearLimit: false,
+        },
+      });
       vi.mocked(dbLeagueMembers.createLeagueMember).mockResolvedValue(
         mockMember,
       );

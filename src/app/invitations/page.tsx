@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { getUserPendingInvitations } from "@/services/invitations";
 import { Mail } from "lucide-react";
 import { headers } from "next/headers";

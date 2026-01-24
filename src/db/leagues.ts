@@ -1,4 +1,4 @@
-import { LeagueVisibility } from "@/lib/constants";
+import { LeagueVisibility } from "@/lib/shared/constants";
 import { and, count, eq, ilike, or } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";

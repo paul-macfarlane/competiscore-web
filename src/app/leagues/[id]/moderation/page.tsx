@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import { auth } from "@/lib/server/auth";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import { getPendingReports, getSuspendedMembers } from "@/services/moderation";
 import { idParamSchema } from "@/validators/shared";

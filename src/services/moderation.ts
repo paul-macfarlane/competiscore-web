@@ -26,9 +26,9 @@ import {
   hasExistingPendingReport,
   updateReportStatus,
 } from "@/db/reports";
-import { ModerationActionType } from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
-import { canActOnRole } from "@/lib/roles";
+import { ModerationActionType } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { canActOnRole } from "@/lib/shared/roles";
 import {
   createReportSchema,
   takeModerationActionSchema,

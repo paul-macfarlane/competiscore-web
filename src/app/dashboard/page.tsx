@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getUserLeagueCount } from "@/db/league-members";
-import { auth } from "@/lib/auth";
+import { UsageIndicator } from "@/components/usage-indicator";
+import { auth } from "@/lib/server/auth";
+import { getUserLeagueLimitInfo } from "@/lib/server/limits";
 import { Swords, Trophy, Users } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -59,7 +60,7 @@ export default async function DashboardPage() {
 }
 
 async function LeagueCountCard({ userId }: { userId: string }) {
-  const leagueCount = await getUserLeagueCount(userId);
+  const limitInfo = await getUserLeagueLimitInfo(userId);
 
   return (
     <Card>
@@ -67,15 +68,18 @@ async function LeagueCountCard({ userId }: { userId: string }) {
         <CardTitle className="text-sm font-medium">Active Leagues</CardTitle>
         <Trophy className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
-      <CardContent>
-        <div className="text-xl font-bold md:text-2xl">{leagueCount}</div>
-        <p className="text-xs text-muted-foreground">
-          {leagueCount === 0
-            ? "Join a league to get started"
-            : leagueCount === 1
-              ? "league membership"
-              : "league memberships"}
-        </p>
+      <CardContent className="space-y-2">
+        <div className="text-xl font-bold md:text-2xl">{limitInfo.current}</div>
+        <UsageIndicator
+          current={limitInfo.current}
+          max={limitInfo.max}
+          label={
+            limitInfo.current === 0
+              ? "Join a league to get started"
+              : "league memberships"
+          }
+          showProgressBar={limitInfo.max !== null}
+        />
       </CardContent>
     </Card>
   );

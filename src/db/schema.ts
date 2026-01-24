@@ -25,6 +25,7 @@ export const user = pgTable(
     image: text("image"),
     username: text("username").notNull().unique(),
     bio: text("bio"),
+    isAdmin: boolean("is_admin").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -421,3 +422,55 @@ export const moderationActionRelations = relations(
 
 export const reportColumns = getTableColumns(report);
 export const moderationActionColumns = getTableColumns(moderationAction);
+
+export const limitType = pgEnum("limit_type", [
+  "max_leagues_per_user",
+  "max_members_per_league",
+  "max_game_types_per_league",
+]);
+
+export const limitOverride = pgTable(
+  "limit_override",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    limitType: limitType("limit_type").notNull(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    leagueId: text("league_id").references(() => league.id, {
+      onDelete: "cascade",
+    }),
+    limitValue: integer("limit_value"),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    reason: text("reason"),
+  },
+  (table) => [
+    index("limit_override_user_idx").on(table.userId),
+    index("limit_override_league_idx").on(table.leagueId),
+  ],
+);
+
+export type LimitOverride = InferSelectModel<typeof limitOverride>;
+export type NewLimitOverride = InferInsertModel<typeof limitOverride>;
+
+export const limitOverrideRelations = relations(limitOverride, ({ one }) => ({
+  user: one(user, {
+    fields: [limitOverride.userId],
+    references: [user.id],
+    relationName: "limitOverrideUser",
+  }),
+  league: one(league, {
+    fields: [limitOverride.leagueId],
+    references: [league.id],
+  }),
+  createdByUser: one(user, {
+    fields: [limitOverride.createdBy],
+    references: [user.id],
+    relationName: "limitOverrideCreatedBy",
+  }),
+}));
+
+export const limitOverrideColumns = getTableColumns(limitOverride);

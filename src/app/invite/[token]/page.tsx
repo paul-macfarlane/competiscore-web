@@ -7,8 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { ROLE_LABELS } from "@/lib/roles";
+import { auth } from "@/lib/server/auth";
+import { ROLE_LABELS } from "@/lib/shared/roles";
 import { getInviteLinkDetails } from "@/services/invitations";
 import { AlertCircle, Users } from "lucide-react";
 import { headers } from "next/headers";

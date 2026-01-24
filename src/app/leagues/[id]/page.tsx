@@ -2,9 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { LeagueMemberRole } from "@/lib/constants";
-import { LeagueAction, canPerformAction } from "@/lib/permissions";
+import { UsageIndicator } from "@/components/usage-indicator";
+import { auth } from "@/lib/server/auth";
+import { getLeagueMemberLimitInfo } from "@/lib/server/limits";
+import { LeagueMemberRole } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import {
   getOwnReportCount,
@@ -92,6 +94,8 @@ async function LeagueDashboardContent({
 
   const ownWarningCountResult = await getOwnWarningCount(userId, leagueId);
   const ownWarningCount = ownWarningCountResult.data ?? 0;
+
+  const memberLimitInfo = await getLeagueMemberLimitInfo(leagueId);
 
   const isSuspended =
     league.suspendedUntil && league.suspendedUntil > new Date();
@@ -183,11 +187,14 @@ async function LeagueDashboardContent({
               <CardTitle className="text-sm font-medium">Members</CardTitle>
               <Users className="text-muted-foreground h-4 w-4" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <div className="text-2xl font-bold">{league.memberCount}</div>
-              <p className="text-muted-foreground text-xs">
-                {league.memberCount === 1 ? "member" : "active members"}
-              </p>
+              <UsageIndicator
+                current={memberLimitInfo.current}
+                max={memberLimitInfo.max}
+                label="capacity"
+                showProgressBar={memberLimitInfo.max !== null}
+              />
             </CardContent>
           </Card>
         </Link>

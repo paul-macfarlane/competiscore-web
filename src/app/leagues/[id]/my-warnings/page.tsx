@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/server/auth";
 import { getLeagueWithRole } from "@/services/leagues";
 import { getOwnModerationHistory } from "@/services/moderation";
 import { idParamSchema } from "@/validators/shared";

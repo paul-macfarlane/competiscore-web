@@ -1,6 +1,6 @@
 import * as dbLeagueMembers from "@/db/league-members";
 import * as dbUsers from "@/db/users";
-import { LeagueMemberRole } from "@/lib/constants";
+import { LeagueMemberRole } from "@/lib/shared/constants";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
