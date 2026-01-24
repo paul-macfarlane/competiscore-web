@@ -96,7 +96,14 @@ export async function getLeagueById(
 export async function getLeagueWithRole(
   leagueId: string,
   userId: string,
-): Promise<ServiceResult<LeagueWithMemberCount & { role: LeagueMemberRole }>> {
+): Promise<
+  ServiceResult<
+    LeagueWithMemberCount & {
+      role: LeagueMemberRole;
+      suspendedUntil: Date | null;
+    }
+  >
+> {
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -111,7 +118,13 @@ export async function getLeagueWithRole(
     return { error: "This league has been archived" };
   }
 
-  return { data: { ...league, role: membership.role } };
+  return {
+    data: {
+      ...league,
+      role: membership.role,
+      suspendedUntil: membership.suspendedUntil,
+    },
+  };
 }
 
 const updateLeagueInputSchema = updateLeagueFormSchema.extend({

@@ -4,9 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/auth";
 import { LeagueMemberRole } from "@/lib/constants";
+import { LeagueAction, canPerformAction } from "@/lib/permissions";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
+import {
+  getOwnReportCount,
+  getOwnWarningCount,
+  getPendingReportCount,
+} from "@/services/moderation";
 import { idParamSchema } from "@/validators/shared";
-import { Settings, Users } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+  AlertTriangle,
+  FileText,
+  Flag,
+  Settings,
+  Shield,
+  Users,
+} from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -62,9 +76,60 @@ async function LeagueDashboardContent({
   const isExecutive = league.role === LeagueMemberRole.EXECUTIVE;
   const executiveCount = await getExecutiveCount(leagueId);
   const isSoleExecutive = isExecutive && executiveCount <= 1;
+  const canViewReports = canPerformAction(
+    league.role,
+    LeagueAction.VIEW_REPORTS,
+  );
+
+  let pendingReportCount = 0;
+  if (canViewReports) {
+    const reportCountResult = await getPendingReportCount(userId, leagueId);
+    pendingReportCount = reportCountResult.data ?? 0;
+  }
+
+  const ownReportCountResult = await getOwnReportCount(userId, leagueId);
+  const ownReportCount = ownReportCountResult.data ?? 0;
+
+  const ownWarningCountResult = await getOwnWarningCount(userId, leagueId);
+  const ownWarningCount = ownWarningCountResult.data ?? 0;
+
+  const isSuspended =
+    league.suspendedUntil && league.suspendedUntil > new Date();
 
   return (
     <>
+      {isSuspended && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="flex items-start gap-3 pt-6">
+            <Shield className="h-6 w-6 text-destructive shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-destructive">
+                Your membership is suspended
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your suspension ends{" "}
+                <span className="font-medium text-foreground">
+                  {formatDistanceToNow(league.suspendedUntil!, {
+                    addSuffix: true,
+                  })}
+                </span>{" "}
+                ({format(league.suspendedUntil!, "PPp")}).
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                While suspended, you cannot participate in games or report other
+                members.{" "}
+                <Link
+                  href={`/leagues/${leagueId}/my-warnings`}
+                  className="text-primary hover:underline"
+                >
+                  View details
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-1 items-start gap-4 min-w-0">
           {league.logo && (
@@ -112,8 +177,8 @@ async function LeagueDashboardContent({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href={`/leagues/${leagueId}/members`} className="block">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+        <Link href={`/leagues/${leagueId}/members`} className="block h-full">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Members</CardTitle>
               <Users className="text-muted-foreground h-4 w-4" />
@@ -127,7 +192,7 @@ async function LeagueDashboardContent({
           </Card>
         </Link>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Your Role</CardTitle>
           </CardHeader>
@@ -143,7 +208,7 @@ async function LeagueDashboardContent({
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2 lg:col-span-1">
+        <Card className="sm:col-span-2 lg:col-span-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Games Played</CardTitle>
           </CardHeader>
@@ -152,6 +217,68 @@ async function LeagueDashboardContent({
             <p className="text-muted-foreground text-xs">Coming soon</p>
           </CardContent>
         </Card>
+
+        {canViewReports && (
+          <Link
+            href={`/leagues/${leagueId}/moderation`}
+            className="block h-full"
+          >
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Moderation
+                </CardTitle>
+                <Flag className="text-muted-foreground h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold flex items-center gap-2">
+                  {pendingReportCount}
+                  {pendingReportCount > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      Pending
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {pendingReportCount === 1 ? "report" : "reports"} to review
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        <Link href={`/leagues/${leagueId}/my-reports`} className="block h-full">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Reports</CardTitle>
+              <FileText className="text-muted-foreground h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{ownReportCount}</div>
+              <p className="text-muted-foreground text-xs">
+                {ownReportCount === 1 ? "report" : "reports"} submitted
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link
+          href={`/leagues/${leagueId}/my-warnings`}
+          className="block h-full"
+        >
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Warnings</CardTitle>
+              <AlertTriangle className="text-muted-foreground h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{ownWarningCount}</div>
+              <p className="text-muted-foreground text-xs">
+                {ownWarningCount === 1 ? "warning" : "warnings"} received
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -180,8 +307,8 @@ function LeagueDashboardSkeleton() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i} className="h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-20" />
             </CardHeader>

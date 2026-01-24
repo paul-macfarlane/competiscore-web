@@ -15,6 +15,9 @@ export const LeagueAction = {
   UNARCHIVE_LEAGUE: "unarchive_league",
   DELETE_LEAGUE: "delete_league",
   TRANSFER_EXECUTIVE: "transfer_executive",
+  REPORT_MEMBER: "report_member",
+  VIEW_REPORTS: "view_reports",
+  MODERATE_MEMBERS: "moderate_members",
 } as const;
 
 export type LeagueAction = (typeof LeagueAction)[keyof typeof LeagueAction];
@@ -23,6 +26,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
   [LeagueMemberRole.MEMBER]: new Set([
     LeagueAction.VIEW_MEMBERS,
     LeagueAction.PLAY_GAMES,
+    LeagueAction.REPORT_MEMBER,
   ]),
   [LeagueMemberRole.MANAGER]: new Set([
     LeagueAction.VIEW_MEMBERS,
@@ -33,6 +37,9 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.INVITE_MEMBERS,
     LeagueAction.CREATE_PLACEHOLDERS,
     LeagueAction.REMOVE_MEMBERS,
+    LeagueAction.REPORT_MEMBER,
+    LeagueAction.VIEW_REPORTS,
+    LeagueAction.MODERATE_MEMBERS,
   ]),
   [LeagueMemberRole.EXECUTIVE]: new Set([
     LeagueAction.VIEW_MEMBERS,
@@ -49,6 +56,9 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.UNARCHIVE_LEAGUE,
     LeagueAction.DELETE_LEAGUE,
     LeagueAction.TRANSFER_EXECUTIVE,
+    LeagueAction.REPORT_MEMBER,
+    LeagueAction.VIEW_REPORTS,
+    LeagueAction.MODERATE_MEMBERS,
   ]),
 };
 
@@ -70,6 +80,7 @@ export const LeaguePage = {
   GAMES: "games",
   TOURNAMENTS: "tournaments",
   SEASONS: "seasons",
+  MODERATION: "moderation",
 } as const;
 
 export type LeaguePage = (typeof LeaguePage)[keyof typeof LeaguePage];
@@ -101,6 +112,10 @@ const PAGE_PERMISSIONS: Record<LeaguePage, Set<LeagueMemberRole>> = {
     LeagueMemberRole.EXECUTIVE,
   ]),
   [LeaguePage.SETTINGS]: new Set([LeagueMemberRole.EXECUTIVE]),
+  [LeaguePage.MODERATION]: new Set([
+    LeagueMemberRole.MANAGER,
+    LeagueMemberRole.EXECUTIVE,
+  ]),
 };
 
 export function canAccessPage(

@@ -85,6 +85,7 @@ async function MembersContent({
     league.role,
     LeagueAction.CREATE_PLACEHOLDERS,
   );
+  const canReport = canPerformAction(league.role, LeagueAction.REPORT_MEMBER);
 
   const [membersResult, placeholdersResult, retiredPlaceholdersResult] =
     await Promise.all([
@@ -126,6 +127,7 @@ async function MembersContent({
             currentUserRole={league.role}
             canManageRoles={canManageRoles}
             canRemove={canRemove}
+            canReport={canReport}
             leagueId={leagueId}
           />
         </CardContent>

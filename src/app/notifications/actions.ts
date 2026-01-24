@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { NotificationAction, NotificationType } from "@/lib/notifications";
 import { acceptInvitation, declineInvitation } from "@/services/invitations";
+import { acknowledgeModerationAction } from "@/services/moderation";
 import { getNotifications } from "@/services/notifications";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -47,6 +48,19 @@ export async function handleNotificationAction(
         if (result.data) {
           revalidatePath("/invitations");
         }
+        return result;
+      }
+      return { error: "Invalid action" };
+    }
+
+    case NotificationType.MODERATION_ACTION: {
+      const actionId = notificationId.replace("moderation_", "");
+
+      if (action === NotificationAction.DISMISS) {
+        const result = await acknowledgeModerationAction(
+          session.user.id,
+          actionId,
+        );
         return result;
       }
       return { error: "Invalid action" };

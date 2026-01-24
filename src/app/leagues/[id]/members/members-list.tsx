@@ -13,7 +13,8 @@ import { LeagueMemberWithUser } from "@/db/league-members";
 import { getInitials } from "@/lib/client-utils";
 import { LeagueMemberRole } from "@/lib/constants";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, canActOnRole } from "@/lib/roles";
-import { MoreHorizontal, Shield, UserMinus, Users } from "lucide-react";
+import { Flag, MoreHorizontal, Shield, UserMinus, Users } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { removeMemberAction, updateMemberRoleAction } from "./actions";
@@ -24,6 +25,7 @@ interface MembersListProps {
   currentUserRole: LeagueMemberRole;
   canManageRoles: boolean;
   canRemove: boolean;
+  canReport: boolean;
   leagueId: string;
 }
 
@@ -33,6 +35,7 @@ export function MembersList({
   currentUserRole,
   canManageRoles,
   canRemove,
+  canReport,
   leagueId,
 }: MembersListProps) {
   const [isPending, startTransition] = useTransition();
@@ -108,7 +111,8 @@ export function MembersList({
             <Badge variant={ROLE_BADGE_VARIANTS[member.role]}>
               {ROLE_LABELS[member.role]}
             </Badge>
-            {(canManageRoles || canRemove) && canModify && (
+            {((canManageRoles || canRemove) && canModify) ||
+            (canReport && !isCurrentUser) ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -121,7 +125,7 @@ export function MembersList({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {canManageRoles && (
+                  {canManageRoles && canModify && (
                     <>
                       {member.role !== LeagueMemberRole.MEMBER && (
                         <DropdownMenuItem
@@ -164,7 +168,7 @@ export function MembersList({
                       )}
                     </>
                   )}
-                  {canRemove && (
+                  {canRemove && canModify && (
                     <DropdownMenuItem
                       onClick={() => handleRemove(member.userId)}
                       className="text-destructive focus:text-destructive"
@@ -173,9 +177,19 @@ export function MembersList({
                       Remove from League
                     </DropdownMenuItem>
                   )}
+                  {canReport && !isCurrentUser && (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href={`/leagues/${leagueId}/members/${member.userId}/report`}
+                      >
+                        <Flag className="mr-2 h-4 w-4" />
+                        Report Member
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            ) : null}
           </div>
         );
       })}

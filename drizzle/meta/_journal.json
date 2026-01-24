@@ -50,6 +50,34 @@
       "when": 1769225246493,
       "tag": "0006_small_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769231044729,
+      "tag": "0007_far_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769234609659,
+      "tag": "0008_oval_azazel",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769235939617,
+      "tag": "0009_bouncy_rafael_vega",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769235958429,
+      "tag": "0010_moaning_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

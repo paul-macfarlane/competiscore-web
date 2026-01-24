@@ -12,13 +12,27 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  MODERATION_ACTION_LABELS,
+  ModerationActionType,
+} from "@/lib/constants";
+import {
   LeagueInvitationNotification,
+  ModerationActionNotification,
   Notification,
   NotificationAction,
   NotificationType,
 } from "@/lib/notifications";
 import { ROLE_LABELS } from "@/lib/roles";
-import { Bell, Check, Loader2, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  Loader2,
+  Shield,
+  UserMinus,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
@@ -131,6 +145,13 @@ function NotificationItem({ notification, onAction }: NotificationItemProps) {
           onAction={onAction}
         />
       );
+    case NotificationType.MODERATION_ACTION:
+      return (
+        <ModerationNotificationItem
+          notification={notification}
+          onAction={onAction}
+        />
+      );
     // Future: Add cases for other notification types
     // case NotificationType.CHALLENGE:
     //   return <ChallengeNotificationItem ... />;
@@ -236,6 +257,146 @@ function InvitationNotificationItem({
               )}
               Accept
             </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ModerationNotificationItemProps {
+  notification: ModerationActionNotification;
+  onAction: (
+    notification: Notification,
+    action: NotificationAction,
+  ) => Promise<{ error?: string }>;
+}
+
+function ModerationNotificationItem({
+  notification,
+  onAction,
+}: ModerationNotificationItemProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDismiss = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onAction(notification, NotificationAction.DISMISS);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  const handleViewDetails = () => {
+    router.push(`/leagues/${notification.data.leagueId}/my-warnings`);
+  };
+
+  const getIcon = () => {
+    switch (notification.data.actionType) {
+      case ModerationActionType.WARNED:
+        return <AlertTriangle className="h-5 w-5 text-warning" />;
+      case ModerationActionType.SUSPENDED:
+        return <Shield className="h-5 w-5 text-destructive" />;
+      case ModerationActionType.REMOVED:
+        return <UserMinus className="h-5 w-5 text-destructive" />;
+      case ModerationActionType.SUSPENSION_LIFTED:
+        return <Shield className="h-5 w-5 text-success" />;
+      default:
+        return <AlertTriangle className="h-5 w-5 text-warning" />;
+    }
+  };
+
+  const getMessage = () => {
+    switch (notification.data.actionType) {
+      case ModerationActionType.WARNED:
+        return (
+          <>
+            You received a <span className="font-medium">warning</span> in{" "}
+            <span className="font-medium">{notification.data.leagueName}</span>
+          </>
+        );
+      case ModerationActionType.SUSPENDED:
+        return (
+          <>
+            You were <span className="font-medium">suspended</span> from{" "}
+            <span className="font-medium">{notification.data.leagueName}</span>
+            {notification.data.suspendedUntil && (
+              <>
+                {" "}
+                until{" "}
+                {formatDistanceToNow(
+                  new Date(notification.data.suspendedUntil),
+                  {
+                    addSuffix: true,
+                  },
+                )}
+              </>
+            )}
+          </>
+        );
+      case ModerationActionType.REMOVED:
+        return (
+          <>
+            You were <span className="font-medium">removed</span> from{" "}
+            <span className="font-medium">{notification.data.leagueName}</span>
+          </>
+        );
+      case ModerationActionType.SUSPENSION_LIFTED:
+        return (
+          <>
+            Your suspension in{" "}
+            <span className="font-medium">{notification.data.leagueName}</span>{" "}
+            has been <span className="font-medium">lifted</span>
+          </>
+        );
+      default:
+        return MODERATION_ACTION_LABELS[notification.data.actionType];
+    }
+  };
+
+  return (
+    <div className="p-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted">
+          {getIcon()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">{getMessage()}</p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {notification.data.reason}
+          </p>
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleDismiss}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <X className="mr-1 h-3 w-3" />
+              )}
+              Dismiss
+            </Button>
+            {notification.data.actionType !== ModerationActionType.REMOVED &&
+              notification.data.actionType !==
+                ModerationActionType.SUSPENSION_LIFTED && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={handleViewDetails}
+                  disabled={isPending}
+                >
+                  View Details
+                </Button>
+              )}
           </div>
         </div>
       </div>

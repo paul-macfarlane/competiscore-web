@@ -72,6 +72,7 @@ const mockMember = {
   leagueId: "league-123",
   role: "executive" as const,
   joinedAt: new Date(),
+  suspendedUntil: null,
 };
 
 describe("leagues service", () => {

@@ -1,0 +1,1 @@
+ALTER TABLE "moderation_action" ALTER COLUMN "report_id" DROP NOT NULL;

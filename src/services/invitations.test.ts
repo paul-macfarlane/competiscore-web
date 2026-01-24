@@ -69,6 +69,7 @@ const mockMember = {
   leagueId: "league-123",
   role: LeagueMemberRole.MANAGER,
   joinedAt: new Date(),
+  suspendedUntil: null,
 };
 
 const mockInvitation = {
@@ -99,6 +100,7 @@ const mockInvitationWithDetails = {
     name: "Inviter",
     username: "inviter",
   },
+  invitee: null,
 };
 
 describe("invitations service", () => {

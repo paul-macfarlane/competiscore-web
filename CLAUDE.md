@@ -11,6 +11,7 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 - Components that are only used in a single page should be colocated with the page in the `src/app` directory.
 - Database operations should be in the `src/db` directory.
 - Business logic functions should be in the `src/services` directory.
+- Shared validation schemas (used by both UI forms and services) should be in the `src/validators` directory.
 - Server Actions should be colocated with the page in the `src/app` directory, unless the action is used in multiple pages, in which case it should be in the `src/actions` directory.
 
 ## General Standards
@@ -21,6 +22,7 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 - In general, less code is better. Its less to maintain, less bugs to have, less to read, etc.
 - Comments in the code should be minimal. Code comments should only ever be needed to explain WHY, but never WHAT. The code already says WHAT.
 - All text fields that can be filled out by a user should have a sensible limit both at the database layer and zod validation layer. They should re-use the same constant value
+- Shared domain constants (e.g., role hierarchies, labels) and utility functions should be placed in `src/lib` for reuse across services and UI components.
 
 ## Authentication Standards
 
@@ -43,11 +45,13 @@ We use Drizzle ORM for database operations and integration with Postgres and Neo
 - Database functions should be very limited in business logic
 - Database functions should only be called by service functions, and never directly by other functions or components.
 - Database Types can be made by using DrizzleORM's `inferSelect` and `inferInsert` functions, and should be used. These can be defined in the `src/db/schema.ts` file.
+- Table column extractions using `getTableColumns` should be exported from `src/db/schema.ts` for reuse across db files, rather than duplicating the extraction in multiple files.
 
 ## Next.js Standards
 
 - All Next.js pages should be server components.
 - All Next.js components should be server components unless client reactivity is needed.
+- Query and Path parameters should be validated using zod and handled gracefully if the validation fails.
 - Server components when fetching data should not make direct database calls, but should call a business logic function that will handle the database call.
 - Server components that fetch data should be async functions and utilize [Streaming](https://nextjs.org/docs/app/getting-started/fetching-data#streaming) to fetch data from the server. A `loading.ts` file can be used for route segements (layouts and pages), but if the loading is more granular, Suspense can be used to handle the loading state.
 - In general, we should use Server Components where possible. Anytime client reactivity is needed, we should use Client Components, but instead of making a large component a client component, we should split it into smaller components that are client components where the interactivity is needed, but still maintain a server component that uses the client components to render the page.
@@ -61,9 +65,20 @@ We use Drizzle ORM for database operations and integration with Postgres and Neo
 Business logic functions should be in the `src/services` directory.
 
 - Services should call database functions, but nothing else should call them
-- Services should have unit tests, mocking external dependencies and only testing input and output. No need to test "was this function called with the correct input".
+- Services should have unit tests, mocking external dependencies and only testing input and output. Tests should NOT use `toHaveBeenCalled` or `toHaveBeenCalledWith` - only verify outputs based on mocked inputs.
 - Services may take in an "unknown" type for the input and then use zod to validate the input.
 - The idea behind this is to put as much business logic in the service layer, so that if we ever want to change to a separate API layer, we can do so with minimal changes to the business logic.
+
+## Validation Standards
+
+We use Zod for validation. Validation schemas that are shared between the UI (forms) and the backend (services) should be placed in the `src/validators` directory.
+
+- Shared schemas should be in `src/validators`, organized by domain (e.g., `users.ts`, `leagues.ts`).
+- Define base field schemas (e.g., `usernameSchema`, `nameSchema`) that can be composed into larger schemas.
+- Services can extend shared schemas (e.g., adding `.transform()` or `.optional()`) as needed.
+- UI forms should import and use the shared schemas directly for react-hook-form validation.
+- Validation schemas that are only used in one place (e.g., only in a service or only in a form) do not need to be in `src/validators`.
+- **Form validation schemas MUST be shared between the client form and the service function** to ensure validation is consistent and avoid drift. If a form submits to a server action that calls a service, both the form and the service should use the same schema from `src/validators`.
 
 ## Styling Standards
 
@@ -72,3 +87,4 @@ We use ShadCN's Component Library for styling.
 - We should be use components from the library where possible, and avoid creating custom components unless absolutely necessary.
 - consult the [ShadCN Component Library](https://ui.shadcn.com/docs/components) for the available components.
 - Arbitrary colors should not be used. Instead, use the theme colors defined in the `globals.css` file. If a new color is needed, add it to the `globals.css` file.
+- The entire app should be mobile-first, and should be responsive to different screen sizes.

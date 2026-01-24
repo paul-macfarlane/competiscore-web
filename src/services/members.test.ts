@@ -28,6 +28,7 @@ const mockMember = {
   leagueId: "league-123",
   role: LeagueMemberRole.EXECUTIVE,
   joinedAt: new Date(),
+  suspendedUntil: null,
 };
 
 const mockMemberWithUser = {

@@ -11,7 +11,7 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 | 3. League Creation & Management | 🚧 In Progress | 95%      |
 | 4. Member Management            | ✅ Complete    | 100%     |
 | 5. Role-Based Permissions       | ✅ Complete    | 100%     |
-| 6. Moderation System            | ⏳ Not Started | 0%       |
+| 6. Moderation System            | ✅ Complete    | 100%     |
 | 7. Usage Limits                 | ⏳ Not Started | 0%       |
 
 ---
@@ -176,43 +176,45 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 
 ## 6. Moderation System
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 ### Database Schema
 
-- [ ] Report table (id, reporterId, reportedUserId, leagueId, reason, description, evidence, status, createdAt)
-- [ ] Report reason enum (unsportsmanlike, false_reporting, harassment, spam, other)
-- [ ] Moderation action table (id, reportId, moderatorId, action, reason, createdAt)
-- [ ] Action enum (dismissed, warned, suspended, removed)
-- [ ] Member warning/suspension status in league_member
+- [x] Report table (id, reporterId, reportedUserId, leagueId, reason, description, evidence, status, createdAt)
+- [x] Report reason enum (unsportsmanlike, false_reporting, harassment, spam, other)
+- [x] Moderation action table (id, reportId, moderatorId, action, reason, createdAt)
+- [x] Action enum (dismissed, warned, suspended, removed)
+- [x] Member warning/suspension status in league_member (suspendedUntil field)
 
 ### Reporting
 
-- [ ] Report member form
-- [ ] Report reason selection
-- [ ] Report description and evidence fields
-- [ ] View own reports submitted
+- [x] Report member form (`/leagues/[id]/members/[memberId]/report`)
+- [x] Report reason selection
+- [x] Report description and evidence fields
+- [x] View own reports submitted (`/leagues/[id]/my-reports`)
 
 ### Remediation (Managers/Executives)
 
-- [ ] View pending reports
-- [ ] Dismiss report with reason
-- [ ] Warn member
-- [ ] Suspend member (temporary)
-- [ ] Remove member
+- [x] View pending reports (`/leagues/[id]/moderation`)
+- [x] Dismiss report with reason
+- [x] Warn member
+- [x] Suspend member (temporary)
+- [x] Remove member
 
 ### Audit Trail
 
-- [ ] Log all moderation actions
-- [ ] View member's offense history
-- [ ] Members can see warnings against them
+- [x] Log all moderation actions (moderation_action table)
+- [x] View member's offense history (shown on report detail page)
+- [x] Members can see warnings against them (`/leagues/[id]/my-warnings`)
 
 ### UI/UX
 
-- [ ] Report button on member profiles
-- [ ] Moderation dashboard for managers
-- [ ] Report detail view
-- [ ] Member moderation history view
+- [x] Report button on member profiles (in member dropdown menu)
+- [x] Moderation dashboard for managers (`/leagues/[id]/moderation`)
+- [x] Report detail view (`/leagues/[id]/moderation/[reportId]`)
+- [x] Member moderation history view (for managers viewing reports)
+- [x] Moderation card on league dashboard with pending report count
+- [x] My Reports and My Warnings cards on league dashboard for all members
 
 ---
 

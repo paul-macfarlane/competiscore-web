@@ -166,6 +166,7 @@ export const leagueMember = pgTable(
       .references(() => league.id, { onDelete: "cascade" }),
     role: leagueMemberRole("role").notNull().default("member"),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
+    suspendedUntil: timestamp("suspended_until"),
   },
   (table) => [
     uniqueIndex("league_member_unique").on(table.userId, table.leagueId),
@@ -291,3 +292,132 @@ export const leagueColumns = getTableColumns(league);
 export const leagueMemberColumns = getTableColumns(leagueMember);
 export const leagueInvitationColumns = getTableColumns(leagueInvitation);
 export const placeholderMemberColumns = getTableColumns(placeholderMember);
+
+export const reportReason = pgEnum("report_reason", [
+  "unsportsmanlike",
+  "false_reporting",
+  "harassment",
+  "spam",
+  "other",
+]);
+
+export const reportStatus = pgEnum("report_status", ["pending", "resolved"]);
+
+export const moderationActionType = pgEnum("moderation_action_type", [
+  "dismissed",
+  "warned",
+  "suspended",
+  "removed",
+  "suspension_lifted",
+]);
+
+export const report = pgTable(
+  "report",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    reporterId: text("reporter_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    reportedUserId: text("reported_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    reason: reportReason("reason").notNull(),
+    description: text("description").notNull(),
+    evidence: text("evidence"),
+    status: reportStatus("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("report_league_idx").on(table.leagueId),
+    index("report_reported_user_idx").on(table.reportedUserId),
+    index("report_reporter_idx").on(table.reporterId),
+    index("report_status_idx").on(table.status),
+  ],
+);
+
+export type Report = InferSelectModel<typeof report>;
+export type NewReport = InferInsertModel<typeof report>;
+
+export const moderationAction = pgTable(
+  "moderation_action",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    reportId: text("report_id").references(() => report.id, {
+      onDelete: "cascade",
+    }),
+    moderatorId: text("moderator_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "set null" }),
+    targetUserId: text("target_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    action: moderationActionType("action").notNull(),
+    reason: text("reason").notNull(),
+    suspendedUntil: timestamp("suspended_until"),
+    acknowledgedAt: timestamp("acknowledged_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("moderation_action_report_idx").on(table.reportId),
+    index("moderation_action_target_idx").on(table.targetUserId),
+    index("moderation_action_league_idx").on(table.leagueId),
+  ],
+);
+
+export type ModerationAction = InferSelectModel<typeof moderationAction>;
+export type NewModerationAction = InferInsertModel<typeof moderationAction>;
+
+export const reportRelations = relations(report, ({ one, many }) => ({
+  reporter: one(user, {
+    fields: [report.reporterId],
+    references: [user.id],
+    relationName: "reportedBy",
+  }),
+  reportedUser: one(user, {
+    fields: [report.reportedUserId],
+    references: [user.id],
+    relationName: "reportsAgainst",
+  }),
+  league: one(league, {
+    fields: [report.leagueId],
+    references: [league.id],
+  }),
+  moderationActions: many(moderationAction),
+}));
+
+export const moderationActionRelations = relations(
+  moderationAction,
+  ({ one }) => ({
+    report: one(report, {
+      fields: [moderationAction.reportId],
+      references: [report.id],
+    }),
+    moderator: one(user, {
+      fields: [moderationAction.moderatorId],
+      references: [user.id],
+      relationName: "moderatedBy",
+    }),
+    targetUser: one(user, {
+      fields: [moderationAction.targetUserId],
+      references: [user.id],
+      relationName: "moderationActionsAgainst",
+    }),
+    league: one(league, {
+      fields: [moderationAction.leagueId],
+      references: [league.id],
+    }),
+  }),
+);
+
+export const reportColumns = getTableColumns(report);
+export const moderationActionColumns = getTableColumns(moderationAction);

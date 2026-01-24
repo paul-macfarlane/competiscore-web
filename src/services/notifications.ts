@@ -1,3 +1,5 @@
+import { getUnacknowledgedModerationActions } from "@/db/moderation-actions";
+import { ModerationActionType } from "@/lib/constants";
 import { Notification, NotificationType } from "@/lib/notifications";
 
 import { getUserPendingInvitations } from "./invitations";
@@ -25,6 +27,24 @@ export async function getNotifications(
         },
       });
     }
+  }
+
+  const moderationActions = await getUnacknowledgedModerationActions(userId);
+  for (const action of moderationActions) {
+    notifications.push({
+      type: NotificationType.MODERATION_ACTION,
+      id: `moderation_${action.id}`,
+      createdAt: action.createdAt,
+      data: {
+        actionId: action.id,
+        leagueId: action.leagueId,
+        leagueName: action.league.name,
+        leagueLogo: action.league.logo,
+        actionType: action.action as ModerationActionType,
+        reason: action.reason,
+        suspendedUntil: action.suspendedUntil,
+      },
+    });
   }
 
   // Future: Add other notification types here

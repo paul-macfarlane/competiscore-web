@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
 import {
@@ -233,4 +233,75 @@ export async function getLeagueMemberWithUser(
     .limit(1);
 
   return results[0];
+}
+
+export async function suspendMember(
+  userId: string,
+  leagueId: string,
+  suspendedUntil: Date,
+  dbOrTx: DBOrTx = db,
+): Promise<LeagueMember | undefined> {
+  const result = await dbOrTx
+    .update(leagueMember)
+    .set({ suspendedUntil })
+    .where(
+      and(eq(leagueMember.userId, userId), eq(leagueMember.leagueId, leagueId)),
+    )
+    .returning();
+  return result[0];
+}
+
+export async function unsuspendMember(
+  userId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<LeagueMember | undefined> {
+  const result = await dbOrTx
+    .update(leagueMember)
+    .set({ suspendedUntil: null })
+    .where(
+      and(eq(leagueMember.userId, userId), eq(leagueMember.leagueId, leagueId)),
+    )
+    .returning();
+  return result[0];
+}
+
+export async function isMemberSuspended(
+  userId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const member = await getLeagueMember(userId, leagueId, dbOrTx);
+  if (!member || !member.suspendedUntil) {
+    return false;
+  }
+  return member.suspendedUntil > new Date();
+}
+
+export async function getSuspendedMembers(
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<LeagueMemberWithUser[]> {
+  const now = new Date();
+  const results = await dbOrTx
+    .select({
+      ...leagueMemberColumns,
+      user: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        image: user.image,
+      },
+    })
+    .from(leagueMember)
+    .innerJoin(user, eq(leagueMember.userId, user.id))
+    .where(
+      and(
+        eq(leagueMember.leagueId, leagueId),
+        gt(leagueMember.suspendedUntil, now),
+      ),
+    )
+    .orderBy(leagueMember.suspendedUntil);
+
+  return results;
 }
