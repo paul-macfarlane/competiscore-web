@@ -30,6 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
 
 import { checkUsernameAction, updateProfileAction } from "./actions";
 
@@ -42,7 +43,6 @@ type AsyncCheckResult = { username: string; available: boolean } | null;
 export function ProfileForm({ user }: ProfileFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [success, setSuccess] = useState(false);
   const [asyncCheckResult, setAsyncCheckResult] =
     useState<AsyncCheckResult>(null);
 
@@ -110,8 +110,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
   }, [normalizedUsername, needsAsyncCheck, asyncCheckResult]);
 
   const onSubmit = (values: ProfileFormValues) => {
-    setSuccess(false);
-
     startTransition(async () => {
       const result = await updateProfileAction({
         ...values,
@@ -124,10 +122,10 @@ export function ProfileForm({ user }: ProfileFormProps) {
             form.setError(field as keyof ProfileFormValues, { message });
           });
         } else {
-          form.setError("root", { message: result.error });
+          toast.error(result.error);
         }
       } else {
-        setSuccess(true);
+        toast.success("Profile updated successfully!");
         router.refresh();
       }
     });
@@ -244,24 +242,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
             </FormItem>
           )}
         />
-
-        <div className="min-h-[52px]">
-          {form.formState.errors.root && (
-            <div className="bg-destructive/10 rounded-md p-3">
-              <p className="text-destructive text-sm">
-                {form.formState.errors.root.message}
-              </p>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-success/10 rounded-md p-3">
-              <p className="text-success text-sm">
-                Profile updated successfully!
-              </p>
-            </div>
-          )}
-        </div>
 
         <Button
           type="submit"

@@ -1,23 +1,36 @@
 import { AtLimitMessage } from "@/components/at-limit-message";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
 import { getUserLeagueLimitInfo } from "@/lib/server/limits";
 import { ArrowLeft } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { CreateLeagueForm } from "./create-league-form";
 
-export default async function NewLeaguePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    redirect("/");
-  }
+function CreateLeagueSkeleton() {
+  return (
+    <div className="mx-auto max-w-md space-y-4 md:space-y-6">
+      <div className="text-center">
+        <Skeleton className="mx-auto h-8 w-48" />
+        <Skeleton className="mx-auto mt-2 h-5 w-64" />
+      </div>
+      <div className="space-y-4 rounded-lg border p-4 md:p-6">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+  );
+}
 
-  const limitInfo = await getUserLeagueLimitInfo(session.user.id);
+async function CreateLeagueContent({ userId }: { userId: string }) {
+  const limitInfo = await getUserLeagueLimitInfo(userId);
 
   if (limitInfo.isAtLimit) {
     return (
@@ -49,5 +62,20 @@ export default async function NewLeaguePage() {
       </div>
       <CreateLeagueForm />
     </div>
+  );
+}
+
+export default async function NewLeaguePage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/");
+  }
+
+  return (
+    <Suspense fallback={<CreateLeagueSkeleton />}>
+      <CreateLeagueContent userId={session.user.id} />
+    </Suspense>
   );
 }

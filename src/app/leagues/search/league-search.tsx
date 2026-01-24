@@ -14,6 +14,7 @@ import { Check, Search, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { joinLeagueAction, searchLeaguesAction } from "../actions";
 
@@ -141,6 +142,7 @@ function SearchResultCard({
       if (result.error) {
         setError(result.error);
       } else {
+        toast.success("Successfully joined league!");
         onJoined();
       }
     });

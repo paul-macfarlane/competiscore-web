@@ -26,7 +26,7 @@ export const reportStatusSchema = z.enum([
 
 export const reportDescriptionSchema = z
   .string()
-  .min(10, "Description must be at least 10 characters")
+  .min(10, "Please provide a detailed description (at least 10 characters)")
   .max(
     REPORT_DESCRIPTION_MAX_LENGTH,
     `Description must be at most ${REPORT_DESCRIPTION_MAX_LENGTH} characters`,
@@ -71,7 +71,7 @@ export const suspensionDaysSchema = z
   .min(1, "Suspension must be at least 1 day")
   .max(
     MAX_SUSPENSION_DAYS,
-    `Suspension cannot exceed ${MAX_SUSPENSION_DAYS} days`,
+    `Suspension cannot exceed ${MAX_SUSPENSION_DAYS} days (temporary suspension only)`,
   );
 
 const moderationActionBaseSchema = z.object({

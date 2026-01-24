@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/bottom-nav";
 import { Header } from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/toaster";
 import { auth } from "@/lib/server/auth";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -19,8 +20,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Competiscore",
+  title: {
+    default: "Competiscore",
+    template: "%s | Competiscore",
+  },
   description: "Track your competitions with friends",
+  keywords: ["competition", "leaderboard", "gaming", "sports", "tracking"],
+  authors: [{ name: "Competiscore" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://competiscore.com",
+    title: "Competiscore",
+    description: "Track your competitions with friends",
+    siteName: "Competiscore",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Competiscore",
+    description: "Track your competitions with friends",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default async function RootLayout({
@@ -50,6 +73,7 @@ export default async function RootLayout({
             {children}
           </main>
           {session && <BottomNav />}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

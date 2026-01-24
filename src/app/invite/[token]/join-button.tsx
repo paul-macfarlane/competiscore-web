@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { joinViaInviteLinkAction } from "./actions";
 
@@ -24,6 +25,7 @@ export function JoinButton({ token, leagueId }: JoinButtonProps) {
       if (result.error) {
         setError(result.error);
       } else if (result.data) {
+        toast.success("Successfully joined league!");
         router.push(`/leagues/${leagueId}`);
       }
     });

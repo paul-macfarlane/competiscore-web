@@ -45,7 +45,7 @@ export const usernameSchema = z
   )
   .regex(
     /^[a-zA-Z0-9_-]+$/,
-    "Username can only contain letters, numbers, underscores, and hyphens",
+    "Username can only contain letters, numbers, underscores, and hyphens (e.g., john_doe, player-123)",
   );
 
 export const nameSchema = z

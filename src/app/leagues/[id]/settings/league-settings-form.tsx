@@ -29,8 +29,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, ImageIcon, Lock } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { updateLeagueAction } from "./actions";
 
@@ -49,7 +50,6 @@ interface LeagueSettingsFormProps {
 export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [success, setSuccess] = useState(false);
 
   const form = useForm<CreateLeagueFormValues>({
     resolver: zodResolver(createLeagueFormSchema),
@@ -63,8 +63,6 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
   });
 
   const onSubmit = (values: CreateLeagueFormValues) => {
-    setSuccess(false);
-
     startTransition(async () => {
       const result = await updateLeagueAction(league.id, values);
 
@@ -74,10 +72,10 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
             form.setError(field as keyof CreateLeagueFormValues, { message });
           });
         } else {
-          form.setError("root", { message: result.error });
+          toast.error(result.error);
         }
       } else {
-        setSuccess(true);
+        toast.success("Settings saved successfully!");
         router.refresh();
       }
     });
@@ -223,20 +221,6 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
             </FormItem>
           )}
         />
-
-        {form.formState.errors.root && (
-          <div className="bg-destructive/10 rounded-md p-3">
-            <p className="text-destructive text-sm">
-              {form.formState.errors.root.message}
-            </p>
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-success/10 rounded-md p-3">
-            <p className="text-success text-sm">Settings saved successfully!</p>
-          </div>
-        )}
 
         <Button
           type="submit"

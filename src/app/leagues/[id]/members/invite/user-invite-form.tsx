@@ -17,6 +17,7 @@ import { LeagueMemberRole } from "@/lib/shared/constants";
 import { ROLE_LABELS } from "@/lib/shared/roles";
 import { Check, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { inviteUserAction, searchUsersAction } from "./actions";
 
@@ -38,7 +39,6 @@ export function UserInviteForm({
   const [isSearching, setIsSearching] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const searchUsers = useCallback(
     async (searchQuery: string) => {
@@ -77,20 +77,18 @@ export function UserInviteForm({
   const handleClearSelection = () => {
     setSelectedUser(null);
     setError(null);
-    setSuccess(null);
   };
 
   const handleInvite = () => {
     if (!selectedUser) return;
 
     setError(null);
-    setSuccess(null);
     startTransition(async () => {
       const result = await inviteUserAction(leagueId, selectedUser.id, role);
       if (result.error) {
         setError(result.error);
       } else {
-        setSuccess(`Invitation sent to ${selectedUser.name}`);
+        toast.success(`Invitation sent to ${selectedUser.name}`);
         setSelectedUser(null);
       }
     });
@@ -101,11 +99,6 @@ export function UserInviteForm({
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-md bg-success/10 p-3 text-sm text-success">
-          {success}
         </div>
       )}
 

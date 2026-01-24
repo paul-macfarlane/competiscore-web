@@ -23,6 +23,7 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,6 +34,39 @@ import { LeaveLeagueButton } from "./leave-league-button";
 
 interface LeagueDashboardPageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: LeagueDashboardPageProps): Promise<Metadata> {
+  const rawParams = await params;
+  const parsed = idParamSchema.safeParse(rawParams);
+  if (!parsed.success) {
+    return {
+      title: "League Not Found",
+    };
+  }
+
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    return {
+      title: "League",
+    };
+  }
+
+  const result = await getLeagueWithRole(parsed.data.id, session.user.id);
+  if (result.error || !result.data) {
+    return {
+      title: "League Not Found",
+    };
+  }
+
+  return {
+    title: result.data.name,
+    description: result.data.description,
+  };
 }
 
 export default async function LeagueDashboardPage({

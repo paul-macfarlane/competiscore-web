@@ -25,6 +25,7 @@ import { Gavel, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { takeModerationActionAction } from "../actions";
 
@@ -80,6 +81,7 @@ export function ModerationActionForm({
       if (result.error) {
         setError(result.error);
       } else {
+        toast.success("Moderation action taken successfully");
         router.push(`/leagues/${leagueId}/moderation`);
       }
     });

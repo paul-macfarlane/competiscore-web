@@ -91,3 +91,19 @@ We use ShadCN's Component Library for styling.
 - consult the [ShadCN Component Library](https://ui.shadcn.com/docs/components) for the available components.
 - Arbitrary colors should not be used. Instead, use the theme colors defined in the `globals.css` file. If a new color is needed, add it to the `globals.css` file.
 - The entire app should be mobile-first, and should be responsive to different screen sizes.
+
+## UX/UI Feedback Standards
+
+- Use `sonner` for toast notifications for success messages and root-level errors.
+- Use inline form field errors for specific validation issues.
+- Use `loading.tsx` and Suspense boundaries for loading states.
+
+## Error Handling Standards
+
+- Use `error.tsx` for route-level error boundaries.
+- Server actions should return `ServiceResult<T>` and catch unexpected errors.
+
+## SEO Standards
+
+- All pages should have appropriate metadata (title, description).
+- Dynamic pages should use `generateMetadata`.

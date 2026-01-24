@@ -12,7 +12,7 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 | 4. Member Management            | ✅ Complete    | 100%     |
 | 5. Role-Based Permissions       | ✅ Complete    | 100%     |
 | 6. Moderation System            | ✅ Complete    | 100%     |
-| 7. Usage Limits                 | ⏳ Not Started | 0%       |
+| 7. Usage Limits                 | 🚧 In Progress | 0%       |
 
 ---
 
@@ -264,9 +264,10 @@ This document tracks all tasks for Phase 1 of Competiscore development based on 
 - [ ] Error boundary components
 - [ ] Toast notifications for success/error feedback
 - [ ] Comprehensive form validation messages
-- [ ] Accessibility audit (ARIA labels, keyboard navigation)
+- [ ] Accessibility audit (ARIA labels, keyboard navigation) (deferred to future phase)
 - [ ] SEO meta tags for public pages
-- [ ] Rate limiting on sensitive operations
+- [ ] Favicon for apple touch icon for app
+- [ ] Rate limiting on sensitive operations (deferred to future phase)
 
 ---
 

@@ -30,6 +30,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { createLeagueAction } from "../actions";
 
@@ -66,9 +67,10 @@ export function CreateLeagueForm() {
             form.setError(field as keyof CreateLeagueFormValues, { message });
           });
         } else {
-          form.setError("root", { message: result.error });
+          toast.error(result.error);
         }
       } else if (result.data) {
+        toast.success("League created successfully!");
         router.push(`/leagues/${result.data.id}`);
       }
     });
@@ -214,14 +216,6 @@ export function CreateLeagueForm() {
             </FormItem>
           )}
         />
-
-        {form.formState.errors.root && (
-          <div className="bg-destructive/10 rounded-md p-3">
-            <p className="text-destructive text-sm">
-              {form.formState.errors.root.message}
-            </p>
-          </div>
-        )}
 
         <Button
           type="submit"

@@ -24,6 +24,7 @@ import { Flag, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { createReportAction } from "./actions";
@@ -75,6 +76,7 @@ export function ReportForm({ leagueId, member }: ReportFormProps) {
       if (result.error) {
         setError(result.error);
       } else {
+        toast.success("Report submitted successfully");
         router.push(`/leagues/${leagueId}/members`);
       }
     });

@@ -8,6 +8,7 @@ import { Check, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { acceptInvitationAction, declineInvitationAction } from "./actions";
 
@@ -30,6 +31,7 @@ export function InvitationsList({ invitations }: InvitationsListProps) {
       if (result.error) {
         setError(result.error);
       } else {
+        toast.success("Invitation accepted!", {});
         router.push(`/leagues/${leagueId}`);
       }
     });
@@ -43,6 +45,8 @@ export function InvitationsList({ invitations }: InvitationsListProps) {
       setProcessingId(null);
       if (result.error) {
         setError(result.error);
+      } else {
+        toast.success("Invitation declined");
       }
     });
   };

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /invitations
+Disallow: /leagues/*/members/
+Disallow: /leagues/*/moderation/
+Disallow: /leagues/*/settings/
+Disallow: /leagues/*/my-reports
+Disallow: /leagues/*/my-warnings
+Disallow: /leagues/archived/
