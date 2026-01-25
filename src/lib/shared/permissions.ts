@@ -1,4 +1,4 @@
-import { LeagueMemberRole } from "./constants";
+import { LeagueMemberRole, TeamMemberRole } from "./constants";
 
 export const LeagueAction = {
   VIEW_MEMBERS: "view_members",
@@ -18,6 +18,8 @@ export const LeagueAction = {
   REPORT_MEMBER: "report_member",
   VIEW_REPORTS: "view_reports",
   MODERATE_MEMBERS: "moderate_members",
+  CREATE_TEAMS: "create_teams",
+  MANAGE_TEAMS: "manage_teams",
 } as const;
 
 export type LeagueAction = (typeof LeagueAction)[keyof typeof LeagueAction];
@@ -27,6 +29,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.VIEW_MEMBERS,
     LeagueAction.PLAY_GAMES,
     LeagueAction.REPORT_MEMBER,
+    LeagueAction.CREATE_TEAMS,
   ]),
   [LeagueMemberRole.MANAGER]: new Set([
     LeagueAction.VIEW_MEMBERS,
@@ -40,6 +43,8 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.REPORT_MEMBER,
     LeagueAction.VIEW_REPORTS,
     LeagueAction.MODERATE_MEMBERS,
+    LeagueAction.CREATE_TEAMS,
+    LeagueAction.MANAGE_TEAMS,
   ]),
   [LeagueMemberRole.EXECUTIVE]: new Set([
     LeagueAction.VIEW_MEMBERS,
@@ -59,6 +64,8 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.REPORT_MEMBER,
     LeagueAction.VIEW_REPORTS,
     LeagueAction.MODERATE_MEMBERS,
+    LeagueAction.CREATE_TEAMS,
+    LeagueAction.MANAGE_TEAMS,
   ]),
 };
 
@@ -81,6 +88,7 @@ export const LeaguePage = {
   TOURNAMENTS: "tournaments",
   SEASONS: "seasons",
   MODERATION: "moderation",
+  TEAMS: "teams",
 } as const;
 
 export type LeaguePage = (typeof LeaguePage)[keyof typeof LeaguePage];
@@ -116,6 +124,11 @@ const PAGE_PERMISSIONS: Record<LeaguePage, Set<LeagueMemberRole>> = {
     LeagueMemberRole.MANAGER,
     LeagueMemberRole.EXECUTIVE,
   ]),
+  [LeaguePage.TEAMS]: new Set([
+    LeagueMemberRole.MEMBER,
+    LeagueMemberRole.MANAGER,
+    LeagueMemberRole.EXECUTIVE,
+  ]),
 };
 
 export function canAccessPage(
@@ -123,4 +136,44 @@ export function canAccessPage(
   page: LeaguePage,
 ): boolean {
   return PAGE_PERMISSIONS[page]?.has(role) ?? false;
+}
+
+// Team-level permissions
+export const TeamAction = {
+  VIEW_TEAM: "view_team",
+  LEAVE_TEAM: "leave_team",
+  EDIT_TEAM: "edit_team",
+  ADD_MEMBERS: "add_members",
+  REMOVE_MEMBERS: "remove_members",
+  MANAGE_ROLES: "manage_roles",
+  ARCHIVE_TEAM: "archive_team",
+  UNARCHIVE_TEAM: "unarchive_team",
+  DELETE_TEAM: "delete_team",
+} as const;
+
+export type TeamAction = (typeof TeamAction)[keyof typeof TeamAction];
+
+const TEAM_PERMISSIONS: Record<TeamMemberRole, Set<TeamAction>> = {
+  [TeamMemberRole.MEMBER]: new Set([
+    TeamAction.VIEW_TEAM,
+    TeamAction.LEAVE_TEAM,
+  ]),
+  [TeamMemberRole.MANAGER]: new Set([
+    TeamAction.VIEW_TEAM,
+    TeamAction.LEAVE_TEAM,
+    TeamAction.EDIT_TEAM,
+    TeamAction.ADD_MEMBERS,
+    TeamAction.REMOVE_MEMBERS,
+    TeamAction.MANAGE_ROLES,
+    TeamAction.ARCHIVE_TEAM,
+    TeamAction.UNARCHIVE_TEAM,
+    TeamAction.DELETE_TEAM,
+  ]),
+};
+
+export function canPerformTeamAction(
+  role: TeamMemberRole,
+  action: TeamAction,
+): boolean {
+  return TEAM_PERMISSIONS[role]?.has(action) ?? false;
 }

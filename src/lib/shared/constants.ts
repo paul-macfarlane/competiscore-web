@@ -29,6 +29,7 @@ export const ICON_PATHS = {
   AVATARS: "/avatars",
   LEAGUE_LOGOS: "/league-logos",
   GAME_TYPE_ICONS: "/game-type-icons",
+  TEAM_ICONS: "/team-avatars",
 } as const;
 
 export const LEAGUE_LOGOS = [
@@ -134,6 +135,82 @@ export const GAME_TYPE_ICONS = [
   "robot",
   "medal",
 ] as const;
+
+export const TEAM_ICONS = [
+  "8-ball",
+  "cards",
+  "chess-knight",
+  "controller",
+  "crown",
+  "dice",
+  "flag",
+  "gem",
+  "ghost",
+  "joystick",
+  "pacman",
+  "paddle",
+  "potion",
+  "robot",
+  "rocket",
+  "shield",
+  "skull",
+  "sword",
+  "target",
+  "trophy",
+] as const;
+
+export const USER_AVATARS = [
+  "8-ball",
+  "cards",
+  "chess-knight",
+  "controller",
+  "crown",
+  "dice",
+  "flag",
+  "gem",
+  "ghost",
+  "joystick",
+  "pacman",
+  "paddle",
+  "potion",
+  "robot",
+  "rocket",
+  "shield",
+  "skull",
+  "sword",
+  "target",
+  "trophy",
+] as const;
+
+export const TeamMemberRole = {
+  MEMBER: "member",
+  MANAGER: "manager",
+} as const;
+
+export type TeamMemberRole =
+  (typeof TeamMemberRole)[keyof typeof TeamMemberRole];
+
+export type IconOption = {
+  name: string;
+  src: string;
+};
+
+function formatIconName(icon: string): string {
+  return icon
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export const TEAM_ICON_OPTIONS: IconOption[] = TEAM_ICONS.map((icon) => ({
+  name: formatIconName(icon),
+  src: `${ICON_PATHS.TEAM_ICONS}/${icon}.svg`,
+}));
+
+export const USER_AVATAR_OPTIONS: IconOption[] = USER_AVATARS.map((icon) => ({
+  name: formatIconName(icon),
+  src: `${ICON_PATHS.AVATARS}/${icon}.svg`,
+}));
 
 export const ScoringType = {
   WIN_LOSS: "win_loss",

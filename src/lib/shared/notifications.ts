@@ -1,7 +1,12 @@
-import { LeagueMemberRole, ModerationActionType } from "./constants";
+import {
+  LeagueMemberRole,
+  ModerationActionType,
+  TeamMemberRole,
+} from "./constants";
 
 export const NotificationType = {
   LEAGUE_INVITATION: "league_invitation",
+  TEAM_INVITATION: "team_invitation",
   MODERATION_ACTION: "moderation_action",
   // Future: CHALLENGE: "challenge",
   // Future: MATCH_RESULT: "match_result",
@@ -36,6 +41,20 @@ export type LeagueInvitationNotification = BaseNotification & {
   };
 };
 
+export type TeamInvitationNotification = BaseNotification & {
+  type: typeof NotificationType.TEAM_INVITATION;
+  data: {
+    invitationId: string;
+    teamId: string;
+    teamName: string;
+    teamLogo: string | null;
+    leagueId: string;
+    leagueName: string;
+    role: TeamMemberRole;
+    inviterName: string;
+  };
+};
+
 export type ModerationActionNotification = BaseNotification & {
   type: typeof NotificationType.MODERATION_ACTION;
   data: {
@@ -62,5 +81,6 @@ export type ModerationActionNotification = BaseNotification & {
 
 export type Notification =
   | LeagueInvitationNotification
+  | TeamInvitationNotification
   | ModerationActionNotification;
 // Future: | ChallengeNotification | MatchResultNotification

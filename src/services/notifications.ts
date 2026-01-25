@@ -4,6 +4,7 @@ import { Notification, NotificationType } from "@/lib/shared/notifications";
 
 import { getUserPendingInvitations } from "./invitations";
 import { ServiceResult } from "./shared";
+import { getUserPendingTeamInvitations } from "./team-invitations";
 
 export async function getNotifications(
   userId: string,
@@ -22,6 +23,27 @@ export async function getNotifications(
           leagueId: inv.league.id,
           leagueName: inv.league.name,
           leagueLogo: inv.league.logo,
+          role: inv.role,
+          inviterName: inv.inviter.name,
+        },
+      });
+    }
+  }
+
+  const teamInvitationsResult = await getUserPendingTeamInvitations(userId);
+  if (teamInvitationsResult.data) {
+    for (const inv of teamInvitationsResult.data) {
+      notifications.push({
+        type: NotificationType.TEAM_INVITATION,
+        id: `team_invitation_${inv.id}`,
+        createdAt: inv.createdAt,
+        data: {
+          invitationId: inv.id,
+          teamId: inv.team.id,
+          teamName: inv.team.name,
+          teamLogo: inv.team.logo,
+          leagueId: inv.team.league.id,
+          leagueName: inv.team.league.name,
           role: inv.role,
           inviterName: inv.inviter.name,
         },

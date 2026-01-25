@@ -21,8 +21,9 @@ import {
   Notification,
   NotificationAction,
   NotificationType,
+  TeamInvitationNotification,
 } from "@/lib/shared/notifications";
-import { ROLE_LABELS } from "@/lib/shared/roles";
+import { ROLE_LABELS, TEAM_ROLE_LABELS } from "@/lib/shared/roles";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
@@ -145,6 +146,13 @@ function NotificationItem({ notification, onAction }: NotificationItemProps) {
           onAction={onAction}
         />
       );
+    case NotificationType.TEAM_INVITATION:
+      return (
+        <TeamInvitationNotificationItem
+          notification={notification}
+          onAction={onAction}
+        />
+      );
     case NotificationType.MODERATION_ACTION:
       return (
         <ModerationNotificationItem
@@ -226,6 +234,114 @@ function InvitationNotificationItem({
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               {ROLE_LABELS[notification.data.role]}
+            </Badge>
+          </div>
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleDecline}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <X className="mr-1 h-3 w-3" />
+              )}
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleAccept}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Check className="mr-1 h-3 w-3" />
+              )}
+              Accept
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface TeamInvitationNotificationItemProps {
+  notification: TeamInvitationNotification;
+  onAction: (
+    notification: Notification,
+    action: NotificationAction,
+  ) => Promise<{ error?: string }>;
+}
+
+function TeamInvitationNotificationItem({
+  notification,
+  onAction,
+}: TeamInvitationNotificationItemProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAccept = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onAction(notification, NotificationAction.ACCEPT);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        router.push(
+          `/leagues/${notification.data.leagueId}/teams/${notification.data.teamId}`,
+        );
+      }
+    });
+  };
+
+  const handleDecline = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onAction(notification, NotificationAction.DECLINE);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  return (
+    <div className="p-3">
+      <div className="flex items-start gap-3">
+        {notification.data.teamLogo ? (
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            <Image
+              src={notification.data.teamLogo}
+              alt={notification.data.teamName}
+              fill
+              className="object-cover p-0.5"
+            />
+          </div>
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted">
+            <span className="text-sm font-bold text-muted-foreground">
+              {notification.data.teamName[0]}
+            </span>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">
+            <span className="font-medium">{notification.data.inviterName}</span>
+            {" invited you to join team "}
+            <span className="font-medium">{notification.data.teamName}</span>
+            {" in "}
+            <span className="font-medium">{notification.data.leagueName}</span>
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <Badge variant="secondary" className="text-xs">
+              {TEAM_ROLE_LABELS[notification.data.role]}
             </Badge>
           </div>
           {error && <p className="mt-1 text-xs text-destructive">{error}</p>}

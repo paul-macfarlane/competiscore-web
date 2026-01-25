@@ -1,4 +1,4 @@
-import { LeagueMemberRole } from "./constants";
+import { LeagueMemberRole, TeamMemberRole } from "./constants";
 
 export const ROLE_HIERARCHY: Record<LeagueMemberRole, number> = {
   [LeagueMemberRole.MEMBER]: 1,
@@ -19,6 +19,11 @@ export const ROLE_BADGE_VARIANTS: Record<
   [LeagueMemberRole.MEMBER]: "secondary",
   [LeagueMemberRole.MANAGER]: "default",
   [LeagueMemberRole.EXECUTIVE]: "default",
+};
+
+export const TEAM_ROLE_LABELS: Record<TeamMemberRole, string> = {
+  [TeamMemberRole.MEMBER]: "Member",
+  [TeamMemberRole.MANAGER]: "Manager",
 };
 
 export const ALL_ROLES: LeagueMemberRole[] = [

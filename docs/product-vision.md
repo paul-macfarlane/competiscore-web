@@ -76,7 +76,41 @@ The app supports two types of teams:
 
 **Registered Teams:** Persistent teams with names, logos, and their own ELO ratings. Players create teams and invite others (placeholder members can be added without invitation). Players can be on multiple registered teams. Team composition can change over time, but team ELO persists regardless of roster changes.
 
-**Ad-hoc Teams:** Ephemeral teams formed at match time for one-off competitions. These appear in match history (e.g., “Player A & Player B vs Player C & Player D”) but have no persistent identity, page, or ELO.
+**Team Member Roles:**
+
+Each registered team has two member roles:
+
+| Permission          | Member | Manager |
+| ------------------- | ------ | ------- |
+| View team           | ✓      | ✓       |
+| Leave team          | ✓      | ✓       |
+| Edit team details   |        | ✓       |
+| Invite members      |        | ✓       |
+| Add placeholders    |        | ✓       |
+| Remove members      |        | ✓       |
+| Manage member roles |        | ✓       |
+| Archive/Unarchive   |        | ✓       |
+| Delete team         |        | ✓       |
+
+The team creator is automatically assigned the Manager role. League Managers and Executives can also manage any team as a fallback (league-level permission overrides team-level).
+
+**Team Invitations:**
+
+Team managers can invite users to join their team via two methods:
+
+**In-App Invitation:** Search for existing league members and send them a team invitation directly. The invitee will see the invitation in their notifications and can accept or reject it. Only current league members can be invited via in-app invitation.
+
+**Invite Link:** Generate a shareable team invite link that can be sent via any channel. The link handles three scenarios:
+
+- **League member:** Shows the team details and allows them to join immediately
+- **Non-league member (authenticated):** Prompts to join both the league AND the team. User is informed they will become a member of both.
+- **Unauthenticated user:** Prompts sign-in/sign-up flow, then handles league + team joining as above
+
+Team invite links can be configured to expire after a set time or number of uses. When joining via a team invite link, the user is added to the league (if not already a member) with the default "Member" role before being added to the team.
+
+Note: Placeholder members can be added directly to teams without invitation (since they represent people who haven't signed up yet).
+
+**Ad-hoc Teams:** Ephemeral teams formed at match time for one-off competitions. These appear in match history (e.g., "Player A & Player B vs Player C & Player D") but have no persistent identity, page, or ELO.
 
 ---
 

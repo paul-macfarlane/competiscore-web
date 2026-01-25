@@ -7,7 +7,7 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 | Category                    | Status         | Progress |
 | --------------------------- | -------------- | -------- |
 | 1. Game Types               | ✅ Complete    | 100%     |
-| 2. Team Management          | ⏳ Not Started | 0%       |
+| 2. Team Management          | ✅ Complete    | 100%     |
 | 3. Match Recording          | ⏳ Not Started | 0%       |
 | 4. ELO & Rankings           | ⏳ Not Started | 0%       |
 | 5. Standings & Leaderboards | ⏳ Not Started | 0%       |
@@ -51,26 +51,45 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 
 ## 2. Team Management
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 ### Database Schema
 
-- [ ] Team table (id, leagueId, name, logo, createdAt)
-- [ ] Team member table (teamId, userId/placeholderId, joinedAt)
+- [x] Team table (id, leagueId, name, logo, createdAt)
+- [x] Team member table (teamId, userId/placeholderId, joinedAt, role)
+- [x] Team invitation table (id, teamId, inviterId, inviteeId, status, expiresAt, token)
 
 ### Team Operations
 
-- [ ] Create team form
-- [ ] Add/Remove members (real users or placeholders)
-- [ ] Edit team settings
-- [ ] Delete team
-- [ ] View team profile
+- [x] Create team form
+- [x] Add/Remove members (real users or placeholders)
+- [x] Edit team settings
+- [x] Archive/Unarchive team
+- [x] Delete team
+- [x] View team profile
+- [x] RBAC: Team managers can manage team, league managers/executives can manage any team
+
+### Team Invitations
+
+- [x] In-app invitation: Search for league members and send team invitation
+- [x] Notification for team invitation (accept/reject)
+- [x] Invite link generation (configurable expiry)
+- [x] Invite link handling:
+  - [x] If user is league member: Prompt to join team
+  - [x] If user is not league member: Prompt to join both league AND team
+  - [x] If user is not authenticated: Sign-in/sign-up flow, then handle league + team join
+- [x] Cancel pending invitations
+- [x] View pending invitations on team settings
+- [x] Unit tests for team invitation service
+- [x] Unit tests for placeholder member service
 
 ### UI/UX
 
-- [ ] Teams list view
-- [ ] Team detail page
-- [ ] Team member management UI
+- [x] Teams list view
+- [x] Team detail page
+- [x] Team member management UI
+- [x] Team invitation UI (search members, send invites)
+- [x] Pending invitations list
 
 ---
 

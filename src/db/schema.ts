@@ -6,6 +6,7 @@ import {
   ModerationActionType,
   ReportReason,
   ReportStatus,
+  TeamMemberRole,
 } from "@/lib/shared/constants";
 import { LimitType } from "@/services/constants";
 import {
@@ -258,6 +259,7 @@ export const leagueRelations = relations(league, ({ many }) => ({
   invitations: many(leagueInvitation),
   placeholderMembers: many(placeholderMember),
   gameTypes: many(gameType),
+  teams: many(team),
 }));
 
 export const leagueMemberRelations = relations(leagueMember, ({ one }) => ({
@@ -533,3 +535,146 @@ export const gameTypeRelations = relations(gameType, ({ one }) => ({
 }));
 
 export const gameTypeColumns = getTableColumns(gameType);
+
+export const team = pgTable(
+  "team",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    logo: text("logo"),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("team_league_idx").on(table.leagueId),
+    index("team_name_league_idx").on(table.leagueId, table.name),
+    index("team_created_by_idx").on(table.createdById),
+  ],
+);
+
+export type Team = InferSelectModel<typeof team>;
+export type NewTeam = InferInsertModel<typeof team>;
+
+export const teamMemberRole = pgEnum("team_member_role", [
+  TeamMemberRole.MEMBER,
+  TeamMemberRole.MANAGER,
+]);
+
+export const teamMember = pgTable(
+  "team_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => team.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    placeholderMemberId: text("placeholder_member_id").references(
+      () => placeholderMember.id,
+      { onDelete: "cascade" },
+    ),
+    role: teamMemberRole("role").notNull().default("member"),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+    leftAt: timestamp("left_at"),
+  },
+  (table) => [
+    index("team_member_team_idx").on(table.teamId),
+    index("team_member_user_idx").on(table.userId),
+    index("team_member_placeholder_idx").on(table.placeholderMemberId),
+  ],
+);
+
+export type TeamMember = InferSelectModel<typeof teamMember>;
+export type NewTeamMember = InferInsertModel<typeof teamMember>;
+
+export const teamInvitation = pgTable(
+  "team_invitation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => team.id, { onDelete: "cascade" }),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => user.id),
+    inviteeUserId: text("invitee_user_id").references(() => user.id),
+    role: teamMemberRole("role").notNull().default("member"),
+    status: invitationStatus("status").notNull().default("pending"),
+    token: text("token").unique(),
+    maxUses: integer("max_uses"),
+    useCount: integer("use_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at"),
+  },
+  (table) => [
+    index("team_invitation_team_idx").on(table.teamId),
+    index("team_invitation_invitee_idx").on(table.inviteeUserId),
+    index("team_invitation_token_idx").on(table.token),
+  ],
+);
+
+export type TeamInvitation = InferSelectModel<typeof teamInvitation>;
+export type NewTeamInvitation = InferInsertModel<typeof teamInvitation>;
+
+export const teamRelations = relations(team, ({ one, many }) => ({
+  league: one(league, {
+    fields: [team.leagueId],
+    references: [league.id],
+  }),
+  createdBy: one(user, {
+    fields: [team.createdById],
+    references: [user.id],
+  }),
+  members: many(teamMember),
+  invitations: many(teamInvitation),
+}));
+
+export const teamMemberRelations = relations(teamMember, ({ one }) => ({
+  team: one(team, {
+    fields: [teamMember.teamId],
+    references: [team.id],
+  }),
+  user: one(user, {
+    fields: [teamMember.userId],
+    references: [user.id],
+  }),
+  placeholderMember: one(placeholderMember, {
+    fields: [teamMember.placeholderMemberId],
+    references: [placeholderMember.id],
+  }),
+}));
+
+export const teamInvitationRelations = relations(teamInvitation, ({ one }) => ({
+  team: one(team, {
+    fields: [teamInvitation.teamId],
+    references: [team.id],
+  }),
+  inviter: one(user, {
+    fields: [teamInvitation.inviterId],
+    references: [user.id],
+  }),
+  invitee: one(user, {
+    fields: [teamInvitation.inviteeUserId],
+    references: [user.id],
+  }),
+}));
+
+export const teamColumns = getTableColumns(team);
+export const teamMemberColumns = getTableColumns(teamMember);
+export const teamInvitationColumns = getTableColumns(teamInvitation);

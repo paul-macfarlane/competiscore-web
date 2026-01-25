@@ -16,9 +16,17 @@ import {
   getOwnWarningCount,
   getPendingReportCount,
 } from "@/services/moderation";
+import { getLeagueTeams } from "@/services/teams";
 import { idParamSchema } from "@/validators/shared";
 import { format, formatDistanceToNow } from "date-fns";
-import { Flag, Gamepad2, Settings, Shield, Users } from "lucide-react";
+import {
+  Flag,
+  Gamepad2,
+  Settings,
+  Shield,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -213,9 +221,13 @@ async function LeagueDashboardContent({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Suspense fallback={<Skeleton className="h-32" />}>
           <GameTypesCard leagueId={leagueId} />
+        </Suspense>
+
+        <Suspense fallback={<Skeleton className="h-32" />}>
+          <TeamsCard leagueId={leagueId} userId={userId} />
         </Suspense>
 
         <Link href={`/leagues/${leagueId}/members`} className="block h-full">
@@ -305,6 +317,35 @@ async function GameTypesCard({ leagueId }: { leagueId: string }) {
             label="game types"
             showProgressBar={gameTypeLimitInfo.max !== null}
           />
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+async function TeamsCard({
+  leagueId,
+  userId,
+}: {
+  leagueId: string;
+  userId: string;
+}) {
+  const result = await getLeagueTeams(userId, leagueId);
+  const teams = result.data || [];
+  const activeTeams = teams.filter((t) => !t.isArchived);
+
+  return (
+    <Link href={`/leagues/${leagueId}/teams`} className="block h-full">
+      <Card className="hover:bg-muted hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer h-full">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Teams</CardTitle>
+          <UsersRound className="text-muted-foreground h-4 w-4" />
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="text-2xl font-bold">{activeTeams.length}</div>
+          <p className="text-muted-foreground text-xs">
+            {activeTeams.length === 1 ? "team" : "teams"} created
+          </p>
         </CardContent>
       </Card>
     </Link>

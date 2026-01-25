@@ -15,17 +15,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { User } from "@/db/schema";
+import { USER_AVATAR_OPTIONS } from "@/lib/shared/constants";
 import {
   BIO_MAX_LENGTH,
   NAME_MAX_LENGTH,
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
 } from "@/services/constants";
-import {
-  AVATARS,
-  ProfileFormValues,
-  profileFormSchema,
-} from "@/validators/users";
+import { ProfileFormValues, profileFormSchema } from "@/validators/users";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -150,7 +147,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               </Avatar>
 
               <IconSelector
-                options={AVATARS}
+                options={USER_AVATAR_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
                 trigger={
