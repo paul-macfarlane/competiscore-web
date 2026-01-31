@@ -27,10 +27,10 @@ export function CreatePlaceholderForm({
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const result = await createPlaceholderAction(
+      const result = await createPlaceholderAction({
         leagueId,
-        displayName.trim(),
-      );
+        displayName: displayName.trim(),
+      });
       if (result.error) {
         setError(result.error);
       } else {

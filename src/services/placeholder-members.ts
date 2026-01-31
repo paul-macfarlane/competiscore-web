@@ -14,6 +14,7 @@ import {
   createPlaceholderSchema,
   displayNameSchema,
 } from "@/validators/members";
+import { placeholderIdSchema } from "@/validators/placeholders";
 import { z } from "zod";
 
 import { ServiceResult, formatZodErrors } from "./shared";
@@ -114,15 +115,29 @@ export async function updatePlaceholder(
 }
 
 export async function retirePlaceholder(
-  placeholderId: string,
   userId: string,
-): Promise<ServiceResult<{ retired: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ retired: boolean; leagueId: string }>> {
+  const parsed = placeholderIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { placeholderId, leagueId } = parsed.data;
+
   const placeholder = await getPlaceholderMemberById(placeholderId);
   if (!placeholder) {
     return { error: "Placeholder member not found" };
   }
 
-  const membership = await getLeagueMember(userId, placeholder.leagueId);
+  if (placeholder.leagueId !== leagueId) {
+    return { error: "Placeholder member does not belong to this league" };
+  }
+
+  const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
   }
@@ -136,7 +151,7 @@ export async function retirePlaceholder(
     return { error: "Failed to retire placeholder member" };
   }
 
-  return { data: { retired: true } };
+  return { data: { retired: true, leagueId } };
 }
 
 export async function getRetiredPlaceholders(
@@ -157,15 +172,29 @@ export async function getRetiredPlaceholders(
 }
 
 export async function restorePlaceholder(
-  placeholderId: string,
   userId: string,
-): Promise<ServiceResult<{ restored: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ restored: boolean; leagueId: string }>> {
+  const parsed = placeholderIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { placeholderId, leagueId } = parsed.data;
+
   const placeholder = await getPlaceholderMemberById(placeholderId);
   if (!placeholder) {
     return { error: "Placeholder member not found" };
   }
 
-  const membership = await getLeagueMember(userId, placeholder.leagueId);
+  if (placeholder.leagueId !== leagueId) {
+    return { error: "Placeholder member does not belong to this league" };
+  }
+
+  const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
   }
@@ -181,5 +210,5 @@ export async function restorePlaceholder(
     return { error: "Failed to restore placeholder member" };
   }
 
-  return { data: { restored: true } };
+  return { data: { restored: true, leagueId } };
 }

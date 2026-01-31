@@ -44,14 +44,23 @@ vi.mock("@/db/index", () => ({
   withTransaction: vi.fn((callback) => callback({})),
 }));
 
+const LEAGUE_ID = "123e4567-e89b-12d3-a456-426614174000";
+const TEAM_ID = "223e4567-e89b-12d3-a456-426614174000";
+const USER_ID = "323e4567-e89b-12d3-a456-426614174000";
+const USER_ID_2 = "423e4567-e89b-12d3-a456-426614174000";
+const MEMBER_ID = "523e4567-e89b-12d3-a456-426614174000";
+const TEAM_MEMBER_ID = "623e4567-e89b-12d3-a456-426614174000";
+const TEAM_MEMBER_CREATOR_ID = "723e4567-e89b-12d3-a456-426614174000";
+const PLACEHOLDER_ID = "823e4567-e89b-12d3-a456-426614174000";
+
 const mockTeam = {
-  id: "team-123",
-  leagueId: "league-123",
+  id: TEAM_ID,
+  leagueId: LEAGUE_ID,
   name: "The Champions",
   description: "Best team ever",
   logo: `${ICON_PATHS.TEAM_ICONS}/trophy.svg`,
   isArchived: false,
-  createdById: "user-123",
+  createdById: USER_ID,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -59,7 +68,7 @@ const mockTeam = {
 const mockTeamWithDetails = {
   ...mockTeam,
   createdBy: {
-    id: "user-123",
+    id: USER_ID,
     name: "John Doe",
     username: "johndoe",
     image: null,
@@ -68,9 +77,9 @@ const mockTeamWithDetails = {
 };
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: MEMBER_ID,
+  userId: USER_ID,
+  leagueId: LEAGUE_ID,
   role: "member" as const,
   joinedAt: new Date(),
   suspendedUntil: null,
@@ -82,9 +91,9 @@ const mockManagerMember = {
 };
 
 const mockTeamMember = {
-  id: "team-member-123",
-  teamId: "team-123",
-  userId: "user-456",
+  id: TEAM_MEMBER_ID,
+  teamId: TEAM_ID,
+  userId: USER_ID_2,
   placeholderMemberId: null,
   role: "member" as const,
   joinedAt: new Date(),
@@ -92,9 +101,9 @@ const mockTeamMember = {
 };
 
 const mockTeamManagerMember = {
-  id: "team-member-creator",
-  teamId: "team-123",
-  userId: "user-123",
+  id: TEAM_MEMBER_CREATOR_ID,
+  teamId: TEAM_ID,
+  userId: USER_ID,
   placeholderMemberId: null,
   role: "manager" as const,
   joinedAt: new Date(),
@@ -112,7 +121,8 @@ describe("createTeam", () => {
     vi.mocked(dbTeams.createTeam).mockResolvedValue(mockTeam);
     vi.mocked(dbTeams.createTeamMember).mockResolvedValue(mockTeamMember);
 
-    const result = await createTeam("user-123", "league-123", {
+    const result = await createTeam(USER_ID, {
+      leagueId: LEAGUE_ID,
       name: "The Champions",
       description: "Best team ever",
       logo: `${ICON_PATHS.TEAM_ICONS}/trophy.svg`,
@@ -125,7 +135,8 @@ describe("createTeam", () => {
   it("should fail if user is not a member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await createTeam("user-123", "league-123", {
+    const result = await createTeam(USER_ID, {
+      leagueId: LEAGUE_ID,
       name: "The Champions",
     });
 
@@ -137,7 +148,8 @@ describe("createTeam", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.checkTeamNameExists).mockResolvedValue(true);
 
-    const result = await createTeam("user-123", "league-123", {
+    const result = await createTeam(USER_ID, {
+      leagueId: LEAGUE_ID,
       name: "The Champions",
     });
 
@@ -150,7 +162,8 @@ describe("createTeam", () => {
   it("should fail with invalid input", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-    const result = await createTeam("user-123", "league-123", {
+    const result = await createTeam(USER_ID, {
+      leagueId: LEAGUE_ID,
       name: "",
     });
 
@@ -164,7 +177,8 @@ describe("createTeam", () => {
     vi.mocked(dbTeams.createTeam).mockResolvedValue(mockTeam);
     vi.mocked(dbTeams.createTeamMember).mockResolvedValue(mockTeamMember);
 
-    await createTeam("user-123", "league-123", {
+    await createTeam(USER_ID, {
+      leagueId: LEAGUE_ID,
       name: "The Champions",
     });
 
@@ -184,7 +198,7 @@ describe("getTeam", () => {
     );
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-    const result = await getTeam("user-123", "team-123");
+    const result = await getTeam(USER_ID, TEAM_ID);
 
     expect(result.data).toEqual(mockTeamWithDetails);
     expect(result.error).toBeUndefined();
@@ -193,7 +207,7 @@ describe("getTeam", () => {
   it("should fail if team not found", async () => {
     vi.mocked(dbTeams.getTeamWithDetails).mockResolvedValue(undefined);
 
-    const result = await getTeam("user-123", "team-123");
+    const result = await getTeam(USER_ID, TEAM_ID);
 
     expect(result.error).toBe("Team not found");
     expect(result.data).toBeUndefined();
@@ -205,7 +219,7 @@ describe("getTeam", () => {
     );
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await getTeam("user-123", "team-123");
+    const result = await getTeam(USER_ID, TEAM_ID);
 
     expect(result.error).toBe("You are not a member of this league");
     expect(result.data).toBeUndefined();
@@ -223,7 +237,7 @@ describe("getLeagueTeams", () => {
       { ...mockTeam, memberCount: 3 },
     ]);
 
-    const result = await getLeagueTeams("user-123", "league-123");
+    const result = await getLeagueTeams(USER_ID, LEAGUE_ID);
 
     expect(result.data).toEqual([{ ...mockTeam, memberCount: 3 }]);
     expect(result.error).toBeUndefined();
@@ -232,7 +246,7 @@ describe("getLeagueTeams", () => {
   it("should fail if user is not a member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await getLeagueTeams("user-123", "league-123");
+    const result = await getLeagueTeams(USER_ID, LEAGUE_ID);
 
     expect(result.error).toBe("You are not a member of this league");
     expect(result.data).toBeUndefined();
@@ -254,9 +268,13 @@ describe("updateTeam", () => {
     vi.mocked(dbTeams.checkTeamNameExists).mockResolvedValue(false);
     vi.mocked(dbTeams.updateTeam).mockResolvedValue(updatedTeam);
 
-    const result = await updateTeam("user-123", "team-123", {
-      name: "Updated Champions",
-    });
+    const result = await updateTeam(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        name: "Updated Champions",
+      },
+    );
 
     expect(result.data).toEqual(updatedTeam);
     expect(result.error).toBeUndefined();
@@ -269,9 +287,13 @@ describe("updateTeam", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await updateTeam("user-123", "team-123", {
-      name: "Updated Champions",
-    });
+    const result = await updateTeam(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        name: "Updated Champions",
+      },
+    );
 
     expect(result.error).toBe("You do not have permission to edit this team");
   });
@@ -282,12 +304,16 @@ describe("updateTeam", () => {
 
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await updateTeam("user-123", "team-123", {
-      name: "Updated",
-    });
+    const result = await updateTeam(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        name: "Updated",
+      },
+    );
 
     expect(result.error).toBe("You do not have permission to edit this team");
   });
@@ -295,9 +321,13 @@ describe("updateTeam", () => {
   it("should fail if team not found", async () => {
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(undefined);
 
-    const result = await updateTeam("user-123", "team-123", {
-      name: "Updated",
-    });
+    const result = await updateTeam(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        name: "Updated",
+      },
+    );
 
     expect(result.error).toBe("Team not found");
   });
@@ -310,9 +340,13 @@ describe("updateTeam", () => {
     );
     vi.mocked(dbTeams.checkTeamNameExists).mockResolvedValue(true);
 
-    const result = await updateTeam("user-123", "team-123", {
-      name: "Existing Name",
-    });
+    const result = await updateTeam(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        name: "Existing Name",
+      },
+    );
 
     expect(result.error).toBe("Validation failed");
     expect(result.fieldErrors?.name).toBe(
@@ -337,7 +371,7 @@ describe("archiveTeam", () => {
       isArchived: true,
     });
 
-    const result = await archiveTeam("user-123", "team-123");
+    const result = await archiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBeUndefined();
   });
@@ -347,10 +381,10 @@ describe("archiveTeam", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await archiveTeam("user-123", "team-123");
+    const result = await archiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe(
       "You do not have permission to archive this team",
@@ -364,7 +398,7 @@ describe("archiveTeam", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await archiveTeam("user-123", "team-123");
+    const result = await archiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe(
       "You do not have permission to archive this team",
@@ -374,7 +408,7 @@ describe("archiveTeam", () => {
   it("should fail if team not found", async () => {
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(undefined);
 
-    const result = await archiveTeam("user-123", "team-123");
+    const result = await archiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("Team not found");
   });
@@ -396,7 +430,7 @@ describe("unarchiveTeam", () => {
     );
     vi.mocked(dbTeams.unarchiveTeam).mockResolvedValue(mockTeam);
 
-    const result = await unarchiveTeam("user-123", "team-123");
+    const result = await unarchiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBeUndefined();
   });
@@ -409,10 +443,10 @@ describe("unarchiveTeam", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await unarchiveTeam("user-123", "team-123");
+    const result = await unarchiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe(
       "You do not have permission to unarchive this team",
@@ -429,7 +463,7 @@ describe("unarchiveTeam", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await unarchiveTeam("user-123", "team-123");
+    const result = await unarchiveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe(
       "You do not have permission to unarchive this team",
@@ -450,7 +484,7 @@ describe("deleteTeam", () => {
     );
     vi.mocked(dbTeams.deleteTeam).mockResolvedValue(true);
 
-    const result = await deleteTeam("user-123", "team-123");
+    const result = await deleteTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBeUndefined();
   });
@@ -460,10 +494,10 @@ describe("deleteTeam", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await deleteTeam("user-123", "team-123");
+    const result = await deleteTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("You do not have permission to delete this team");
   });
@@ -475,7 +509,7 @@ describe("deleteTeam", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await deleteTeam("user-123", "team-123");
+    const result = await deleteTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("You do not have permission to delete this team");
   });
@@ -483,7 +517,7 @@ describe("deleteTeam", () => {
   it("should fail if team not found", async () => {
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(undefined);
 
-    const result = await deleteTeam("user-123", "team-123");
+    const result = await deleteTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("Team not found");
   });
@@ -496,7 +530,7 @@ describe("deleteTeam", () => {
     );
     vi.mocked(dbTeams.deleteTeam).mockResolvedValue(false);
 
-    const result = await deleteTeam("user-123", "team-123");
+    const result = await deleteTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("Failed to delete team");
   });
@@ -519,9 +553,13 @@ describe("addTeamMember", () => {
       .mockResolvedValueOnce(undefined);
     vi.mocked(dbTeams.createTeamMember).mockResolvedValue(mockTeamMember);
 
-    const result = await addTeamMember("user-123", "team-123", {
-      userId: "user-456",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        userId: USER_ID_2,
+      },
+    );
 
     expect(result.data).toEqual(mockTeamMember);
     expect(result.error).toBeUndefined();
@@ -531,7 +569,7 @@ describe("addTeamMember", () => {
     const placeholderTeamMember = {
       ...mockTeamMember,
       userId: null,
-      placeholderMemberId: "placeholder-123",
+      placeholderMemberId: PLACEHOLDER_ID,
     };
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(mockTeam);
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
@@ -545,9 +583,13 @@ describe("addTeamMember", () => {
       placeholderTeamMember,
     );
 
-    const result = await addTeamMember("user-123", "team-123", {
-      placeholderMemberId: "placeholder-123",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        placeholderMemberId: PLACEHOLDER_ID,
+      },
+    );
 
     expect(result.data).toEqual(placeholderTeamMember);
     expect(result.error).toBeUndefined();
@@ -558,12 +600,16 @@ describe("addTeamMember", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await addTeamMember("user-123", "team-123", {
-      userId: "user-456",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        userId: USER_ID_2,
+      },
+    );
 
     expect(result.error).toBe(
       "You do not have permission to add members to this team",
@@ -577,9 +623,13 @@ describe("addTeamMember", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await addTeamMember("user-123", "team-123", {
-      userId: "user-456",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        userId: USER_ID_2,
+      },
+    );
 
     expect(result.error).toBe(
       "You do not have permission to add members to this team",
@@ -595,9 +645,13 @@ describe("addTeamMember", () => {
       .mockResolvedValueOnce(mockTeamManagerMember)
       .mockResolvedValueOnce(undefined);
 
-    const result = await addTeamMember("user-123", "team-123", {
-      userId: "user-456",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        userId: USER_ID_2,
+      },
+    );
 
     expect(result.error).toBe("User is not a member of this league");
   });
@@ -614,9 +668,13 @@ describe("addTeamMember", () => {
       .mockResolvedValueOnce(mockTeamManagerMember)
       .mockResolvedValueOnce(mockTeamMember);
 
-    const result = await addTeamMember("user-123", "team-123", {
-      userId: "user-456",
-    });
+    const result = await addTeamMember(
+      USER_ID,
+      { teamId: TEAM_ID },
+      {
+        userId: USER_ID_2,
+      },
+    );
 
     expect(result.error).toBe("User is already a member of this team");
   });
@@ -628,7 +686,7 @@ describe("addTeamMember", () => {
       mockTeamManagerMember,
     );
 
-    const result = await addTeamMember("user-123", "team-123", {});
+    const result = await addTeamMember(USER_ID, { teamId: TEAM_ID }, {});
 
     expect(result.error).toBe("Validation failed");
   });
@@ -643,10 +701,10 @@ describe("removeTeamMember", () => {
     vi.mocked(dbTeams.getTeamMemberById).mockResolvedValue(mockTeamMember);
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(mockTeam);
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
-    // Acting user (user-123) is a team manager
+    // Acting user (USER_ID) is a team manager
     vi.mocked(dbTeams.getTeamMemberByUserId).mockImplementation(
       async (_teamId, userId) => {
-        if (userId === "user-123") return mockTeamManagerMember;
+        if (userId === USER_ID) return mockTeamManagerMember;
         return undefined;
       },
     );
@@ -655,7 +713,9 @@ describe("removeTeamMember", () => {
       leftAt: new Date(),
     });
 
-    const result = await removeTeamMember("user-123", "team-member-123");
+    const result = await removeTeamMember(USER_ID, {
+      teamMemberId: TEAM_MEMBER_ID,
+    });
 
     expect(result.error).toBeUndefined();
   });
@@ -663,7 +723,9 @@ describe("removeTeamMember", () => {
   it("should fail if team member not found", async () => {
     vi.mocked(dbTeams.getTeamMemberById).mockResolvedValue(undefined);
 
-    const result = await removeTeamMember("user-123", "team-member-123");
+    const result = await removeTeamMember(USER_ID, {
+      teamMemberId: TEAM_MEMBER_ID,
+    });
 
     expect(result.error).toBe("Team member not found");
   });
@@ -674,10 +736,12 @@ describe("removeTeamMember", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue({
       ...mockTeamMember,
-      userId: "user-123",
+      userId: USER_ID,
     });
 
-    const result = await removeTeamMember("user-123", "team-member-123");
+    const result = await removeTeamMember(USER_ID, {
+      teamMemberId: TEAM_MEMBER_ID,
+    });
 
     expect(result.error).toBe(
       "You do not have permission to remove members from this team",
@@ -692,7 +756,9 @@ describe("removeTeamMember", () => {
     );
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await removeTeamMember("user-123", "team-member-123");
+    const result = await removeTeamMember(USER_ID, {
+      teamMemberId: TEAM_MEMBER_ID,
+    });
 
     expect(result.error).toBe(
       "You do not have permission to remove members from this team",
@@ -714,7 +780,7 @@ describe("leaveTeam", () => {
       leftAt: new Date(),
     });
 
-    const result = await leaveTeam("user-123", "team-123");
+    const result = await leaveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBeUndefined();
   });
@@ -722,7 +788,7 @@ describe("leaveTeam", () => {
   it("should fail if team not found", async () => {
     vi.mocked(dbTeams.getTeamById).mockResolvedValue(undefined);
 
-    const result = await leaveTeam("user-123", "team-123");
+    const result = await leaveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("Team not found");
   });
@@ -732,7 +798,7 @@ describe("leaveTeam", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getTeamMemberByUserId).mockResolvedValue(undefined);
 
-    const result = await leaveTeam("user-123", "team-123");
+    const result = await leaveTeam(USER_ID, { teamId: TEAM_ID });
 
     expect(result.error).toBe("You are not a member of this team");
   });
@@ -747,7 +813,7 @@ describe("getMyTeams", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbTeams.getUserTeamsByLeagueId).mockResolvedValue([mockTeam]);
 
-    const result = await getMyTeams("user-123", "league-123");
+    const result = await getMyTeams(USER_ID, LEAGUE_ID);
 
     expect(result.data).toEqual([mockTeam]);
     expect(result.error).toBeUndefined();
@@ -756,7 +822,7 @@ describe("getMyTeams", () => {
   it("should fail if user is not a league member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await getMyTeams("user-123", "league-123");
+    const result = await getMyTeams(USER_ID, LEAGUE_ID);
 
     expect(result.error).toBe("You are not a member of this league");
   });

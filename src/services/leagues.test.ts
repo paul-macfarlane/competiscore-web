@@ -19,6 +19,7 @@ import {
   unarchiveLeague,
   updateLeague,
 } from "./leagues";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db/leagues", () => ({
   createLeague: vi.fn(),
@@ -60,7 +61,7 @@ vi.mock("@/lib/server/limits", () => ({
 }));
 
 const mockLeague = {
-  id: "league-123",
+  id: TEST_IDS.LEAGUE_ID,
   name: "Test League",
   description: "A test league",
   visibility: LeagueVisibility.PUBLIC,
@@ -71,9 +72,9 @@ const mockLeague = {
 };
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: "executive" as const,
   joinedAt: new Date(),
   suspendedUntil: null,
@@ -86,7 +87,7 @@ describe("leagues service", () => {
 
   describe("createLeague", () => {
     it("returns validation error for invalid input", async () => {
-      const result = await createLeague("user-123", {
+      const result = await createLeague(TEST_IDS.USER_ID, {
         name: "",
         description: "",
         visibility: LeagueVisibility.PUBLIC,
@@ -108,7 +109,7 @@ describe("leagues service", () => {
         message: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
       });
 
-      const result = await createLeague("user-123", {
+      const result = await createLeague(TEST_IDS.USER_ID, {
         name: "New League",
         description: "Description",
         visibility: LeagueVisibility.PUBLIC,
@@ -124,7 +125,7 @@ describe("leagues service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getLeagueById("league-123", "user-123");
+      const result = await getLeagueById(TEST_IDS.LEAGUE_ID, TEST_IDS.USER_ID);
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -135,7 +136,7 @@ describe("leagues service", () => {
         undefined,
       );
 
-      const result = await getLeagueById("league-123", "user-123");
+      const result = await getLeagueById(TEST_IDS.LEAGUE_ID, TEST_IDS.USER_ID);
 
       expect(result.error).toBe("League not found");
     });
@@ -148,7 +149,7 @@ describe("leagues service", () => {
         memberCount: 1,
       });
 
-      const result = await getLeagueById("league-123", "user-123");
+      const result = await getLeagueById(TEST_IDS.LEAGUE_ID, TEST_IDS.USER_ID);
 
       expect(result.error).toBe("This league has been archived");
     });
@@ -160,7 +161,7 @@ describe("leagues service", () => {
         memberCount: 5,
       });
 
-      const result = await getLeagueById("league-123", "user-123");
+      const result = await getLeagueById(TEST_IDS.LEAGUE_ID, TEST_IDS.USER_ID);
 
       expect(result.data).toEqual({ ...mockLeague, memberCount: 5 });
     });
@@ -170,9 +171,11 @@ describe("leagues service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await updateLeague("user-123", {
-        leagueId: "league-123",
+      const result = await updateLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         name: "Updated Name",
+        description: "A test league",
+        visibility: LeagueVisibility.PUBLIC,
       });
 
       expect(result.error).toBe("You are not a member of this league");
@@ -184,9 +187,11 @@ describe("leagues service", () => {
         role: "member",
       });
 
-      const result = await updateLeague("user-123", {
-        leagueId: "league-123",
+      const result = await updateLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         name: "Updated Name",
+        description: "A test league",
+        visibility: LeagueVisibility.PUBLIC,
       });
 
       expect(result.error).toBe(
@@ -202,9 +207,11 @@ describe("leagues service", () => {
         name: "Updated Name",
       });
 
-      const result = await updateLeague("user-123", {
-        leagueId: "league-123",
+      const result = await updateLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         name: "Updated Name",
+        description: "A test league",
+        visibility: LeagueVisibility.PUBLIC,
       });
 
       expect(result.data?.name).toBe("Updated Name");
@@ -218,7 +225,9 @@ describe("leagues service", () => {
         role: "member",
       });
 
-      const result = await archiveLeague("league-123", "user-123");
+      const result = await archiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to archive the league",
@@ -233,7 +242,9 @@ describe("leagues service", () => {
         isArchived: true,
       });
 
-      const result = await archiveLeague("league-123", "user-123");
+      const result = await archiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ archived: true });
     });
@@ -246,7 +257,9 @@ describe("leagues service", () => {
         role: "member",
       });
 
-      const result = await deleteLeague("league-123", "user-123");
+      const result = await deleteLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to delete the league",
@@ -258,7 +271,9 @@ describe("leagues service", () => {
       vi.mocked(dbLeagues.getLeagueById).mockResolvedValue(mockLeague);
       vi.mocked(dbLeagues.deleteLeague).mockResolvedValue(true);
 
-      const result = await deleteLeague("league-123", "user-123");
+      const result = await deleteLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ deleted: true });
     });
@@ -273,7 +288,7 @@ describe("leagues service", () => {
         mockLeagues,
       );
 
-      const result = await getUserLeagues("user-123");
+      const result = await getUserLeagues(TEST_IDS.USER_ID);
 
       expect(result.data).toEqual(mockLeagues);
     });
@@ -281,7 +296,7 @@ describe("leagues service", () => {
 
   describe("searchPublicLeagues", () => {
     it("returns validation error for empty query", async () => {
-      const result = await searchPublicLeagues("", "user-123");
+      const result = await searchPublicLeagues("", TEST_IDS.USER_ID);
 
       expect(result.error).toBe("Invalid search query");
     });
@@ -291,7 +306,7 @@ describe("leagues service", () => {
       vi.mocked(dbLeagues.searchPublicLeagues).mockResolvedValue(mockResults);
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await searchPublicLeagues("test", "user-123");
+      const result = await searchPublicLeagues("test", TEST_IDS.USER_ID);
 
       expect(result.data).toEqual([
         { ...mockLeague, memberCount: 5, isMember: false },
@@ -303,7 +318,9 @@ describe("leagues service", () => {
     it("returns error when already a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await joinPublicLeague("league-123", "user-123");
+      const result = await joinPublicLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("You are already a member of this league");
     });
@@ -315,7 +332,9 @@ describe("leagues service", () => {
         visibility: LeagueVisibility.PRIVATE,
       });
 
-      const result = await joinPublicLeague("league-123", "user-123");
+      const result = await joinPublicLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "This league is private and requires an invitation",
@@ -336,7 +355,9 @@ describe("leagues service", () => {
         message: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
       });
 
-      const result = await joinPublicLeague("league-123", "user-123");
+      const result = await joinPublicLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
@@ -361,7 +382,9 @@ describe("leagues service", () => {
         message: `This league has reached its maximum of ${MAX_MEMBERS_PER_LEAGUE} members`,
       });
 
-      const result = await joinPublicLeague("league-123", "user-123");
+      const result = await joinPublicLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         `This league has reached its maximum of ${MAX_MEMBERS_PER_LEAGUE} members`,
@@ -388,7 +411,9 @@ describe("leagues service", () => {
         mockMember,
       );
 
-      const result = await joinPublicLeague("league-123", "user-123");
+      const result = await joinPublicLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ joined: true });
     });
@@ -398,7 +423,9 @@ describe("leagues service", () => {
     it("returns error when not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await leaveLeague("league-123", "user-123");
+      const result = await leaveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -407,7 +434,9 @@ describe("leagues service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
       vi.mocked(dbLeagueMembers.getMemberCountByRole).mockResolvedValue(1);
 
-      const result = await leaveLeague("league-123", "user-123");
+      const result = await leaveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You are the only executive. Please transfer the executive role to another member before leaving.",
@@ -419,7 +448,9 @@ describe("leagues service", () => {
       vi.mocked(dbLeagueMembers.getMemberCountByRole).mockResolvedValue(2);
       vi.mocked(dbLeagueMembers.deleteLeagueMember).mockResolvedValue(true);
 
-      const result = await leaveLeague("league-123", "user-123");
+      const result = await leaveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ left: true });
     });
@@ -431,7 +462,9 @@ describe("leagues service", () => {
       });
       vi.mocked(dbLeagueMembers.deleteLeagueMember).mockResolvedValue(true);
 
-      const result = await leaveLeague("league-123", "user-123");
+      const result = await leaveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ left: true });
     });
@@ -451,7 +484,7 @@ describe("leagues service", () => {
         mockArchivedLeagues,
       );
 
-      const result = await getArchivedLeagues("user-123");
+      const result = await getArchivedLeagues(TEST_IDS.USER_ID);
 
       expect(result.data).toEqual(mockArchivedLeagues);
     });
@@ -461,7 +494,7 @@ describe("leagues service", () => {
         [],
       );
 
-      const result = await getArchivedLeagues("user-123");
+      const result = await getArchivedLeagues(TEST_IDS.USER_ID);
 
       expect(result.data).toEqual([]);
     });
@@ -471,7 +504,10 @@ describe("leagues service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getArchivedLeagueById("league-123", "user-123");
+      const result = await getArchivedLeagueById(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -482,7 +518,10 @@ describe("leagues service", () => {
         role: "member",
       });
 
-      const result = await getArchivedLeagueById("league-123", "user-123");
+      const result = await getArchivedLeagueById(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("Only executives can view archived leagues");
     });
@@ -495,7 +534,10 @@ describe("leagues service", () => {
         memberCount: 5,
       });
 
-      const result = await getArchivedLeagueById("league-123", "user-123");
+      const result = await getArchivedLeagueById(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("This league is not archived");
     });
@@ -508,7 +550,10 @@ describe("leagues service", () => {
         memberCount: 5,
       });
 
-      const result = await getArchivedLeagueById("league-123", "user-123");
+      const result = await getArchivedLeagueById(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.data).toEqual({
         ...mockLeague,
@@ -522,7 +567,9 @@ describe("leagues service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await unarchiveLeague("league-123", "user-123");
+      const result = await unarchiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -533,7 +580,9 @@ describe("leagues service", () => {
         role: "member",
       });
 
-      const result = await unarchiveLeague("league-123", "user-123");
+      const result = await unarchiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to unarchive the league",
@@ -544,7 +593,9 @@ describe("leagues service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
       vi.mocked(dbLeagues.getLeagueById).mockResolvedValue(mockLeague);
 
-      const result = await unarchiveLeague("league-123", "user-123");
+      const result = await unarchiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("League is not archived");
     });
@@ -560,7 +611,9 @@ describe("leagues service", () => {
         isArchived: false,
       });
 
-      const result = await unarchiveLeague("league-123", "user-123");
+      const result = await unarchiveLeague(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual({ unarchived: true });
     });

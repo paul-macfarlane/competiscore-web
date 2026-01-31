@@ -9,6 +9,7 @@ import {
   searchUsersForInvite,
   updateMemberRole,
 } from "./members";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db/league-members", () => ({
   getLeagueMember: vi.fn(),
@@ -23,9 +24,9 @@ vi.mock("@/db/users", () => ({
 }));
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: LeagueMemberRole.EXECUTIVE,
   joinedAt: new Date(),
   suspendedUntil: null,
@@ -34,7 +35,7 @@ const mockMember = {
 const mockMemberWithUser = {
   ...mockMember,
   user: {
-    id: "user-123",
+    id: TEST_IDS.USER_ID,
     name: "Test User",
     username: "testuser",
     image: null,
@@ -50,7 +51,10 @@ describe("members service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getLeagueMembers("league-123", "user-123");
+      const result = await getLeagueMembers(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -61,7 +65,10 @@ describe("members service", () => {
         mockMemberWithUser,
       ]);
 
-      const result = await getLeagueMembers("league-123", "user-123");
+      const result = await getLeagueMembers(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.data).toEqual([mockMemberWithUser]);
     });
@@ -69,7 +76,10 @@ describe("members service", () => {
 
   describe("removeMember", () => {
     it("returns error when trying to remove self", async () => {
-      const result = await removeMember("league-123", "user-123", "user-123");
+      const result = await removeMember(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID,
+      });
 
       expect(result.error).toBe(
         "You cannot remove yourself. Use 'Leave League' instead.",
@@ -79,7 +89,10 @@ describe("members service", () => {
     it("returns error when requester is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await removeMember("league-123", "user-456", "user-123");
+      const result = await removeMember(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -90,7 +103,10 @@ describe("members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await removeMember("league-123", "user-456", "user-123");
+      const result = await removeMember(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("You don't have permission to remove members");
     });
@@ -103,11 +119,14 @@ describe("members service", () => {
         })
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           role: LeagueMemberRole.EXECUTIVE,
         });
 
-      const result = await removeMember("league-123", "user-456", "user-123");
+      const result = await removeMember(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe(
         "You cannot remove someone with an equal or higher role",
@@ -122,22 +141,28 @@ describe("members service", () => {
         })
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           role: LeagueMemberRole.MEMBER,
         });
       vi.mocked(dbLeagueMembers.deleteLeagueMember).mockResolvedValue(true);
 
-      const result = await removeMember("league-123", "user-456", "user-123");
+      const result = await removeMember(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
-      expect(result.data).toEqual({ removed: true });
+      expect(result.data).toEqual({
+        removed: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
   describe("updateMemberRole", () => {
     it("returns error when trying to change own role", async () => {
-      const result = await updateMemberRole("user-123", {
-        leagueId: "league-123",
-        targetUserId: "user-123",
+      const result = await updateMemberRole(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID,
         role: LeagueMemberRole.MANAGER,
       });
 
@@ -150,9 +175,9 @@ describe("members service", () => {
         role: LeagueMemberRole.MANAGER,
       });
 
-      const result = await updateMemberRole("user-123", {
-        leagueId: "league-123",
-        targetUserId: "user-456",
+      const result = await updateMemberRole(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -167,13 +192,13 @@ describe("members service", () => {
         })
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           role: LeagueMemberRole.EXECUTIVE,
         });
 
-      const result = await updateMemberRole("user-123", {
-        leagueId: "league-123",
-        targetUserId: "user-456",
+      const result = await updateMemberRole(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -190,22 +215,25 @@ describe("members service", () => {
         })
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           role: LeagueMemberRole.MEMBER,
         });
       vi.mocked(dbLeagueMembers.updateMemberRole).mockResolvedValue({
         ...mockMember,
-        userId: "user-456",
+        userId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MANAGER,
       });
 
-      const result = await updateMemberRole("user-123", {
-        leagueId: "league-123",
-        targetUserId: "user-456",
+      const result = await updateMemberRole(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MANAGER,
       });
 
-      expect(result.data).toEqual({ updated: true });
+      expect(result.data).toEqual({
+        updated: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
@@ -213,11 +241,10 @@ describe("members service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await searchUsersForInvite(
-        "league-123",
-        "test",
-        "user-123",
-      );
+      const result = await searchUsersForInvite(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        query: "test",
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -228,11 +255,10 @@ describe("members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await searchUsersForInvite(
-        "league-123",
-        "test",
-        "user-123",
-      );
+      const result = await searchUsersForInvite(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        query: "test",
+      });
 
       expect(result.error).toBe("You don't have permission to invite members");
     });
@@ -249,11 +275,10 @@ describe("members service", () => {
         { id: "user-789", name: "Other User", username: "other", image: null },
       ]);
 
-      const result = await searchUsersForInvite(
-        "league-123",
-        "test",
-        "user-123",
-      );
+      const result = await searchUsersForInvite(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        query: "test",
+      });
 
       expect(result.data).toEqual([
         { id: "user-789", name: "Other User", username: "other", image: null },

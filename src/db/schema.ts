@@ -3,6 +3,8 @@ import {
   InvitationStatus,
   LeagueMemberRole,
   LeagueVisibility,
+  MatchResult,
+  MatchStatus,
   ModerationActionType,
   ReportReason,
   ReportStatus,
@@ -260,6 +262,8 @@ export const leagueRelations = relations(league, ({ many }) => ({
   placeholderMembers: many(placeholderMember),
   gameTypes: many(gameType),
   teams: many(team),
+  matches: many(match),
+  highScoreEntries: many(highScoreEntry),
 }));
 
 export const leagueMemberRelations = relations(leagueMember, ({ one }) => ({
@@ -527,11 +531,13 @@ export const gameType = pgTable(
 export type GameType = InferSelectModel<typeof gameType>;
 export type NewGameType = InferInsertModel<typeof gameType>;
 
-export const gameTypeRelations = relations(gameType, ({ one }) => ({
+export const gameTypeRelations = relations(gameType, ({ one, many }) => ({
   league: one(league, {
     fields: [gameType.leagueId],
     references: [league.id],
   }),
+  matches: many(match),
+  highScoreEntries: many(highScoreEntry),
 }));
 
 export const gameTypeColumns = getTableColumns(gameType);
@@ -678,3 +684,208 @@ export const teamInvitationRelations = relations(teamInvitation, ({ one }) => ({
 export const teamColumns = getTableColumns(team);
 export const teamMemberColumns = getTableColumns(teamMember);
 export const teamInvitationColumns = getTableColumns(teamInvitation);
+
+export const matchStatus = pgEnum("match_status", [
+  MatchStatus.PENDING,
+  MatchStatus.ACCEPTED,
+  MatchStatus.COMPLETED,
+  MatchStatus.DECLINED,
+  MatchStatus.CANCELLED,
+]);
+
+export const matchResult = pgEnum("match_result", [
+  MatchResult.WIN,
+  MatchResult.LOSS,
+  MatchResult.DRAW,
+]);
+
+export const match = pgTable(
+  "match",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    gameTypeId: text("game_type_id")
+      .notNull()
+      .references(() => gameType.id, { onDelete: "cascade" }),
+    status: matchStatus("status").notNull().default(MatchStatus.COMPLETED),
+    playedAt: timestamp("played_at").notNull(),
+    recorderId: text("recorder_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    challengerId: text("challenger_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
+    challengedAt: timestamp("challenged_at"),
+    acceptedAt: timestamp("accepted_at"),
+    declinedAt: timestamp("declined_at"),
+    cancelledAt: timestamp("cancelled_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("match_league_idx").on(table.leagueId),
+    index("match_game_type_idx").on(table.gameTypeId),
+    index("match_status_idx").on(table.status),
+    index("match_played_at_idx").on(table.playedAt),
+    index("match_recorder_idx").on(table.recorderId),
+    index("match_challenger_idx").on(table.challengerId),
+  ],
+);
+
+export type Match = InferSelectModel<typeof match>;
+export type NewMatch = InferInsertModel<typeof match>;
+
+export const matchParticipant = pgTable(
+  "match_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    matchId: text("match_id")
+      .notNull()
+      .references(() => match.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    teamId: text("team_id").references(() => team.id, { onDelete: "cascade" }),
+    placeholderMemberId: text("placeholder_member_id").references(
+      () => placeholderMember.id,
+      { onDelete: "cascade" },
+    ),
+    side: integer("side"),
+    score: integer("score"),
+    rank: integer("rank"),
+    result: matchResult("result"),
+    isChallenged: boolean("is_challenged"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("match_participant_match_idx").on(table.matchId),
+    index("match_participant_user_idx").on(table.userId),
+    index("match_participant_team_idx").on(table.teamId),
+    index("match_participant_placeholder_idx").on(table.placeholderMemberId),
+  ],
+);
+
+export type MatchParticipant = InferSelectModel<typeof matchParticipant>;
+export type NewMatchParticipant = InferInsertModel<typeof matchParticipant>;
+
+export const highScoreEntry = pgTable(
+  "high_score_entry",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    gameTypeId: text("game_type_id")
+      .notNull()
+      .references(() => gameType.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    teamId: text("team_id").references(() => team.id, { onDelete: "cascade" }),
+    placeholderMemberId: text("placeholder_member_id").references(
+      () => placeholderMember.id,
+      { onDelete: "cascade" },
+    ),
+    score: integer("score").notNull(),
+    recorderId: text("recorder_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    achievedAt: timestamp("achieved_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("high_score_entry_league_idx").on(table.leagueId),
+    index("high_score_entry_game_type_idx").on(table.gameTypeId),
+    index("high_score_entry_user_idx").on(table.userId),
+    index("high_score_entry_team_idx").on(table.teamId),
+    index("high_score_entry_placeholder_idx").on(table.placeholderMemberId),
+    index("high_score_entry_score_idx").on(table.score),
+    index("high_score_entry_achieved_at_idx").on(table.achievedAt),
+  ],
+);
+
+export type HighScoreEntry = InferSelectModel<typeof highScoreEntry>;
+export type NewHighScoreEntry = InferInsertModel<typeof highScoreEntry>;
+
+export const matchRelations = relations(match, ({ one, many }) => ({
+  league: one(league, {
+    fields: [match.leagueId],
+    references: [league.id],
+  }),
+  gameType: one(gameType, {
+    fields: [match.gameTypeId],
+    references: [gameType.id],
+  }),
+  recorder: one(user, {
+    fields: [match.recorderId],
+    references: [user.id],
+    relationName: "recordedMatches",
+  }),
+  challenger: one(user, {
+    fields: [match.challengerId],
+    references: [user.id],
+    relationName: "challengedMatches",
+  }),
+  participants: many(matchParticipant),
+}));
+
+export const matchParticipantRelations = relations(
+  matchParticipant,
+  ({ one }) => ({
+    match: one(match, {
+      fields: [matchParticipant.matchId],
+      references: [match.id],
+    }),
+    user: one(user, {
+      fields: [matchParticipant.userId],
+      references: [user.id],
+    }),
+    team: one(team, {
+      fields: [matchParticipant.teamId],
+      references: [team.id],
+    }),
+    placeholderMember: one(placeholderMember, {
+      fields: [matchParticipant.placeholderMemberId],
+      references: [placeholderMember.id],
+    }),
+  }),
+);
+
+export const highScoreEntryRelations = relations(highScoreEntry, ({ one }) => ({
+  league: one(league, {
+    fields: [highScoreEntry.leagueId],
+    references: [league.id],
+  }),
+  gameType: one(gameType, {
+    fields: [highScoreEntry.gameTypeId],
+    references: [gameType.id],
+  }),
+  user: one(user, {
+    fields: [highScoreEntry.userId],
+    references: [user.id],
+  }),
+  team: one(team, {
+    fields: [highScoreEntry.teamId],
+    references: [team.id],
+  }),
+  placeholderMember: one(placeholderMember, {
+    fields: [highScoreEntry.placeholderMemberId],
+    references: [placeholderMember.id],
+  }),
+  recorder: one(user, {
+    fields: [highScoreEntry.recorderId],
+    references: [user.id],
+    relationName: "recordedHighScores",
+  }),
+}));
+
+export const matchColumns = getTableColumns(match);
+export const matchParticipantColumns = getTableColumns(matchParticipant);
+export const highScoreEntryColumns = getTableColumns(highScoreEntry);

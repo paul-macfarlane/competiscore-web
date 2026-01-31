@@ -13,7 +13,11 @@ import { GameType } from "@/db/schema";
 import { canLeagueAddGameType } from "@/lib/server/limits";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import {
+  archiveGameTypeSchema,
   createGameTypeFormSchema,
+  deleteGameTypeSchema,
+  gameTypeIdSchema,
+  unarchiveGameTypeSchema,
   updateGameTypeFormSchema,
 } from "@/validators/game-types";
 
@@ -21,18 +25,8 @@ import { ServiceResult, formatZodErrors } from "./shared";
 
 export async function createGameType(
   userId: string,
-  leagueId: string,
   input: unknown,
 ): Promise<ServiceResult<GameType>> {
-  const membership = await getLeagueMember(userId, leagueId);
-  if (!membership) {
-    return { error: "You are not a member of this league" };
-  }
-
-  if (!canPerformAction(membership.role, LeagueAction.CREATE_GAME_TYPES)) {
-    return { error: "You do not have permission to create game types" };
-  }
-
   const parsed = createGameTypeFormSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -41,8 +35,17 @@ export async function createGameType(
     };
   }
 
+  const membership = await getLeagueMember(userId, parsed.data.leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  if (!canPerformAction(membership.role, LeagueAction.CREATE_GAME_TYPES)) {
+    return { error: "You do not have permission to create game types" };
+  }
+
   const nameExists = await dbCheckGameTypeNameExists(
-    leagueId,
+    parsed.data.leagueId,
     parsed.data.name,
   );
   if (nameExists) {
@@ -52,13 +55,13 @@ export async function createGameType(
     };
   }
 
-  const limitCheck = await canLeagueAddGameType(leagueId);
+  const limitCheck = await canLeagueAddGameType(parsed.data.leagueId);
   if (!limitCheck.allowed) {
     return { error: limitCheck.message };
   }
 
   const gameType = await dbCreateGameType({
-    leagueId,
+    leagueId: parsed.data.leagueId,
     name: parsed.data.name,
     description: parsed.data.description || null,
     logo: parsed.data.logo || null,
@@ -101,10 +104,26 @@ export async function getLeagueGameTypes(
 
 export async function updateGameType(
   userId: string,
-  gameTypeId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<GameType>> {
-  const gameType = await dbGetGameTypeById(gameTypeId);
+  const idParsed = gameTypeIdSchema.safeParse(idInput);
+  if (!idParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(idParsed.error),
+    };
+  }
+
+  const dataParsed = updateGameTypeFormSchema.safeParse(dataInput);
+  if (!dataParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(dataParsed.error),
+    };
+  }
+
+  const gameType = await dbGetGameTypeById(idParsed.data.gameTypeId);
   if (!gameType) {
     return { error: "Game type not found" };
   }
@@ -118,19 +137,11 @@ export async function updateGameType(
     return { error: "You do not have permission to edit game types" };
   }
 
-  const parsed = updateGameTypeFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      error: "Validation failed",
-      fieldErrors: formatZodErrors(parsed.error),
-    };
-  }
-
-  if (parsed.data.name) {
+  if (dataParsed.data.name) {
     const nameExists = await dbCheckGameTypeNameExists(
       gameType.leagueId,
-      parsed.data.name,
-      gameTypeId,
+      dataParsed.data.name,
+      idParsed.data.gameTypeId,
     );
     if (nameExists) {
       return {
@@ -140,12 +151,23 @@ export async function updateGameType(
     }
   }
 
-  const updated = await dbUpdateGameType(gameTypeId, {
-    name: parsed.data.name,
-    description: parsed.data.description,
-    logo: parsed.data.logo,
-  });
+  // Merge config: preserve existing config fields and only update provided ones
+  let configToUpdate: string | undefined = undefined;
+  if (dataParsed.data.config) {
+    const existingConfig = JSON.parse(gameType.config);
+    const mergedConfig = {
+      ...existingConfig,
+      ...dataParsed.data.config,
+    };
+    configToUpdate = JSON.stringify(mergedConfig);
+  }
 
+  const updated = await dbUpdateGameType(idParsed.data.gameTypeId, {
+    name: dataParsed.data.name,
+    description: dataParsed.data.description,
+    logo: dataParsed.data.logo,
+    config: configToUpdate,
+  });
   if (!updated) {
     return { error: "Failed to update game type" };
   }
@@ -155,8 +177,18 @@ export async function updateGameType(
 
 export async function archiveGameType(
   userId: string,
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = archiveGameTypeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { gameTypeId } = parsed.data;
+
   const gameType = await dbGetGameTypeById(gameTypeId);
   if (!gameType) {
     return { error: "Game type not found" };
@@ -177,8 +209,18 @@ export async function archiveGameType(
 
 export async function unarchiveGameType(
   userId: string,
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = unarchiveGameTypeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { gameTypeId } = parsed.data;
+
   const gameType = await dbGetGameTypeById(gameTypeId);
   if (!gameType) {
     return { error: "Game type not found" };
@@ -199,8 +241,18 @@ export async function unarchiveGameType(
 
 export async function deleteGameType(
   userId: string,
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = deleteGameTypeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { gameTypeId } = parsed.data;
+
   const gameType = await dbGetGameTypeById(gameTypeId);
   if (!gameType) {
     return { error: "Game type not found" };

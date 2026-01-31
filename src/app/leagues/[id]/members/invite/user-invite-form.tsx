@@ -48,7 +48,7 @@ export function UserInviteForm({
       }
 
       setIsSearching(true);
-      const result = await searchUsersAction(leagueId, searchQuery);
+      const result = await searchUsersAction({ leagueId, query: searchQuery });
       setIsSearching(false);
 
       if (result.data) {
@@ -84,7 +84,11 @@ export function UserInviteForm({
 
     setError(null);
     startTransition(async () => {
-      const result = await inviteUserAction(leagueId, selectedUser.id, role);
+      const result = await inviteUserAction({
+        leagueId,
+        inviteeUserId: selectedUser.id,
+        role,
+      });
       if (result.error) {
         setError(result.error);
       } else {

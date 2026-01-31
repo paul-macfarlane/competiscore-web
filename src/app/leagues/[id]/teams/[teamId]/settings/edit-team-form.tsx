@@ -51,7 +51,7 @@ export function EditTeamForm({ team }: EditTeamFormProps) {
 
   const onSubmit = (values: UpdateTeamFormValues) => {
     startTransition(async () => {
-      const result = await updateTeamAction(team.id, values);
+      const result = await updateTeamAction({ teamId: team.id }, values);
 
       if (result.error) {
         if (result.fieldErrors) {

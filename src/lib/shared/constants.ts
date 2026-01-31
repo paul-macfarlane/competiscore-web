@@ -234,3 +234,78 @@ export const ParticipantType = {
 
 export type ParticipantType =
   (typeof ParticipantType)[keyof typeof ParticipantType];
+
+export const MatchParticipantType = {
+  USER: "user",
+  TEAM: "team",
+  PLACEHOLDER: "placeholder",
+} as const;
+
+export type MatchParticipantType =
+  (typeof MatchParticipantType)[keyof typeof MatchParticipantType];
+
+export const MatchStatus = {
+  PENDING: "pending",
+  ACCEPTED: "accepted",
+  COMPLETED: "completed",
+  DECLINED: "declined",
+  CANCELLED: "cancelled",
+} as const;
+
+export type MatchStatus = (typeof MatchStatus)[keyof typeof MatchStatus];
+
+export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
+  [MatchStatus.PENDING]: "Pending",
+  [MatchStatus.ACCEPTED]: "Accepted",
+  [MatchStatus.COMPLETED]: "Completed",
+  [MatchStatus.DECLINED]: "Declined",
+  [MatchStatus.CANCELLED]: "Cancelled",
+};
+
+export const MatchResult = {
+  WIN: "win",
+  LOSS: "loss",
+  DRAW: "draw",
+} as const;
+
+export type MatchResult = (typeof MatchResult)[keyof typeof MatchResult];
+
+export const MATCH_RESULT_LABELS: Record<MatchResult, string> = {
+  [MatchResult.WIN]: "Win",
+  [MatchResult.LOSS]: "Loss",
+  [MatchResult.DRAW]: "Draw",
+};
+
+export const H2HWinningSide = {
+  SIDE1: "side1",
+  SIDE2: "side2",
+  DRAW: "draw",
+} as const;
+
+export type H2HWinningSide =
+  (typeof H2HWinningSide)[keyof typeof H2HWinningSide];
+
+export const ChallengeWinningSide = {
+  CHALLENGER: "challenger",
+  CHALLENGED: "challenged",
+  DRAW: "draw",
+} as const;
+
+export type ChallengeWinningSide =
+  (typeof ChallengeWinningSide)[keyof typeof ChallengeWinningSide];
+
+export const TimeRange = {
+  WEEK: "week",
+  MONTH: "month",
+  YEAR: "year",
+  ALL: "all",
+} as const;
+
+export type TimeRange = (typeof TimeRange)[keyof typeof TimeRange];
+
+export const ChallengeType = {
+  RECEIVED: "received",
+  SENT: "sent",
+} as const;
+
+export type ChallengeType = (typeof ChallengeType)[keyof typeof ChallengeType];

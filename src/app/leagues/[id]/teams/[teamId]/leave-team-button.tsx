@@ -29,7 +29,7 @@ export function LeaveTeamButton({ teamId }: LeaveTeamButtonProps) {
 
   const handleLeave = () => {
     startTransition(async () => {
-      const result = await leaveTeamAction(teamId);
+      const result = await leaveTeamAction({ teamId });
       if (result.error) {
         toast.error(result.error);
       } else {

@@ -30,7 +30,7 @@ export function UnarchiveSection({ leagueId }: UnarchiveSectionProps) {
     setError(null);
 
     startTransition(async () => {
-      const result = await unarchiveLeagueAction(leagueId);
+      const result = await unarchiveLeagueAction({ leagueId });
 
       if (result.error) {
         setError(result.error);

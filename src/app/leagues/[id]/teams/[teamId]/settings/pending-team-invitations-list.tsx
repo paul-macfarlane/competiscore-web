@@ -38,7 +38,9 @@ function InvitationItem({
 
   const handleCancel = () => {
     startTransition(async () => {
-      const result = await cancelTeamInvitationAction(invitation.id);
+      const result = await cancelTeamInvitationAction({
+        invitationId: invitation.id,
+      });
       if (result.error) {
         toast.error(result.error);
       } else {

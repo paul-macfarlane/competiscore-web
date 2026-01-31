@@ -22,8 +22,8 @@ import {
   LEAGUE_NAME_MAX_LENGTH,
 } from "@/services/constants";
 import {
-  CreateLeagueFormValues,
-  createLeagueFormSchema,
+  UpdateLeagueFormValues,
+  updateLeagueFormSchema,
 } from "@/validators/leagues";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, ImageIcon, Lock } from "lucide-react";
@@ -51,8 +51,8 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CreateLeagueFormValues>({
-    resolver: zodResolver(createLeagueFormSchema),
+  const form = useForm<UpdateLeagueFormValues>({
+    resolver: zodResolver(updateLeagueFormSchema),
     defaultValues: {
       name: league.name,
       description: league.description,
@@ -62,14 +62,17 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
     mode: "onChange",
   });
 
-  const onSubmit = (values: CreateLeagueFormValues) => {
+  const onSubmit = (values: UpdateLeagueFormValues) => {
     startTransition(async () => {
-      const result = await updateLeagueAction(league.id, values);
+      const result = await updateLeagueAction({
+        leagueId: league.id,
+        ...values,
+      });
 
       if (result.error) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
-            form.setError(field as keyof CreateLeagueFormValues, { message });
+            form.setError(field as keyof UpdateLeagueFormValues, { message });
           });
         } else {
           toast.error(result.error);

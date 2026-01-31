@@ -25,7 +25,7 @@ export function PendingInvitationsList({
   const handleCancel = (invitationId: string) => {
     setError(null);
     startTransition(async () => {
-      const result = await cancelInvitationAction(invitationId, leagueId);
+      const result = await cancelInvitationAction({ invitationId, leagueId });
       if (result.error) {
         setError(result.error);
       }

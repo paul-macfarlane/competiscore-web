@@ -28,7 +28,7 @@ export function JoinButton({
   const handleJoin = () => {
     setError(null);
     startTransition(async () => {
-      const result = await joinTeamViaInviteLinkAction(token);
+      const result = await joinTeamViaInviteLinkAction({ token });
       if (result.error) {
         setError(result.error);
       } else if (result.data) {

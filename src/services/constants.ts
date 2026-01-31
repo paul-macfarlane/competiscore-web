@@ -28,3 +28,6 @@ export const RULES_MAX_LENGTH = 10000;
 
 export const TEAM_NAME_MAX_LENGTH = 100;
 export const TEAM_DESCRIPTION_MAX_LENGTH = 500;
+
+export const MAX_PARTICIPANTS_PER_MATCH = 50;
+export const MAX_SCORE_VALUE = 999999999;

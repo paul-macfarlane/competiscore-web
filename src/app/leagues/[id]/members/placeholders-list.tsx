@@ -24,7 +24,7 @@ export function PlaceholdersList({
   const handleRetire = (placeholderId: string) => {
     setError(null);
     startTransition(async () => {
-      const result = await retirePlaceholderAction(placeholderId, leagueId);
+      const result = await retirePlaceholderAction({ placeholderId, leagueId });
       if (result.error) {
         setError(result.error);
       }
@@ -94,7 +94,10 @@ export function RetiredPlaceholdersList({
   const handleRestore = (placeholderId: string) => {
     setError(null);
     startTransition(async () => {
-      const result = await restorePlaceholderAction(placeholderId, leagueId);
+      const result = await restorePlaceholderAction({
+        placeholderId,
+        leagueId,
+      });
       if (result.error) {
         setError(result.error);
       }

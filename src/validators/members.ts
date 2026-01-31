@@ -2,6 +2,8 @@ import { LeagueMemberRole } from "@/lib/shared/constants";
 import { NAME_MAX_LENGTH } from "@/services/constants";
 import { z } from "zod";
 
+import { uuidSchema } from "./common";
+
 export const displayNameSchema = z
   .string()
   .min(1, "Display name is required")
@@ -15,6 +17,11 @@ export const memberRoleSchema = z.enum([
   LeagueMemberRole.MANAGER,
   LeagueMemberRole.EXECUTIVE,
 ]);
+
+export const removeMemberSchema = z.object({
+  leagueId: uuidSchema,
+  targetUserId: z.string().min(1, "User is required"),
+});
 
 export const createPlaceholderSchema = z.object({
   displayName: displayNameSchema,
@@ -47,3 +54,29 @@ export const updateMemberRoleSchema = z.object({
 });
 
 export type UpdateMemberRoleFormValues = z.infer<typeof updateMemberRoleSchema>;
+
+export const updateMemberRoleActionSchema = z.object({
+  leagueId: uuidSchema,
+  targetUserId: z.string().min(1, "User is required"),
+  role: memberRoleSchema,
+});
+
+export const searchUsersSchema = z.object({
+  leagueId: uuidSchema,
+  query: z.string().min(1, "Search query is required"),
+});
+
+export const inviteUserActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: inviteUserSchema,
+});
+
+export const generateInviteLinkActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: generateInviteLinkSchema,
+});
+
+export const createPlaceholderActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: createPlaceholderSchema,
+});

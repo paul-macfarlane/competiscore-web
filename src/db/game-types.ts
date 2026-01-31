@@ -36,7 +36,7 @@ export async function getGameTypesByLeagueId(
 
 export async function updateGameType(
   id: string,
-  data: Partial<Pick<GameType, "name" | "description" | "logo">>,
+  data: Partial<Pick<GameType, "name" | "description" | "logo" | "config">>,
   dbOrTx: DBOrTx = db,
 ): Promise<GameType | undefined> {
   const result = await dbOrTx

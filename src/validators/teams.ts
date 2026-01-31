@@ -5,6 +5,8 @@ import {
 } from "@/services/constants";
 import { z } from "zod";
 
+import { uuidSchema } from "./common";
+
 export const teamNameSchema = z
   .string()
   .min(1, "Team name is required")
@@ -35,6 +37,7 @@ export const teamLogoSchema = z
   .or(z.literal(""));
 
 export const createTeamFormSchema = z.object({
+  leagueId: uuidSchema,
   name: teamNameSchema,
   description: teamDescriptionSchema,
   logo: teamLogoSchema,
@@ -91,3 +94,56 @@ export const generateTeamInviteLinkSchema = z.object({
 export type GenerateTeamInviteLinkFormValues = z.infer<
   typeof generateTeamInviteLinkSchema
 >;
+
+export const teamIdSchema = z.object({
+  teamId: uuidSchema,
+});
+
+export const teamMemberIdSchema = z.object({
+  teamMemberId: uuidSchema,
+});
+
+export const createTeamActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: createTeamFormSchema,
+});
+
+export const updateTeamActionSchema = z.object({
+  teamId: uuidSchema,
+  input: updateTeamFormSchema,
+});
+
+export const archiveTeamSchema = z.object({
+  teamId: uuidSchema,
+});
+
+export const unarchiveTeamSchema = z.object({
+  teamId: uuidSchema,
+});
+
+export const deleteTeamSchema = z.object({
+  teamId: uuidSchema,
+});
+
+export const addTeamMemberActionSchema = z.object({
+  teamId: uuidSchema,
+  input: addTeamMemberSchema,
+});
+
+export const leaveTeamSchema = z.object({
+  teamId: uuidSchema,
+});
+
+export const inviteTeamMemberActionSchema = z.object({
+  teamId: uuidSchema,
+  input: inviteTeamMemberSchema,
+});
+
+export const generateTeamInviteLinkActionSchema = z.object({
+  teamId: uuidSchema,
+  input: generateTeamInviteLinkSchema,
+});
+
+export const joinTeamViaInviteLinkSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});

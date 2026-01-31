@@ -2,9 +2,6 @@ import {
   GAME_TYPE_ICONS,
   GameCategory,
   ICON_PATHS,
-  ParticipantType,
-  ScoreOrder,
-  ScoringType,
 } from "@/lib/shared/constants";
 import {
   GAME_TYPE_DESCRIPTION_MAX_LENGTH,
@@ -12,6 +9,13 @@ import {
   RULES_MAX_LENGTH,
 } from "@/services/constants";
 import { z } from "zod";
+
+import { uuidSchema } from "./common";
+import {
+  ffaConfigSchema,
+  h2hConfigSchema,
+  highScoreConfigSchema,
+} from "./game-configs";
 
 export const gameTypeNameSchema = z
   .string()
@@ -52,30 +56,6 @@ const rulesSchema = z
   .optional()
   .or(z.literal(""));
 
-export const h2hConfigSchema = z.object({
-  scoringType: z.enum([ScoringType.WIN_LOSS, ScoringType.SCORE_BASED]),
-  scoreDescription: z.string().max(50).optional(),
-  drawsAllowed: z.boolean(),
-  minPlayersPerSide: z.number().int().min(1).max(10),
-  maxPlayersPerSide: z.number().int().min(1).max(10),
-  rules: rulesSchema,
-});
-
-export const ffaConfigSchema = z.object({
-  scoringType: z.enum([ScoringType.RANKED_FINISH, ScoringType.SCORE_BASED]),
-  scoreOrder: z.enum([ScoreOrder.HIGHEST_WINS, ScoreOrder.LOWEST_WINS]),
-  minPlayers: z.number().int().min(2).max(50),
-  maxPlayers: z.number().int().min(2).max(50),
-  rules: rulesSchema,
-});
-
-export const highScoreConfigSchema = z.object({
-  scoreOrder: z.enum([ScoreOrder.HIGHEST_WINS, ScoreOrder.LOWEST_WINS]),
-  scoreDescription: z.string().min(1).max(50),
-  participantType: z.enum([ParticipantType.INDIVIDUAL, ParticipantType.TEAM]),
-  rules: rulesSchema,
-});
-
 export const createGameTypeFormSchema = z.discriminatedUnion("category", [
   z.object({
     name: gameTypeNameSchema,
@@ -83,6 +63,7 @@ export const createGameTypeFormSchema = z.discriminatedUnion("category", [
     logo: gameTypeLogoSchema,
     category: z.literal(GameCategory.HEAD_TO_HEAD),
     config: h2hConfigSchema,
+    leagueId: uuidSchema,
   }),
   z.object({
     name: gameTypeNameSchema,
@@ -90,6 +71,7 @@ export const createGameTypeFormSchema = z.discriminatedUnion("category", [
     logo: gameTypeLogoSchema,
     category: z.literal(GameCategory.FREE_FOR_ALL),
     config: ffaConfigSchema,
+    leagueId: uuidSchema,
   }),
   z.object({
     name: gameTypeNameSchema,
@@ -97,15 +79,65 @@ export const createGameTypeFormSchema = z.discriminatedUnion("category", [
     logo: gameTypeLogoSchema,
     category: z.literal(GameCategory.HIGH_SCORE),
     config: highScoreConfigSchema,
+    leagueId: uuidSchema,
   }),
 ]);
 
 export type CreateGameTypeFormValues = z.infer<typeof createGameTypeFormSchema>;
 
-export const updateGameTypeFormSchema = z.object({
-  name: gameTypeNameSchema.optional(),
-  description: gameTypeDescriptionSchema,
-  logo: gameTypeLogoSchema,
+// For updates, we only allow updating the rules field in config
+const updateConfigSchema = z.object({
+  rules: rulesSchema,
 });
 
+export const updateGameTypeFormSchema = z.discriminatedUnion("category", [
+  z.object({
+    category: z.literal(GameCategory.HEAD_TO_HEAD),
+    name: gameTypeNameSchema.optional(),
+    description: gameTypeDescriptionSchema,
+    logo: gameTypeLogoSchema,
+    config: updateConfigSchema.optional(),
+  }),
+  z.object({
+    category: z.literal(GameCategory.FREE_FOR_ALL),
+    name: gameTypeNameSchema.optional(),
+    description: gameTypeDescriptionSchema,
+    logo: gameTypeLogoSchema,
+    config: updateConfigSchema.optional(),
+  }),
+  z.object({
+    category: z.literal(GameCategory.HIGH_SCORE),
+    name: gameTypeNameSchema.optional(),
+    description: gameTypeDescriptionSchema,
+    logo: gameTypeLogoSchema,
+    config: updateConfigSchema.optional(),
+  }),
+]);
+
 export type UpdateGameTypeFormValues = z.infer<typeof updateGameTypeFormSchema>;
+
+export const gameTypeIdSchema = z.object({
+  gameTypeId: uuidSchema,
+});
+
+export const createGameTypeActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: createGameTypeFormSchema,
+});
+
+export const updateGameTypeActionSchema = z.object({
+  gameTypeId: uuidSchema,
+  input: updateGameTypeFormSchema,
+});
+
+export const archiveGameTypeSchema = z.object({
+  gameTypeId: uuidSchema,
+});
+
+export const deleteGameTypeSchema = z.object({
+  gameTypeId: uuidSchema,
+});
+
+export const unarchiveGameTypeSchema = z.object({
+  gameTypeId: uuidSchema,
+});

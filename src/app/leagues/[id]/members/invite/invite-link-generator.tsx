@@ -38,12 +38,12 @@ export function InviteLinkGenerator({
     setError(null);
     setGeneratedLink(null);
     startTransition(async () => {
-      const result = await generateInviteLinkAction(
+      const result = await generateInviteLinkAction({
         leagueId,
         role,
-        expiresInDays ? parseInt(expiresInDays) : undefined,
-        maxUses ? parseInt(maxUses) : undefined,
-      );
+        expiresInDays: expiresInDays ? parseInt(expiresInDays) : undefined,
+        maxUses: maxUses ? parseInt(maxUses) : undefined,
+      });
       if (result.error) {
         setError(result.error);
       } else if (result.data) {

@@ -29,7 +29,13 @@ import {
 } from "@/lib/shared/permissions";
 import {
   addTeamMemberSchema,
+  archiveTeamSchema,
   createTeamFormSchema,
+  deleteTeamSchema,
+  leaveTeamSchema,
+  teamIdSchema,
+  teamMemberIdSchema,
+  unarchiveTeamSchema,
   updateTeamFormSchema,
 } from "@/validators/teams";
 
@@ -37,9 +43,18 @@ import { ServiceResult, formatZodErrors } from "./shared";
 
 export async function createTeam(
   userId: string,
-  leagueId: string,
   input: unknown,
 ): Promise<ServiceResult<Team>> {
+  const parsed = createTeamFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -47,14 +62,6 @@ export async function createTeam(
 
   if (!canPerformAction(membership.role, LeagueAction.CREATE_TEAMS)) {
     return { error: "You do not have permission to create teams" };
-  }
-
-  const parsed = createTeamFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      error: "Validation failed",
-      fieldErrors: formatZodErrors(parsed.error),
-    };
   }
 
   const nameExists = await dbCheckTeamNameExists(leagueId, parsed.data.name);
@@ -124,9 +131,27 @@ export async function getLeagueTeams(
 
 export async function updateTeam(
   userId: string,
-  teamId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<Team>> {
+  const idParsed = teamIdSchema.safeParse(idInput);
+  if (!idParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(idParsed.error),
+    };
+  }
+
+  const dataParsed = updateTeamFormSchema.safeParse(dataInput);
+  if (!dataParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(dataParsed.error),
+    };
+  }
+
+  const { teamId } = idParsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };
@@ -145,18 +170,10 @@ export async function updateTeam(
     return { error: "You do not have permission to edit this team" };
   }
 
-  const parsed = updateTeamFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      error: "Validation failed",
-      fieldErrors: formatZodErrors(parsed.error),
-    };
-  }
-
-  if (parsed.data.name) {
+  if (dataParsed.data.name) {
     const nameExists = await dbCheckTeamNameExists(
       team.leagueId,
-      parsed.data.name,
+      dataParsed.data.name,
       teamId,
     );
     if (nameExists) {
@@ -168,9 +185,9 @@ export async function updateTeam(
   }
 
   const updated = await dbUpdateTeam(teamId, {
-    name: parsed.data.name,
-    description: parsed.data.description,
-    logo: parsed.data.logo,
+    name: dataParsed.data.name,
+    description: dataParsed.data.description,
+    logo: dataParsed.data.logo,
   });
 
   if (!updated) {
@@ -182,8 +199,18 @@ export async function updateTeam(
 
 export async function archiveTeam(
   userId: string,
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = archiveTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { teamId } = parsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };
@@ -208,8 +235,18 @@ export async function archiveTeam(
 
 export async function unarchiveTeam(
   userId: string,
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = unarchiveTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { teamId } = parsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };
@@ -234,8 +271,18 @@ export async function unarchiveTeam(
 
 export async function deleteTeam(
   userId: string,
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = deleteTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { teamId } = parsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };
@@ -264,9 +311,27 @@ export async function deleteTeam(
 
 export async function addTeamMember(
   userId: string,
-  teamId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<TeamMember>> {
+  const idParsed = teamIdSchema.safeParse(idInput);
+  if (!idParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(idParsed.error),
+    };
+  }
+
+  const dataParsed = addTeamMemberSchema.safeParse(dataInput);
+  if (!dataParsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(dataParsed.error),
+    };
+  }
+
+  const { teamId } = idParsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };
@@ -285,17 +350,9 @@ export async function addTeamMember(
     return { error: "You do not have permission to add members to this team" };
   }
 
-  const parsed = addTeamMemberSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      error: "Validation failed",
-      fieldErrors: formatZodErrors(parsed.error),
-    };
-  }
-
-  if (parsed.data.userId) {
+  if (dataParsed.data.userId) {
     const targetMembership = await getLeagueMember(
-      parsed.data.userId,
+      dataParsed.data.userId,
       team.leagueId,
     );
     if (!targetMembership) {
@@ -304,17 +361,17 @@ export async function addTeamMember(
 
     const existingMember = await dbGetTeamMemberByUserId(
       teamId,
-      parsed.data.userId,
+      dataParsed.data.userId,
     );
     if (existingMember) {
       return { error: "User is already a member of this team" };
     }
   }
 
-  if (parsed.data.placeholderMemberId) {
+  if (dataParsed.data.placeholderMemberId) {
     const existingMember = await dbGetTeamMemberByPlaceholderId(
       teamId,
-      parsed.data.placeholderMemberId,
+      dataParsed.data.placeholderMemberId,
     );
     if (existingMember) {
       return { error: "Placeholder member is already a member of this team" };
@@ -323,8 +380,8 @@ export async function addTeamMember(
 
   const newMember = await dbCreateTeamMember({
     teamId,
-    userId: parsed.data.userId || null,
-    placeholderMemberId: parsed.data.placeholderMemberId || null,
+    userId: dataParsed.data.userId || null,
+    placeholderMemberId: dataParsed.data.placeholderMemberId || null,
   });
 
   return { data: newMember };
@@ -332,8 +389,18 @@ export async function addTeamMember(
 
 export async function removeTeamMember(
   userId: string,
-  teamMemberId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = teamMemberIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { teamMemberId } = parsed.data;
+
   const targetMember = await dbGetTeamMemberById(teamMemberId);
   if (!targetMember) {
     return { error: "Team member not found" };
@@ -365,8 +432,18 @@ export async function removeTeamMember(
 
 export async function leaveTeam(
   userId: string,
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
+  const parsed = leaveTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { teamId } = parsed.data;
+
   const team = await dbGetTeamById(teamId);
   if (!team) {
     return { error: "Team not found" };

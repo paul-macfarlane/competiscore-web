@@ -38,7 +38,7 @@ export async function searchLeaguesAction(
 }
 
 export async function joinLeagueAction(
-  leagueId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ joined: boolean }>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -47,5 +47,5 @@ export async function joinLeagueAction(
     return { error: "Unauthorized" };
   }
 
-  return joinPublicLeagueService(leagueId, session.user.id);
+  return joinPublicLeagueService(session.user.id, input);
 }

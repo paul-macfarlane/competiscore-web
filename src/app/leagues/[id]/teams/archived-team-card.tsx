@@ -22,7 +22,7 @@ export function ArchivedTeamCard({ team }: ArchivedTeamCardProps) {
 
   const handleUnarchive = () => {
     startTransition(async () => {
-      const result = await unarchiveTeamAction(team.id);
+      const result = await unarchiveTeamAction({ teamId: team.id });
       if (result.error) {
         toast.error(result.error);
       } else {

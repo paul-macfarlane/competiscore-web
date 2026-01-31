@@ -23,6 +23,7 @@ import {
   liftSuspension,
   takeModerationAction,
 } from "./moderation";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db", () => ({
   withTransaction: vi.fn((callback) => callback({})),
@@ -56,9 +57,9 @@ vi.mock("@/db/moderation-actions", () => ({
 }));
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: LeagueMemberRole.MEMBER,
   joinedAt: new Date(),
   suspendedUntil: null,
@@ -66,16 +67,16 @@ const mockMember = {
 
 const mockManager = {
   ...mockMember,
-  id: "manager-123",
-  userId: "manager-user-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID_2,
   role: LeagueMemberRole.MANAGER,
 };
 
 const mockReport = {
-  id: "report-123",
-  reporterId: "user-123",
-  reportedUserId: "user-456",
-  leagueId: "league-123",
+  id: TEST_IDS.REPORT_ID,
+  reporterId: TEST_IDS.USER_ID,
+  reportedUserId: TEST_IDS.USER_ID_2,
+  leagueId: TEST_IDS.LEAGUE_ID,
   reason: ReportReason.HARASSMENT,
   description: "Test description",
   evidence: null,
@@ -86,13 +87,13 @@ const mockReport = {
 const mockReportWithUsers = {
   ...mockReport,
   reporter: {
-    id: "user-123",
+    id: TEST_IDS.USER_ID,
     name: "Reporter User",
     username: "reporter",
     image: null,
   },
   reportedUser: {
-    id: "user-456",
+    id: TEST_IDS.USER_ID_2,
     name: "Reported User",
     username: "reported",
     image: null,
@@ -106,9 +107,9 @@ describe("moderation service", () => {
 
   describe("createReport", () => {
     it("returns error for self-reporting", async () => {
-      const result = await createReport("user-123", {
-        reportedUserId: "user-123",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
@@ -119,9 +120,9 @@ describe("moderation service", () => {
     it("returns error when reporter is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await createReport("user-123", {
-        reportedUserId: "user-456",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
@@ -133,9 +134,9 @@ describe("moderation service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
       vi.mocked(dbLeagueMembers.isMemberSuspended).mockResolvedValue(true);
 
-      const result = await createReport("user-123", {
-        reportedUserId: "user-456",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
@@ -149,9 +150,9 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(undefined);
       vi.mocked(dbLeagueMembers.isMemberSuspended).mockResolvedValue(false);
 
-      const result = await createReport("user-123", {
-        reportedUserId: "user-456",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
@@ -166,9 +167,9 @@ describe("moderation service", () => {
       vi.mocked(dbLeagueMembers.isMemberSuspended).mockResolvedValue(false);
       vi.mocked(dbReports.hasExistingPendingReport).mockResolvedValue(true);
 
-      const result = await createReport("user-123", {
-        reportedUserId: "user-456",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
@@ -184,14 +185,17 @@ describe("moderation service", () => {
       vi.mocked(dbReports.hasExistingPendingReport).mockResolvedValue(false);
       vi.mocked(dbReports.createReport).mockResolvedValue(mockReport);
 
-      const result = await createReport("user-123", {
-        reportedUserId: "user-456",
-        leagueId: "league-123",
+      const result = await createReport(TEST_IDS.USER_ID, {
+        reportedUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         reason: ReportReason.HARASSMENT,
         description: "Test description with enough length",
       });
 
-      expect(result.data).toEqual({ created: true });
+      expect(result.data).toEqual({
+        created: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
@@ -199,7 +203,10 @@ describe("moderation service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getPendingReports("user-123", "league-123");
+      const result = await getPendingReports(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -207,7 +214,10 @@ describe("moderation service", () => {
     it("returns error when user lacks permission", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await getPendingReports("user-123", "league-123");
+      const result = await getPendingReports(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.error).toBe("You don't have permission to view reports");
     });
@@ -218,7 +228,10 @@ describe("moderation service", () => {
         mockReportWithUsers,
       ]);
 
-      const result = await getPendingReports("manager-user-123", "league-123");
+      const result = await getPendingReports(
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toEqual([mockReportWithUsers]);
     });
@@ -228,7 +241,10 @@ describe("moderation service", () => {
     it("returns 0 when user lacks permission", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await getPendingReportCount("user-123", "league-123");
+      const result = await getPendingReportCount(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toBe(0);
     });
@@ -238,8 +254,8 @@ describe("moderation service", () => {
       vi.mocked(dbReports.getPendingReportCount).mockResolvedValue(5);
 
       const result = await getPendingReportCount(
-        "manager-user-123",
-        "league-123",
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.LEAGUE_ID,
       );
 
       expect(result.data).toBe(5);
@@ -250,8 +266,8 @@ describe("moderation service", () => {
     it("returns error when report not found", async () => {
       vi.mocked(dbReports.getReportWithUsersById).mockResolvedValue(undefined);
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -265,8 +281,8 @@ describe("moderation service", () => {
         status: "resolved",
       });
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -280,8 +296,8 @@ describe("moderation service", () => {
       );
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -295,8 +311,8 @@ describe("moderation service", () => {
       );
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await takeModerationAction("user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -309,12 +325,12 @@ describe("moderation service", () => {
     it("returns error when moderating own report", async () => {
       vi.mocked(dbReports.getReportWithUsersById).mockResolvedValue({
         ...mockReportWithUsers,
-        reporterId: "manager-user-123",
+        reporterId: TEST_IDS.USER_ID_2,
       });
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockManager);
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -330,12 +346,12 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockManager)
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           role: LeagueMemberRole.EXECUTIVE,
         });
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Test reason text",
       });
@@ -354,27 +370,31 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockMember);
       vi.mocked(dbModerationActions.createModerationAction).mockResolvedValue({
         id: "action-123",
-        reportId: "report-123",
-        moderatorId: "manager-user-123",
-        targetUserId: "user-456",
-        leagueId: "league-123",
+        reportId: TEST_IDS.REPORT_ID,
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.DISMISSED,
         reason: "No evidence",
         suspendedUntil: null,
         createdAt: new Date(),
+        acknowledgedAt: null,
       });
       vi.mocked(dbReports.updateReportStatus).mockResolvedValue({
         ...mockReport,
         status: "resolved",
       });
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.DISMISSED,
         reason: "No evidence provided",
       });
 
-      expect(result.data).toEqual({ actionTaken: true });
+      expect(result.data).toEqual({
+        actionTaken: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
 
     it("successfully warns member", async () => {
@@ -386,27 +406,31 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockMember);
       vi.mocked(dbModerationActions.createModerationAction).mockResolvedValue({
         id: "action-123",
-        reportId: "report-123",
-        moderatorId: "manager-user-123",
-        targetUserId: "user-456",
-        leagueId: "league-123",
+        reportId: TEST_IDS.REPORT_ID,
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.WARNED,
         reason: "Violated rules",
         suspendedUntil: null,
         createdAt: new Date(),
+        acknowledgedAt: null,
       });
       vi.mocked(dbReports.updateReportStatus).mockResolvedValue({
         ...mockReport,
         status: "resolved",
       });
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.WARNED,
         reason: "Violated rules warning",
       });
 
-      expect(result.data).toEqual({ actionTaken: true });
+      expect(result.data).toEqual({
+        actionTaken: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
 
     it("successfully suspends member", async () => {
@@ -418,14 +442,15 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockMember);
       vi.mocked(dbModerationActions.createModerationAction).mockResolvedValue({
         id: "action-123",
-        reportId: "report-123",
-        moderatorId: "manager-user-123",
-        targetUserId: "user-456",
-        leagueId: "league-123",
+        reportId: TEST_IDS.REPORT_ID,
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.SUSPENDED,
         reason: "Serious violation",
         suspendedUntil: new Date(),
         createdAt: new Date(),
+        acknowledgedAt: null,
       });
       vi.mocked(dbReports.updateReportStatus).mockResolvedValue({
         ...mockReport,
@@ -436,14 +461,17 @@ describe("moderation service", () => {
         suspendedUntil: new Date(),
       });
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.SUSPENDED,
         reason: "Serious violation here",
         suspensionDays: 7,
       });
 
-      expect(result.data).toEqual({ actionTaken: true });
+      expect(result.data).toEqual({
+        actionTaken: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
 
     it("successfully removes member", async () => {
@@ -455,14 +483,15 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockMember);
       vi.mocked(dbModerationActions.createModerationAction).mockResolvedValue({
         id: "action-123",
-        reportId: "report-123",
-        moderatorId: "manager-user-123",
-        targetUserId: "user-456",
-        leagueId: "league-123",
+        reportId: TEST_IDS.REPORT_ID,
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.REMOVED,
         reason: "Repeated violations",
         suspendedUntil: null,
         createdAt: new Date(),
+        acknowledgedAt: null,
       });
       vi.mocked(dbReports.updateReportStatus).mockResolvedValue({
         ...mockReport,
@@ -470,13 +499,16 @@ describe("moderation service", () => {
       });
       vi.mocked(dbLeagueMembers.deleteLeagueMember).mockResolvedValue(true);
 
-      const result = await takeModerationAction("manager-user-123", {
-        reportId: "report-123",
+      const result = await takeModerationAction(TEST_IDS.USER_ID_2, {
+        reportId: TEST_IDS.REPORT_ID,
         action: ModerationActionType.REMOVED,
         reason: "Repeated violations now",
       });
 
-      expect(result.data).toEqual({ actionTaken: true });
+      expect(result.data).toEqual({
+        actionTaken: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
@@ -484,7 +516,10 @@ describe("moderation service", () => {
     it("returns error when report not found", async () => {
       vi.mocked(dbReports.getReportWithUsersById).mockResolvedValue(undefined);
 
-      const result = await getReportDetail("user-123", "report-123");
+      const result = await getReportDetail(
+        TEST_IDS.USER_ID,
+        TEST_IDS.REPORT_ID,
+      );
 
       expect(result.error).toBe("Report not found");
     });
@@ -495,7 +530,10 @@ describe("moderation service", () => {
       );
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await getReportDetail("user-123", "report-123");
+      const result = await getReportDetail(
+        TEST_IDS.USER_ID,
+        TEST_IDS.REPORT_ID,
+      );
 
       expect(result.error).toBe("You don't have permission to view reports");
     });
@@ -509,7 +547,10 @@ describe("moderation service", () => {
         dbModerationActions.getModerationHistoryByUser,
       ).mockResolvedValue([]);
 
-      const result = await getReportDetail("manager-user-123", "report-123");
+      const result = await getReportDetail(
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.REPORT_ID,
+      );
 
       expect(result.data).toEqual({
         report: mockReportWithUsers,
@@ -522,7 +563,10 @@ describe("moderation service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getOwnModerationHistory("user-123", "league-123");
+      const result = await getOwnModerationHistory(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -537,7 +581,10 @@ describe("moderation service", () => {
       });
       vi.mocked(dbModerationActions.getWarningsByUser).mockResolvedValue([]);
 
-      const result = await getOwnModerationHistory("user-123", "league-123");
+      const result = await getOwnModerationHistory(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data?.warnings).toEqual([]);
       expect(result.data?.suspendedUntil).toEqual(futureDate);
@@ -549,9 +596,9 @@ describe("moderation service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
       const result = await getMemberModerationHistory(
-        "user-123",
-        "user-456",
-        "league-123",
+        TEST_IDS.USER_ID,
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.LEAGUE_ID,
       );
 
       expect(result.error).toBe(
@@ -566,9 +613,9 @@ describe("moderation service", () => {
       ).mockResolvedValue([]);
 
       const result = await getMemberModerationHistory(
-        "manager-user-123",
-        "user-456",
-        "league-123",
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.USER_ID_2,
+        TEST_IDS.LEAGUE_ID,
       );
 
       expect(result.data).toEqual([]);
@@ -579,7 +626,10 @@ describe("moderation service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getOwnSubmittedReports("user-123", "league-123");
+      const result = await getOwnSubmittedReports(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -590,7 +640,10 @@ describe("moderation service", () => {
         mockReportWithUsers,
       ]);
 
-      const result = await getOwnSubmittedReports("user-123", "league-123");
+      const result = await getOwnSubmittedReports(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toEqual([mockReportWithUsers]);
     });
@@ -603,7 +656,10 @@ describe("moderation service", () => {
         mockReportWithUsers,
       ]);
 
-      const result = await getOwnReportCount("user-123", "league-123");
+      const result = await getOwnReportCount(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toBe(2);
     });
@@ -611,7 +667,10 @@ describe("moderation service", () => {
     it("returns 0 when no reports", async () => {
       vi.mocked(dbReports.getReportsByReporter).mockResolvedValue([]);
 
-      const result = await getOwnReportCount("user-123", "league-123");
+      const result = await getOwnReportCount(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toBe(0);
     });
@@ -621,17 +680,17 @@ describe("moderation service", () => {
     it("returns count of warnings", async () => {
       const mockWarning = {
         id: "action-123",
-        reportId: "report-123",
-        moderatorId: "manager-user-123",
-        targetUserId: "user-123",
-        leagueId: "league-123",
+        reportId: TEST_IDS.REPORT_ID,
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.WARNED,
         reason: "Warning reason",
         suspendedUntil: null,
         acknowledgedAt: null,
         createdAt: new Date(),
         moderator: {
-          id: "manager-user-123",
+          id: TEST_IDS.USER_ID_2,
           name: "Manager",
           username: "manager",
           image: null,
@@ -643,7 +702,10 @@ describe("moderation service", () => {
         mockWarning,
       ]);
 
-      const result = await getOwnWarningCount("user-123", "league-123");
+      const result = await getOwnWarningCount(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toBe(2);
     });
@@ -651,7 +713,10 @@ describe("moderation service", () => {
     it("returns 0 when no warnings", async () => {
       vi.mocked(dbModerationActions.getWarningsByUser).mockResolvedValue([]);
 
-      const result = await getOwnWarningCount("user-123", "league-123");
+      const result = await getOwnWarningCount(
+        TEST_IDS.USER_ID,
+        TEST_IDS.LEAGUE_ID,
+      );
 
       expect(result.data).toBe(0);
     });
@@ -664,7 +729,7 @@ describe("moderation service", () => {
       ).mockResolvedValue(false);
 
       const result = await acknowledgeModerationAction(
-        "user-123",
+        TEST_IDS.USER_ID,
         "action-123",
       );
 
@@ -679,7 +744,7 @@ describe("moderation service", () => {
       ).mockResolvedValue(true);
 
       const result = await acknowledgeModerationAction(
-        "user-123",
+        TEST_IDS.USER_ID,
         "action-123",
       );
 
@@ -692,7 +757,7 @@ describe("moderation service", () => {
       ...mockMember,
       suspendedUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       user: {
-        id: "user-456",
+        id: TEST_IDS.USER_ID_2,
         name: "Suspended User",
         username: "suspended",
         image: null,
@@ -702,7 +767,9 @@ describe("moderation service", () => {
     it("returns error when user is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getSuspendedMembers("user-123", "league-123");
+      const result = await getSuspendedMembers(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -710,7 +777,9 @@ describe("moderation service", () => {
     it("returns error when user lacks permission", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await getSuspendedMembers("user-123", "league-123");
+      const result = await getSuspendedMembers(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to view suspended members",
@@ -723,10 +792,9 @@ describe("moderation service", () => {
         mockSuspendedMember,
       ]);
 
-      const result = await getSuspendedMembers(
-        "manager-user-123",
-        "league-123",
-      );
+      const result = await getSuspendedMembers(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.data).toEqual([mockSuspendedMember]);
     });
@@ -736,18 +804,17 @@ describe("moderation service", () => {
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const suspendedMember = {
       ...mockMember,
-      userId: "user-456",
+      userId: TEST_IDS.USER_ID_2,
       suspendedUntil: futureDate,
     };
 
     it("returns error when moderator is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -755,7 +822,10 @@ describe("moderation service", () => {
     it("returns error when moderator lacks permission", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await liftSuspension("user-123", "user-456", "league-123");
+      const result = await liftSuspension(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to lift suspensions",
@@ -767,11 +837,10 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockManager)
         .mockResolvedValueOnce(undefined);
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("The member is no longer part of this league");
     });
@@ -781,11 +850,10 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockManager)
         .mockResolvedValueOnce(mockMember);
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("This member is not currently suspended");
     });
@@ -796,15 +864,14 @@ describe("moderation service", () => {
         .mockResolvedValueOnce(mockManager)
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
           suspendedUntil: pastDate,
         });
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe("This member is not currently suspended");
     });
@@ -817,11 +884,10 @@ describe("moderation service", () => {
           role: LeagueMemberRole.EXECUTIVE,
         });
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
       expect(result.error).toBe(
         "You cannot lift the suspension of someone with an equal or higher role",
@@ -841,9 +907,9 @@ describe("moderation service", () => {
       ).mockResolvedValue({
         id: "action-123",
         reportId: null,
-        moderatorId: "manager-user-123",
-        targetUserId: "user-456",
-        leagueId: "league-123",
+        moderatorId: TEST_IDS.USER_ID_2,
+        targetUserId: TEST_IDS.USER_ID_2,
+        leagueId: TEST_IDS.LEAGUE_ID,
         action: ModerationActionType.SUSPENSION_LIFTED,
         reason: "Suspension lifted early by moderator",
         suspendedUntil: null,
@@ -851,13 +917,15 @@ describe("moderation service", () => {
         createdAt: new Date(),
       });
 
-      const result = await liftSuspension(
-        "manager-user-123",
-        "user-456",
-        "league-123",
-      );
+      const result = await liftSuspension(TEST_IDS.USER_ID_2, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        targetUserId: TEST_IDS.USER_ID_2,
+      });
 
-      expect(result.data).toEqual({ lifted: true });
+      expect(result.data).toEqual({
+        lifted: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 });

@@ -18,3 +18,7 @@ export function formatZodErrors(zodError: ZodError): FieldErrors {
   }
   return fieldErrors;
 }
+
+export function isSuspended(member: { suspendedUntil: Date | null }): boolean {
+  return member.suspendedUntil !== null && member.suspendedUntil > new Date();
+}

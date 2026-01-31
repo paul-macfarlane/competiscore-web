@@ -23,7 +23,7 @@ export function ArchivedGameTypeCard({ gameType }: ArchivedGameTypeCardProps) {
 
   const handleUnarchive = () => {
     startTransition(async () => {
-      const result = await unarchiveGameTypeAction(gameType.id);
+      const result = await unarchiveGameTypeAction({ gameTypeId: gameType.id });
       if (result.error) {
         toast.error(result.error);
       } else {

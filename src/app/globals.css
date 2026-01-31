@@ -39,6 +39,12 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-rank-gold-bg: var(--rank-gold-bg);
+  --color-rank-gold-text: var(--rank-gold-text);
+  --color-rank-silver-bg: var(--rank-silver-bg);
+  --color-rank-silver-text: var(--rank-silver-text);
+  --color-rank-bronze-bg: var(--rank-bronze-bg);
+  --color-rank-bronze-text: var(--rank-bronze-text);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -83,6 +89,12 @@
   --sidebar-ring: oklch(0.704 0.04 256.788);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
+  --rank-gold-bg: oklch(0.9 0.1 90 / 20%);
+  --rank-gold-text: oklch(0.55 0.15 85);
+  --rank-silver-bg: oklch(0.7 0.02 260 / 20%);
+  --rank-silver-text: oklch(0.45 0.02 260);
+  --rank-bronze-bg: oklch(0.75 0.12 55 / 20%);
+  --rank-bronze-text: oklch(0.5 0.12 50);
 }
 
 .dark {
@@ -119,6 +131,12 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --rank-gold-bg: oklch(0.9 0.1 90 / 20%);
+  --rank-gold-text: oklch(0.8 0.15 90);
+  --rank-silver-bg: oklch(0.7 0.02 260 / 20%);
+  --rank-silver-text: oklch(0.75 0.02 260);
+  --rank-bronze-bg: oklch(0.75 0.12 55 / 20%);
+  --rank-bronze-text: oklch(0.75 0.12 55);
 }
 
 @layer base {

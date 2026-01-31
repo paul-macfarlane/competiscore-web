@@ -6,7 +6,7 @@ import { ServiceResult } from "@/services/shared";
 import { headers } from "next/headers";
 
 export async function unarchiveLeagueAction(
-  leagueId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ unarchived: boolean }>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -15,5 +15,5 @@ export async function unarchiveLeagueAction(
     return { error: "Not authenticated" };
   }
 
-  return unarchiveLeague(leagueId, session.user.id);
+  return unarchiveLeague(session.user.id, input);
 }

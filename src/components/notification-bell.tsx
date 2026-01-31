@@ -70,11 +70,11 @@ export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
     notification: Notification,
     action: NotificationAction,
   ) => {
-    const result = await handleNotificationAction(
-      notification.type,
-      notification.id,
+    const result = await handleNotificationAction({
+      notificationType: notification.type,
+      notificationId: notification.id,
       action,
-    );
+    });
     if (!result.error) {
       // Remove the notification from the list
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id));

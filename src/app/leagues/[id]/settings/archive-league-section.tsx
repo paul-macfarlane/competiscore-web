@@ -30,7 +30,7 @@ export function ArchiveLeagueSection({ leagueId }: ArchiveLeagueSectionProps) {
     setError(null);
 
     startTransition(async () => {
-      const result = await archiveLeagueAction(leagueId);
+      const result = await archiveLeagueAction({ leagueId });
 
       if (result.error) {
         setError(result.error);

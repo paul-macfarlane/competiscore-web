@@ -1,6 +1,7 @@
 "use client";
 
 import { SimpleIconSelector } from "@/components/icon-selector";
+import { MarkdownInput } from "@/components/markdown-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,10 +24,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GameType } from "@/db/schema";
-import { GAME_TYPE_ICONS, ICON_PATHS } from "@/lib/shared/constants";
+import {
+  GAME_TYPE_ICONS,
+  GameCategory,
+  ICON_PATHS,
+} from "@/lib/shared/constants";
+import { parseGameConfig } from "@/lib/shared/game-config-parser";
 import {
   GAME_TYPE_DESCRIPTION_MAX_LENGTH,
   GAME_TYPE_NAME_MAX_LENGTH,
+  RULES_MAX_LENGTH,
 } from "@/services/constants";
 import {
   UpdateGameTypeFormValues,
@@ -70,19 +77,29 @@ export function EditGameTypeForm({
 
   const canDelete = deleteConfirmText === gameType.name;
 
+  const config = parseGameConfig(gameType.config, gameType.category);
+  const rules = "rules" in config ? config.rules : undefined;
+
   const form = useForm<UpdateGameTypeFormValues>({
     resolver: zodResolver(updateGameTypeFormSchema),
     defaultValues: {
+      category: gameType.category as GameCategory,
       name: gameType.name,
       description: gameType.description || "",
       logo: gameType.logo || undefined,
+      config: {
+        rules: rules || "",
+      },
     },
     mode: "onChange",
   });
 
   const onSubmit = (values: UpdateGameTypeFormValues) => {
     startTransition(async () => {
-      const result = await updateGameTypeAction(gameType.id, values);
+      const result = await updateGameTypeAction(
+        { gameTypeId: gameType.id },
+        values,
+      );
 
       if (result.error) {
         if (result.fieldErrors) {
@@ -103,7 +120,7 @@ export function EditGameTypeForm({
 
   const handleArchive = () => {
     startTransition(async () => {
-      const result = await archiveGameTypeAction(gameType.id);
+      const result = await archiveGameTypeAction({ gameTypeId: gameType.id });
 
       if (result.error) {
         toast.error(result.error);
@@ -119,7 +136,7 @@ export function EditGameTypeForm({
     setDeleteError(null);
 
     startTransition(async () => {
-      const result = await deleteGameTypeAction(gameType.id);
+      const result = await deleteGameTypeAction({ gameTypeId: gameType.id });
 
       if (result.error) {
         setDeleteError(result.error);
@@ -214,11 +231,30 @@ export function EditGameTypeForm({
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="config.rules"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rules (Optional)</FormLabel>
+                <FormControl>
+                  <MarkdownInput
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    placeholder="Enter rules in markdown format..."
+                    maxLength={RULES_MAX_LENGTH}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="rounded-lg border p-4 bg-muted/50">
             <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> Game category and configuration cannot be
-              changed after creation to preserve historical data integrity. If
-              you need different settings, create a new game type.
+              <strong>Note:</strong> Game category and scoring configuration
+              cannot be changed after creation to preserve historical data
+              integrity. If you need different settings, create a new game type.
             </p>
           </div>
 

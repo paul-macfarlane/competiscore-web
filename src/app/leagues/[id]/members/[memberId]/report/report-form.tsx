@@ -68,7 +68,7 @@ export function ReportForm({ leagueId, member }: ReportFormProps) {
   const onSubmit = (data: FormValues) => {
     setError(null);
     startTransition(async () => {
-      const result = await createReportAction(leagueId, {
+      const result = await createReportAction({
         ...data,
         reportedUserId: member.userId,
         leagueId,

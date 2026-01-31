@@ -40,7 +40,7 @@ export function DeleteLeagueSection({
     setError(null);
 
     startTransition(async () => {
-      const result = await deleteLeagueAction(leagueId);
+      const result = await deleteLeagueAction({ leagueId });
 
       if (result.error) {
         setError(result.error);

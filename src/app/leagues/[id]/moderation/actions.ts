@@ -2,9 +2,6 @@
 
 import { auth } from "@/lib/server/auth";
 import {
-  getMemberModerationHistory,
-  getPendingReports,
-  getReportDetail,
   getSuspendedMembers,
   liftSuspension,
   takeModerationAction,
@@ -12,32 +9,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-export async function getPendingReportsAction(leagueId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    return { error: "Unauthorized" };
-  }
-
-  return getPendingReports(session.user.id, leagueId);
-}
-
-export async function getReportDetailAction(reportId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    return { error: "Unauthorized" };
-  }
-
-  return getReportDetail(session.user.id, reportId);
-}
-
-export async function takeModerationActionAction(
-  leagueId: string,
-  input: unknown,
-) {
+export async function takeModerationActionAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -47,17 +19,14 @@ export async function takeModerationActionAction(
 
   const result = await takeModerationAction(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/moderation`);
-    revalidatePath(`/leagues/${leagueId}/members`);
+    revalidatePath(`/leagues/${result.data.leagueId}/moderation`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members`);
   }
 
   return result;
 }
 
-export async function getMemberHistoryAction(
-  leagueId: string,
-  targetUserId: string,
-) {
+export async function getSuspendedMembersAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -65,10 +34,10 @@ export async function getMemberHistoryAction(
     return { error: "Unauthorized" };
   }
 
-  return getMemberModerationHistory(session.user.id, targetUserId, leagueId);
+  return getSuspendedMembers(session.user.id, input);
 }
 
-export async function getSuspendedMembersAction(leagueId: string) {
+export async function liftSuspensionAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -76,24 +45,10 @@ export async function getSuspendedMembersAction(leagueId: string) {
     return { error: "Unauthorized" };
   }
 
-  return getSuspendedMembers(session.user.id, leagueId);
-}
-
-export async function liftSuspensionAction(
-  leagueId: string,
-  targetUserId: string,
-) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    return { error: "Unauthorized" };
-  }
-
-  const result = await liftSuspension(session.user.id, targetUserId, leagueId);
+  const result = await liftSuspension(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/moderation`);
-    revalidatePath(`/leagues/${leagueId}/members`);
+    revalidatePath(`/leagues/${result.data.leagueId}/moderation`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members`);
   }
 
   return result;
