@@ -74,7 +74,7 @@ export function ModerationActionForm({
   const onSubmit = (data: ModerationActionFormValues) => {
     setError(null);
     startTransition(async () => {
-      const result = await takeModerationActionAction(leagueId, {
+      const result = await takeModerationActionAction({
         ...data,
         reportId,
       });

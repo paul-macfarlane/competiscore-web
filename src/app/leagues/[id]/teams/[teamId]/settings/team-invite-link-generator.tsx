@@ -35,10 +35,13 @@ export function TeamInviteLinkGenerator({
     setError(null);
     setGeneratedLink(null);
     startTransition(async () => {
-      const result = await generateTeamInviteLinkAction(teamId, {
-        role,
-        expiresInDays: expiresInDays ? parseInt(expiresInDays) : undefined,
-        maxUses: maxUses ? parseInt(maxUses) : undefined,
+      const result = await generateTeamInviteLinkAction({
+        teamId,
+        input: {
+          role,
+          expiresInDays: expiresInDays ? parseInt(expiresInDays) : undefined,
+          maxUses: maxUses ? parseInt(maxUses) : undefined,
+        },
       });
       if (result.error) {
         setError(result.error);

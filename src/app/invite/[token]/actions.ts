@@ -4,7 +4,7 @@ import { auth } from "@/lib/server/auth";
 import { joinViaInviteLink } from "@/services/invitations";
 import { headers } from "next/headers";
 
-export async function joinViaInviteLinkAction(token: string) {
+export async function joinViaInviteLinkAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -12,5 +12,5 @@ export async function joinViaInviteLinkAction(token: string) {
     return { error: "Unauthorized" };
   }
 
-  return joinViaInviteLink(token, session.user.id);
+  return joinViaInviteLink(session.user.id, input);
 }

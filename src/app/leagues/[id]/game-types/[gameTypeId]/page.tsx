@@ -6,19 +6,30 @@ import { auth } from "@/lib/server/auth";
 import {
   GAME_CATEGORY_LABELS,
   GameCategory,
+  MATCH_RESULT_LABELS,
+  MatchResult,
+  MatchStatus,
   ParticipantType,
   ScoreOrder,
   ScoringType,
 } from "@/lib/shared/constants";
+import { parseGameConfig } from "@/lib/shared/game-config-parser";
 import {
   FFAConfig,
   H2HConfig,
   HighScoreConfig,
 } from "@/lib/shared/game-templates";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { cn } from "@/lib/shared/utils";
 import { getGameType } from "@/services/game-types";
+import {
+  getHighScoreEntries,
+  getHighScoreLeaderboard,
+} from "@/services/leaderboards";
 import { getLeagueWithRole } from "@/services/leagues";
-import { Settings } from "lucide-react";
+import { getGameTypeMatches } from "@/services/matches";
+import { formatDistanceToNow } from "date-fns";
+import { Plus, Settings, Trophy } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,8 +68,27 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
     LeagueAction.CREATE_GAME_TYPES,
   );
 
-  const config = JSON.parse(gameType.config);
+  const config = parseGameConfig(gameType.config, gameType.category);
   const categoryLabel = GAME_CATEGORY_LABELS[gameType.category as GameCategory];
+
+  const isHighScore = gameType.category === GameCategory.HIGH_SCORE;
+
+  const [matchesResult, highScoresResult, leaderboardResult] =
+    await Promise.all([
+      !isHighScore
+        ? getGameTypeMatches(session.user.id, gameTypeId, { limit: 5 })
+        : Promise.resolve({ data: [] }),
+      isHighScore
+        ? getHighScoreEntries(session.user.id, gameTypeId, { limit: 5 })
+        : Promise.resolve({ data: [] }),
+      isHighScore
+        ? getHighScoreLeaderboard(session.user.id, gameTypeId, { limit: 5 })
+        : Promise.resolve({ data: [] }),
+    ]);
+
+  const matches = matchesResult.data || [];
+  const highScores = highScoresResult.data || [];
+  const leaderboard = leaderboardResult.data || [];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -92,16 +122,40 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
             </Badge>
           </div>
         </div>
-        {canManage && (
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              href={`/leagues/${leagueId}/game-types/${gameTypeId}/settings`}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Link>
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {gameType.category === GameCategory.HIGH_SCORE && (
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/leagues/${leagueId}/game-types/${gameTypeId}/leaderboard`}
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Leaderboard
+              </Link>
+            </Button>
+          )}
+          {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
+            <Button size="sm" asChild>
+              <Link
+                href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {gameType.category === GameCategory.HIGH_SCORE
+                  ? "Submit Score"
+                  : "Record Match"}
+              </Link>
+            </Button>
+          )}
+          {canManage && (
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/leagues/${leagueId}/game-types/${gameTypeId}/settings`}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -121,28 +175,290 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Match History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Match recording coming in Phase 2 Step 3</p>
-          </div>
-        </CardContent>
-      </Card>
+      {!isHighScore && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Match History</CardTitle>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  href={`/leagues/${leagueId}/matches?gameTypeId=${gameTypeId}`}
+                >
+                  View All
+                </Link>
+              </Button>
+              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link
+                    href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Record
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {matches.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No matches recorded yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {matches.map((match) => (
+                  <MatchHistoryItem
+                    key={match.id}
+                    match={match}
+                    leagueId={leagueId}
+                    category={gameType.category as GameCategory}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Leaderboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Leaderboards coming in Phase 2 Step 5</p>
-          </div>
-        </CardContent>
-      </Card>
+      {isHighScore && (
+        <>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recent Scores</CardTitle>
+              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link
+                    href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Submit
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {highScores.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No scores submitted yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {highScores.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div>
+                        <span className="font-medium">
+                          {entry.user?.name ||
+                            entry.team?.name ||
+                            entry.placeholderMember?.displayName ||
+                            "Unknown"}
+                        </span>
+                        <span className="text-muted-foreground text-sm ml-2">
+                          {formatDistanceToNow(new Date(entry.achievedAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      </div>
+                      <span className="font-bold text-lg">
+                        {entry.score.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Leaderboard</CardTitle>
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  href={`/leagues/${leagueId}/game-types/${gameTypeId}/leaderboard`}
+                >
+                  View All
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {leaderboard.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No scores submitted yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {leaderboard.map((entry) => (
+                    <div
+                      key={`${entry.participantType}-${entry.participantId}`}
+                      className="flex items-center gap-3 py-2"
+                    >
+                      <span
+                        className={cn(
+                          "w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold",
+                          entry.rank === 1 &&
+                            "bg-rank-gold-bg text-rank-gold-text",
+                          entry.rank === 2 &&
+                            "bg-rank-silver-bg text-rank-silver-text",
+                          entry.rank === 3 &&
+                            "bg-rank-bronze-bg text-rank-bronze-text",
+                          entry.rank > 3 && "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {entry.rank}
+                      </span>
+                      <span className="font-medium flex-1">
+                        {entry.participantName}
+                      </span>
+                      <span className="font-bold">
+                        {entry.bestScore.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
+  );
+}
+
+type MatchHistoryItemProps = {
+  match: {
+    id: string;
+    status: string;
+    playedAt: Date;
+    participants: Array<{
+      id: string;
+      side: number | null;
+      result: string | null;
+      score: number | null;
+      rank: number | null;
+      user?: { id: string; name: string } | null;
+      team?: { id: string; name: string } | null;
+      placeholderMember?: { id: string; displayName: string } | null;
+    }>;
+  };
+  leagueId: string;
+  category: GameCategory;
+};
+
+function MatchHistoryItem({
+  match,
+  leagueId,
+  category,
+}: MatchHistoryItemProps) {
+  const getParticipantName = (
+    p: MatchHistoryItemProps["match"]["participants"][0],
+  ) => {
+    if (p.user) return p.user.name;
+    if (p.team) return p.team.name;
+    if (p.placeholderMember) return p.placeholderMember.displayName;
+    return "Unknown";
+  };
+
+  const side1 = match.participants.filter((p) => p.side === 1);
+  const side2 = match.participants.filter((p) => p.side === 2);
+  const isH2H = category === GameCategory.HEAD_TO_HEAD;
+
+  return (
+    <Link
+      href={`/leagues/${leagueId}/matches/${match.id}`}
+      className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm text-muted-foreground">
+          {formatDistanceToNow(new Date(match.playedAt), { addSuffix: true })}
+        </span>
+        {match.status === MatchStatus.COMPLETED && (
+          <Badge variant="secondary" className="text-xs">
+            Completed
+          </Badge>
+        )}
+      </div>
+      {isH2H && (
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            {side1.map((p) => (
+              <div key={p.id} className="flex items-center gap-2">
+                <span className="font-medium">{getParticipantName(p)}</span>
+                {p.result && (
+                  <Badge
+                    variant={
+                      p.result === MatchResult.WIN
+                        ? "default"
+                        : p.result === MatchResult.LOSS
+                          ? "destructive"
+                          : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {MATCH_RESULT_LABELS[p.result as MatchResult]}
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+          <span className="text-muted-foreground">vs</span>
+          <div className="flex-1 text-right">
+            {side2.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 justify-end">
+                {p.result && (
+                  <Badge
+                    variant={
+                      p.result === MatchResult.WIN
+                        ? "default"
+                        : p.result === MatchResult.LOSS
+                          ? "destructive"
+                          : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {MATCH_RESULT_LABELS[p.result as MatchResult]}
+                  </Badge>
+                )}
+                <span className="font-medium">{getParticipantName(p)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {!isH2H && (
+        <div className="space-y-1">
+          {match.participants
+            .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+            .slice(0, 3)
+            .map((p, index) => (
+              <div key={p.id} className="flex items-center gap-2 text-sm">
+                <span
+                  className={cn(
+                    "w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium",
+                    index === 0 && "bg-rank-gold-bg text-rank-gold-text",
+                    index === 1 && "bg-rank-silver-bg text-rank-silver-text",
+                    index === 2 && "bg-rank-bronze-bg text-rank-bronze-text",
+                  )}
+                >
+                  {p.rank || index + 1}
+                </span>
+                <span>{getParticipantName(p)}</span>
+                {p.score !== null && (
+                  <span className="text-muted-foreground ml-auto">
+                    {p.score}
+                  </span>
+                )}
+              </div>
+            ))}
+          {match.participants.length > 3 && (
+            <p className="text-xs text-muted-foreground pl-8">
+              +{match.participants.length - 3} more
+            </p>
+          )}
+        </div>
+      )}
+    </Link>
   );
 }
 

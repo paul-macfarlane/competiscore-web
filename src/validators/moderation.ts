@@ -11,6 +11,8 @@ import {
 } from "@/services/constants";
 import { z } from "zod";
 
+import { uuidSchema } from "./common";
+
 export const reportReasonSchema = z.enum([
   ReportReason.UNSPORTSMANLIKE,
   ReportReason.FALSE_REPORTING,
@@ -114,3 +116,17 @@ export const takeModerationActionSchema = moderationActionBaseSchema
 export type TakeModerationActionFormValues = z.infer<
   typeof takeModerationActionSchema
 >;
+
+export const takeModerationActionActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: takeModerationActionSchema,
+});
+
+export const getSuspendedMembersSchema = z.object({
+  leagueId: uuidSchema,
+});
+
+export const liftSuspensionSchema = z.object({
+  leagueId: uuidSchema,
+  targetUserId: z.string().min(1, "User ID is required"),
+});

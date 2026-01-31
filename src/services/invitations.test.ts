@@ -22,6 +22,7 @@ import {
   inviteUser,
   joinViaInviteLink,
 } from "./invitations";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db/invitations", () => ({
   createInvitation: vi.fn(),
@@ -57,7 +58,7 @@ vi.mock("@/lib/server/limits", () => ({
 }));
 
 const mockLeague = {
-  id: "league-123",
+  id: TEST_IDS.LEAGUE_ID,
   name: "Test League",
   description: "A test league",
   visibility: LeagueVisibility.PUBLIC,
@@ -68,19 +69,19 @@ const mockLeague = {
 };
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: LeagueMemberRole.MANAGER,
   joinedAt: new Date(),
   suspendedUntil: null,
 };
 
 const mockInvitation = {
-  id: "inv-123",
-  leagueId: "league-123",
-  inviterId: "user-123",
-  inviteeUserId: "user-456",
+  id: TEST_IDS.INVITATION_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
+  inviterId: TEST_IDS.USER_ID,
+  inviteeUserId: TEST_IDS.USER_ID_2,
   inviteeEmail: null,
   role: LeagueMemberRole.MEMBER,
   status: InvitationStatus.PENDING,
@@ -94,13 +95,13 @@ const mockInvitation = {
 const mockInvitationWithDetails = {
   ...mockInvitation,
   league: {
-    id: "league-123",
+    id: TEST_IDS.LEAGUE_ID,
     name: "Test League",
     description: "A test league",
     logo: null,
   },
   inviter: {
-    id: "user-123",
+    id: TEST_IDS.USER_ID,
     name: "Inviter",
     username: "inviter",
   },
@@ -116,9 +117,9 @@ describe("invitations service", () => {
     it("returns error when inviter is not a member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -131,9 +132,9 @@ describe("invitations service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -146,9 +147,9 @@ describe("invitations service", () => {
         role: LeagueMemberRole.MANAGER,
       });
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.EXECUTIVE,
       });
 
@@ -161,9 +162,9 @@ describe("invitations service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
       vi.mocked(dbUsers.getUserById).mockResolvedValue(undefined);
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -175,10 +176,10 @@ describe("invitations service", () => {
         .mockResolvedValueOnce(mockMember)
         .mockResolvedValueOnce({
           ...mockMember,
-          userId: "user-456",
+          userId: TEST_IDS.USER_ID_2,
         });
       vi.mocked(dbUsers.getUserById).mockResolvedValue({
-        id: "user-456",
+        id: TEST_IDS.USER_ID_2,
         name: "Invitee",
         email: "invitee@test.com",
         emailVerified: true,
@@ -188,11 +189,12 @@ describe("invitations service", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        isAdmin: false,
       });
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -204,7 +206,7 @@ describe("invitations service", () => {
         .mockResolvedValueOnce(mockMember)
         .mockResolvedValueOnce(undefined);
       vi.mocked(dbUsers.getUserById).mockResolvedValue({
-        id: "user-456",
+        id: TEST_IDS.USER_ID_2,
         name: "Invitee",
         email: "invitee@test.com",
         emailVerified: true,
@@ -214,14 +216,15 @@ describe("invitations service", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        isAdmin: false,
       });
       vi.mocked(dbInvitations.checkExistingPendingInvitation).mockResolvedValue(
         mockInvitation,
       );
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -235,7 +238,7 @@ describe("invitations service", () => {
         .mockResolvedValueOnce(mockMember)
         .mockResolvedValueOnce(undefined);
       vi.mocked(dbUsers.getUserById).mockResolvedValue({
-        id: "user-456",
+        id: TEST_IDS.USER_ID_2,
         name: "Invitee",
         email: "invitee@test.com",
         emailVerified: true,
@@ -263,15 +266,16 @@ describe("invitations service", () => {
         mockInvitation,
       );
 
-      const result = await inviteUser("user-123", {
-        leagueId: "league-123",
-        inviteeUserId: "user-456",
+      const result = await inviteUser(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
+        inviteeUserId: TEST_IDS.USER_ID_2,
         role: LeagueMemberRole.MEMBER,
       });
 
       expect(result.data).toEqual({
         invited: true,
         invitationId: mockInvitation.id,
+        leagueId: TEST_IDS.LEAGUE_ID,
       });
     });
   });
@@ -283,8 +287,8 @@ describe("invitations service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await generateInviteLink("user-123", {
-        leagueId: "league-123",
+      const result = await generateInviteLink(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         role: LeagueMemberRole.MEMBER,
       });
 
@@ -298,8 +302,8 @@ describe("invitations service", () => {
         token: "test-token",
       });
 
-      const result = await generateInviteLink("user-123", {
-        leagueId: "league-123",
+      const result = await generateInviteLink(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         role: LeagueMemberRole.MEMBER,
         expiresInDays: 7,
       });
@@ -353,7 +357,9 @@ describe("invitations service", () => {
         undefined,
       );
 
-      const result = await acceptInvitation("inv-123", "user-456");
+      const result = await acceptInvitation(TEST_IDS.USER_ID_2, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.error).toBe("Invitation not found");
     });
@@ -363,7 +369,9 @@ describe("invitations service", () => {
         mockInvitationWithDetails,
       );
 
-      const result = await acceptInvitation("inv-123", "user-789");
+      const result = await acceptInvitation(TEST_IDS.USER_ID_3, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.error).toBe("This invitation is not for you");
     });
@@ -384,7 +392,9 @@ describe("invitations service", () => {
         message: `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
       });
 
-      const result = await acceptInvitation("inv-123", "user-456");
+      const result = await acceptInvitation(TEST_IDS.USER_ID_2, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.error).toBe(
         `You can only be a member of ${MAX_LEAGUES_PER_USER} leagues`,
@@ -417,7 +427,9 @@ describe("invitations service", () => {
         status: InvitationStatus.ACCEPTED,
       });
 
-      const result = await acceptInvitation("inv-123", "user-456");
+      const result = await acceptInvitation(TEST_IDS.USER_ID_2, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.data).toEqual({ joined: true });
     });
@@ -429,7 +441,9 @@ describe("invitations service", () => {
         mockInvitationWithDetails,
       );
 
-      const result = await declineInvitation("inv-123", "user-789");
+      const result = await declineInvitation(TEST_IDS.USER_ID_3, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.error).toBe("This invitation is not for you");
     });
@@ -443,7 +457,9 @@ describe("invitations service", () => {
         status: InvitationStatus.DECLINED,
       });
 
-      const result = await declineInvitation("inv-123", "user-456");
+      const result = await declineInvitation(TEST_IDS.USER_ID_2, {
+        invitationId: TEST_IDS.INVITATION_ID,
+      });
 
       expect(result.data).toEqual({ declined: true });
     });
@@ -455,7 +471,9 @@ describe("invitations service", () => {
         undefined,
       );
 
-      const result = await joinViaInviteLink("invalid-token", "user-456");
+      const result = await joinViaInviteLink(TEST_IDS.USER_ID_2, {
+        token: "invalid-token",
+      });
 
       expect(result.error).toBe("Invite link not found");
     });
@@ -468,7 +486,9 @@ describe("invitations service", () => {
       vi.mocked(dbLeagues.getLeagueById).mockResolvedValue(mockLeague);
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-      const result = await joinViaInviteLink("valid-token", "user-456");
+      const result = await joinViaInviteLink(TEST_IDS.USER_ID_2, {
+        token: "valid-token",
+      });
 
       expect(result.error).toBe("You are already a member of this league");
     });
@@ -501,9 +521,14 @@ describe("invitations service", () => {
         useCount: 1,
       });
 
-      const result = await joinViaInviteLink("valid-token", "user-456");
+      const result = await joinViaInviteLink(TEST_IDS.USER_ID_2, {
+        token: "valid-token",
+      });
 
-      expect(result.data).toEqual({ joined: true, leagueId: "league-123" });
+      expect(result.data).toEqual({
+        joined: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
@@ -517,7 +542,10 @@ describe("invitations service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await cancelInvitation("inv-123", "user-123");
+      const result = await cancelInvitation(TEST_IDS.USER_ID, {
+        invitationId: TEST_IDS.INVITATION_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to cancel invitations",
@@ -531,9 +559,15 @@ describe("invitations service", () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
       vi.mocked(dbInvitations.deleteInvitation).mockResolvedValue(true);
 
-      const result = await cancelInvitation("inv-123", "user-123");
+      const result = await cancelInvitation(TEST_IDS.USER_ID, {
+        invitationId: TEST_IDS.INVITATION_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
-      expect(result.data).toEqual({ cancelled: true });
+      expect(result.data).toEqual({
+        cancelled: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
     });
   });
 
@@ -543,7 +577,7 @@ describe("invitations service", () => {
         mockInvitationWithDetails,
       ]);
 
-      const result = await getUserPendingInvitations("user-456");
+      const result = await getUserPendingInvitations(TEST_IDS.USER_ID_2);
 
       expect(result.data).toEqual([mockInvitationWithDetails]);
     });
@@ -557,8 +591,8 @@ describe("invitations service", () => {
       });
 
       const result = await getLeaguePendingInvitations(
-        "league-123",
-        "user-123",
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
       );
 
       expect(result.error).toBe(
@@ -573,8 +607,8 @@ describe("invitations service", () => {
       );
 
       const result = await getLeaguePendingInvitations(
-        "league-123",
-        "user-123",
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
       );
 
       expect(result.data).toEqual([mockInvitationWithDetails]);

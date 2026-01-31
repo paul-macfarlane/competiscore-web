@@ -11,22 +11,23 @@ import {
   retirePlaceholder,
   updatePlaceholder,
 } from "./placeholder-members";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db/placeholder-members");
 vi.mock("@/db/league-members");
 
 const mockLeagueMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: LeagueMemberRole.MANAGER,
   joinedAt: new Date(),
   suspendedUntil: null,
 };
 
 const mockPlaceholder = {
-  id: "placeholder-123",
-  leagueId: "league-123",
+  id: TEST_IDS.PLACEHOLDER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   displayName: "John Placeholder",
   linkedUserId: null,
   createdAt: new Date(),
@@ -42,8 +43,8 @@ describe("placeholder-members service", () => {
     it("returns error when user is not a league member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await createPlaceholder("user-123", {
-        leagueId: "league-123",
+      const result = await createPlaceholder(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         displayName: "John Placeholder",
       });
 
@@ -56,8 +57,8 @@ describe("placeholder-members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await createPlaceholder("user-123", {
-        leagueId: "league-123",
+      const result = await createPlaceholder(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         displayName: "John Placeholder",
       });
 
@@ -74,23 +75,23 @@ describe("placeholder-members service", () => {
         mockPlaceholder,
       );
 
-      const result = await createPlaceholder("user-123", {
-        leagueId: "league-123",
+      const result = await createPlaceholder(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         displayName: "John Placeholder",
       });
 
       expect(result.data).toEqual(mockPlaceholder);
       expect(dbPlaceholderMembers.createPlaceholderMember).toHaveBeenCalledWith(
         {
-          leagueId: "league-123",
+          leagueId: TEST_IDS.LEAGUE_ID,
           displayName: "John Placeholder",
         },
       );
     });
 
     it("returns validation error for invalid input", async () => {
-      const result = await createPlaceholder("user-123", {
-        leagueId: "league-123",
+      const result = await createPlaceholder(TEST_IDS.USER_ID, {
+        leagueId: TEST_IDS.LEAGUE_ID,
         displayName: "",
       });
 
@@ -103,7 +104,10 @@ describe("placeholder-members service", () => {
     it("returns error when user is not a league member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getPlaceholders("league-123", "user-123");
+      const result = await getPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -117,7 +121,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getActivePlaceholderMembersByLeague,
       ).mockResolvedValue([mockPlaceholder]);
 
-      const result = await getPlaceholders("league-123", "user-123");
+      const result = await getPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.data).toHaveLength(1);
       expect(result.data?.[0]).toEqual(mockPlaceholder);
@@ -131,7 +138,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getActivePlaceholderMembersByLeague,
       ).mockResolvedValue([mockPlaceholder]);
 
-      const result = await getPlaceholders("league-123", "user-123");
+      const result = await getPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.data).toHaveLength(1);
       expect(result.data?.[0]).toEqual(mockPlaceholder);
@@ -144,8 +154,8 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getPlaceholderMemberById,
       ).mockResolvedValue(undefined);
 
-      const result = await updatePlaceholder("user-123", {
-        placeholderId: "placeholder-123",
+      const result = await updatePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
         displayName: "Updated Name",
       });
 
@@ -158,8 +168,8 @@ describe("placeholder-members service", () => {
       ).mockResolvedValue(mockPlaceholder);
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await updatePlaceholder("user-123", {
-        placeholderId: "placeholder-123",
+      const result = await updatePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
         displayName: "Updated Name",
       });
 
@@ -175,8 +185,8 @@ describe("placeholder-members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await updatePlaceholder("user-123", {
-        placeholderId: "placeholder-123",
+      const result = await updatePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
         displayName: "Updated Name",
       });
 
@@ -201,14 +211,14 @@ describe("placeholder-members service", () => {
         updatedPlaceholder,
       );
 
-      const result = await updatePlaceholder("user-123", {
-        placeholderId: "placeholder-123",
+      const result = await updatePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
         displayName: "Updated Name",
       });
 
       expect(result.data).toEqual(updatedPlaceholder);
       expect(dbPlaceholderMembers.updatePlaceholderMember).toHaveBeenCalledWith(
-        "placeholder-123",
+        TEST_IDS.PLACEHOLDER_ID,
         {
           displayName: "Updated Name",
         },
@@ -226,8 +236,8 @@ describe("placeholder-members service", () => {
         undefined,
       );
 
-      const result = await updatePlaceholder("user-123", {
-        placeholderId: "placeholder-123",
+      const result = await updatePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
         displayName: "Updated Name",
       });
 
@@ -241,7 +251,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getPlaceholderMemberById,
       ).mockResolvedValue(undefined);
 
-      const result = await retirePlaceholder("placeholder-123", "user-123");
+      const result = await retirePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("Placeholder member not found");
     });
@@ -255,7 +268,10 @@ describe("placeholder-members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await retirePlaceholder("placeholder-123", "user-123");
+      const result = await retirePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to retire placeholder members",
@@ -278,11 +294,17 @@ describe("placeholder-members service", () => {
         retiredPlaceholder,
       );
 
-      const result = await retirePlaceholder("placeholder-123", "user-123");
+      const result = await retirePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
-      expect(result.data).toEqual({ retired: true });
+      expect(result.data).toEqual({
+        retired: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
       expect(dbPlaceholderMembers.retirePlaceholderMember).toHaveBeenCalledWith(
-        "placeholder-123",
+        TEST_IDS.PLACEHOLDER_ID,
       );
     });
 
@@ -297,7 +319,10 @@ describe("placeholder-members service", () => {
         undefined,
       );
 
-      const result = await retirePlaceholder("placeholder-123", "user-123");
+      const result = await retirePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("Failed to retire placeholder member");
     });
@@ -307,7 +332,10 @@ describe("placeholder-members service", () => {
     it("returns error when user is not a league member", async () => {
       vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-      const result = await getRetiredPlaceholders("league-123", "user-123");
+      const result = await getRetiredPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe("You are not a member of this league");
     });
@@ -318,7 +346,10 @@ describe("placeholder-members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await getRetiredPlaceholders("league-123", "user-123");
+      const result = await getRetiredPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.error).toBe(
         "You don't have permission to view retired placeholders",
@@ -338,7 +369,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getRetiredPlaceholderMembersByLeague,
       ).mockResolvedValue([retiredPlaceholder]);
 
-      const result = await getRetiredPlaceholders("league-123", "user-123");
+      const result = await getRetiredPlaceholders(
+        TEST_IDS.LEAGUE_ID,
+        TEST_IDS.USER_ID,
+      );
 
       expect(result.data).toHaveLength(1);
       expect(result.data?.[0]).toEqual(retiredPlaceholder);
@@ -351,7 +385,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.getPlaceholderMemberById,
       ).mockResolvedValue(undefined);
 
-      const result = await restorePlaceholder("placeholder-123", "user-123");
+      const result = await restorePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("Placeholder member not found");
     });
@@ -365,7 +402,10 @@ describe("placeholder-members service", () => {
         role: LeagueMemberRole.MEMBER,
       });
 
-      const result = await restorePlaceholder("placeholder-123", "user-123");
+      const result = await restorePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe(
         "You don't have permission to restore placeholder members",
@@ -388,12 +428,18 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.restorePlaceholderMember,
       ).mockResolvedValue(restoredPlaceholder);
 
-      const result = await restorePlaceholder("placeholder-123", "user-123");
+      const result = await restorePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
-      expect(result.data).toEqual({ restored: true });
+      expect(result.data).toEqual({
+        restored: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
       expect(
         dbPlaceholderMembers.restorePlaceholderMember,
-      ).toHaveBeenCalledWith("placeholder-123");
+      ).toHaveBeenCalledWith(TEST_IDS.PLACEHOLDER_ID);
     });
 
     it("returns error when restore fails", async () => {
@@ -407,7 +453,10 @@ describe("placeholder-members service", () => {
         dbPlaceholderMembers.restorePlaceholderMember,
       ).mockResolvedValue(undefined);
 
-      const result = await restorePlaceholder("placeholder-123", "user-123");
+      const result = await restorePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
 
       expect(result.error).toBe("Failed to restore placeholder member");
     });

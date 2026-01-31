@@ -13,6 +13,7 @@ import {
   getLeagueGameTypes,
   updateGameType,
 } from "./game-types";
+import { TEST_IDS } from "./test-helpers";
 
 vi.mock("@/db/game-types", () => ({
   createGameType: vi.fn(),
@@ -34,8 +35,8 @@ vi.mock("@/lib/server/limits", () => ({
 }));
 
 const mockGameType = {
-  id: "game-type-123",
-  leagueId: "league-123",
+  id: TEST_IDS.GAME_TYPE_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   name: "Ping Pong",
   description: "Classic table tennis",
   logo: `${ICON_PATHS.GAME_TYPE_ICONS}/ping-pong.svg`,
@@ -53,9 +54,9 @@ const mockGameType = {
 };
 
 const mockMember = {
-  id: "member-123",
-  userId: "user-123",
-  leagueId: "league-123",
+  id: TEST_IDS.MEMBER_ID,
+  userId: TEST_IDS.USER_ID,
+  leagueId: TEST_IDS.LEAGUE_ID,
   role: "manager" as const,
   joinedAt: new Date(),
   suspendedUntil: null,
@@ -75,7 +76,7 @@ describe("createGameType", () => {
     });
     vi.mocked(dbGameTypes.createGameType).mockResolvedValue(mockGameType);
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "Ping Pong",
       description: "Classic table tennis",
       logo: `${ICON_PATHS.GAME_TYPE_ICONS}/ping-pong.svg`,
@@ -87,6 +88,7 @@ describe("createGameType", () => {
         minPlayersPerSide: 1,
         maxPlayersPerSide: 2,
       },
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.data).toEqual(mockGameType);
@@ -96,10 +98,16 @@ describe("createGameType", () => {
   it("should fail if user is not a member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "Ping Pong",
       category: GameCategory.HEAD_TO_HEAD,
-      config: {},
+      config: {
+        scoringType: "win_loss",
+        drawsAllowed: false,
+        minPlayersPerSide: 1,
+        maxPlayersPerSide: 1,
+      },
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.error).toBe("You are not a member of this league");
@@ -112,10 +120,16 @@ describe("createGameType", () => {
       role: "member",
     });
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "Ping Pong",
       category: GameCategory.HEAD_TO_HEAD,
-      config: {},
+      config: {
+        scoringType: "win_loss",
+        drawsAllowed: false,
+        minPlayersPerSide: 1,
+        maxPlayersPerSide: 1,
+      },
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.error).toBe(
@@ -128,7 +142,7 @@ describe("createGameType", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.checkGameTypeNameExists).mockResolvedValue(true);
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "Ping Pong",
       category: GameCategory.HEAD_TO_HEAD,
       config: {
@@ -137,6 +151,7 @@ describe("createGameType", () => {
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.error).toBe("Validation failed");
@@ -159,7 +174,7 @@ describe("createGameType", () => {
       message: `This league has reached its maximum of ${MAX_GAME_TYPES_PER_LEAGUE} game types`,
     });
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "Ping Pong",
       category: GameCategory.HEAD_TO_HEAD,
       config: {
@@ -168,6 +183,7 @@ describe("createGameType", () => {
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.error).toBe(
@@ -178,9 +194,10 @@ describe("createGameType", () => {
   it("should fail with invalid input", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-    const result = await createGameType("user-123", "league-123", {
+    const result = await createGameType(TEST_IDS.USER_ID, {
       name: "",
       category: "invalid",
+      leagueId: TEST_IDS.LEAGUE_ID,
     });
 
     expect(result.error).toBe("Validation failed");
@@ -197,7 +214,7 @@ describe("getGameType", () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(mockGameType);
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
 
-    const result = await getGameType("user-123", "game-type-123");
+    const result = await getGameType(TEST_IDS.USER_ID, TEST_IDS.GAME_TYPE_ID);
 
     expect(result.data).toEqual(mockGameType);
     expect(result.error).toBeUndefined();
@@ -206,7 +223,7 @@ describe("getGameType", () => {
   it("should fail if game type not found", async () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(undefined);
 
-    const result = await getGameType("user-123", "game-type-123");
+    const result = await getGameType(TEST_IDS.USER_ID, TEST_IDS.GAME_TYPE_ID);
 
     expect(result.error).toBe("Game type not found");
     expect(result.data).toBeUndefined();
@@ -216,7 +233,7 @@ describe("getGameType", () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(mockGameType);
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await getGameType("user-123", "game-type-123");
+    const result = await getGameType(TEST_IDS.USER_ID, TEST_IDS.GAME_TYPE_ID);
 
     expect(result.error).toBe("You are not a member of this league");
     expect(result.data).toBeUndefined();
@@ -234,7 +251,10 @@ describe("getLeagueGameTypes", () => {
       mockGameType,
     ]);
 
-    const result = await getLeagueGameTypes("user-123", "league-123");
+    const result = await getLeagueGameTypes(
+      TEST_IDS.USER_ID,
+      TEST_IDS.LEAGUE_ID,
+    );
 
     expect(result.data).toEqual([mockGameType]);
     expect(result.error).toBeUndefined();
@@ -243,7 +263,10 @@ describe("getLeagueGameTypes", () => {
   it("should fail if user is not a member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
-    const result = await getLeagueGameTypes("user-123", "league-123");
+    const result = await getLeagueGameTypes(
+      TEST_IDS.USER_ID,
+      TEST_IDS.LEAGUE_ID,
+    );
 
     expect(result.error).toBe("You are not a member of this league");
     expect(result.data).toBeUndefined();
@@ -262,9 +285,14 @@ describe("updateGameType", () => {
     vi.mocked(dbGameTypes.checkGameTypeNameExists).mockResolvedValue(false);
     vi.mocked(dbGameTypes.updateGameType).mockResolvedValue(updatedGameType);
 
-    const result = await updateGameType("user-123", "game-type-123", {
-      name: "Updated Ping Pong",
-    });
+    const result = await updateGameType(
+      TEST_IDS.USER_ID,
+      { gameTypeId: TEST_IDS.GAME_TYPE_ID },
+      {
+        category: GameCategory.HEAD_TO_HEAD,
+        name: "Updated Ping Pong",
+      },
+    );
 
     expect(result.data).toEqual(updatedGameType);
     expect(result.error).toBeUndefined();
@@ -273,9 +301,14 @@ describe("updateGameType", () => {
   it("should fail if game type not found", async () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(undefined);
 
-    const result = await updateGameType("user-123", "game-type-123", {
-      name: "Updated",
-    });
+    const result = await updateGameType(
+      TEST_IDS.USER_ID,
+      { gameTypeId: TEST_IDS.GAME_TYPE_ID },
+      {
+        category: GameCategory.HEAD_TO_HEAD,
+        name: "Updated",
+      },
+    );
 
     expect(result.error).toBe("Game type not found");
   });
@@ -287,9 +320,14 @@ describe("updateGameType", () => {
       role: "member",
     });
 
-    const result = await updateGameType("user-123", "game-type-123", {
-      name: "Updated",
-    });
+    const result = await updateGameType(
+      TEST_IDS.USER_ID,
+      { gameTypeId: TEST_IDS.GAME_TYPE_ID },
+      {
+        category: GameCategory.HEAD_TO_HEAD,
+        name: "Updated",
+      },
+    );
 
     expect(result.error).toBe("You do not have permission to edit game types");
   });
@@ -299,9 +337,14 @@ describe("updateGameType", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.checkGameTypeNameExists).mockResolvedValue(true);
 
-    const result = await updateGameType("user-123", "game-type-123", {
-      name: "Existing Name",
-    });
+    const result = await updateGameType(
+      TEST_IDS.USER_ID,
+      { gameTypeId: TEST_IDS.GAME_TYPE_ID },
+      {
+        category: GameCategory.HEAD_TO_HEAD,
+        name: "Existing Name",
+      },
+    );
 
     expect(result.error).toBe("Validation failed");
     expect(result.fieldErrors?.name).toBe(
@@ -323,7 +366,9 @@ describe("archiveGameType", () => {
       isArchived: true,
     });
 
-    const result = await archiveGameType("user-123", "game-type-123");
+    const result = await archiveGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBeUndefined();
   });
@@ -331,7 +376,9 @@ describe("archiveGameType", () => {
   it("should fail if game type not found", async () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(undefined);
 
-    const result = await archiveGameType("user-123", "game-type-123");
+    const result = await archiveGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBe("Game type not found");
   });
@@ -343,7 +390,9 @@ describe("archiveGameType", () => {
       role: "member",
     });
 
-    const result = await archiveGameType("user-123", "game-type-123");
+    const result = await archiveGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBe(
       "You do not have permission to archive game types",
@@ -361,7 +410,9 @@ describe("deleteGameType", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.deleteGameType).mockResolvedValue(true);
 
-    const result = await deleteGameType("user-123", "game-type-123");
+    const result = await deleteGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBeUndefined();
   });
@@ -369,7 +420,9 @@ describe("deleteGameType", () => {
   it("should fail if game type not found", async () => {
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(undefined);
 
-    const result = await deleteGameType("user-123", "game-type-123");
+    const result = await deleteGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBe("Game type not found");
   });
@@ -381,7 +434,9 @@ describe("deleteGameType", () => {
       role: "member",
     });
 
-    const result = await deleteGameType("user-123", "game-type-123");
+    const result = await deleteGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBe(
       "You do not have permission to delete game types",
@@ -393,7 +448,9 @@ describe("deleteGameType", () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.deleteGameType).mockResolvedValue(false);
 
-    const result = await deleteGameType("user-123", "game-type-123");
+    const result = await deleteGameType(TEST_IDS.USER_ID, {
+      gameTypeId: TEST_IDS.GAME_TYPE_ID,
+    });
 
     expect(result.error).toBe("Failed to delete game type");
   });

@@ -67,7 +67,10 @@ function SuspendedMemberItem({
   const handleLiftSuspension = () => {
     setError(null);
     startTransition(async () => {
-      const result = await liftSuspensionAction(leagueId, member.userId);
+      const result = await liftSuspensionAction({
+        leagueId,
+        targetUserId: member.userId,
+      });
       if (result.error) {
         setError(result.error);
       } else {

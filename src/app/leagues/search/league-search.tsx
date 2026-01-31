@@ -137,7 +137,7 @@ function SearchResultCard({
     setError(null);
 
     startTransition(async () => {
-      const result = await joinLeagueAction(league.id);
+      const result = await joinLeagueAction({ leagueId: league.id });
 
       if (result.error) {
         setError(result.error);

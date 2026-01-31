@@ -34,7 +34,7 @@ export function LeaveLeagueButton({
     setError(null);
 
     startTransition(async () => {
-      const result = await leaveLeagueAction(leagueId);
+      const result = await leaveLeagueAction({ leagueId });
 
       if (result.error) {
         setError(result.error);

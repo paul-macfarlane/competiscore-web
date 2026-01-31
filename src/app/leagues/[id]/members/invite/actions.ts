@@ -4,7 +4,6 @@ import { auth } from "@/lib/server/auth";
 import {
   cancelInvitation,
   generateInviteLink,
-  getLeaguePendingInvitations,
   inviteUser,
 } from "@/services/invitations";
 import { searchUsersForInvite } from "@/services/members";
@@ -12,7 +11,7 @@ import { createPlaceholder } from "@/services/placeholder-members";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-export async function searchUsersAction(leagueId: string, query: string) {
+export async function searchUsersAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -20,14 +19,10 @@ export async function searchUsersAction(leagueId: string, query: string) {
     return { error: "Unauthorized" };
   }
 
-  return searchUsersForInvite(leagueId, query, session.user.id);
+  return searchUsersForInvite(session.user.id, input);
 }
 
-export async function inviteUserAction(
-  leagueId: string,
-  inviteeUserId: string,
-  role: string,
-) {
+export async function inviteUserAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -35,24 +30,15 @@ export async function inviteUserAction(
     return { error: "Unauthorized" };
   }
 
-  const result = await inviteUser(session.user.id, {
-    leagueId,
-    inviteeUserId,
-    role,
-  });
+  const result = await inviteUser(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/members/invite`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members/invite`);
   }
 
   return result;
 }
 
-export async function generateInviteLinkAction(
-  leagueId: string,
-  role: string,
-  expiresInDays?: number,
-  maxUses?: number,
-) {
+export async function generateInviteLinkAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -60,23 +46,15 @@ export async function generateInviteLinkAction(
     return { error: "Unauthorized" };
   }
 
-  const result = await generateInviteLink(session.user.id, {
-    leagueId,
-    role,
-    expiresInDays,
-    maxUses,
-  });
+  const result = await generateInviteLink(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/members/invite`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members/invite`);
   }
 
   return result;
 }
 
-export async function cancelInvitationAction(
-  invitationId: string,
-  leagueId: string,
-) {
+export async function cancelInvitationAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -84,15 +62,15 @@ export async function cancelInvitationAction(
     return { error: "Unauthorized" };
   }
 
-  const result = await cancelInvitation(invitationId, session.user.id);
+  const result = await cancelInvitation(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/members/invite`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members/invite`);
   }
 
   return result;
 }
 
-export async function getPendingInvitationsAction(leagueId: string) {
+export async function createPlaceholderAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -100,27 +78,10 @@ export async function getPendingInvitationsAction(leagueId: string) {
     return { error: "Unauthorized" };
   }
 
-  return getLeaguePendingInvitations(leagueId, session.user.id);
-}
-
-export async function createPlaceholderAction(
-  leagueId: string,
-  displayName: string,
-) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    return { error: "Unauthorized" };
-  }
-
-  const result = await createPlaceholder(session.user.id, {
-    leagueId,
-    displayName,
-  });
+  const result = await createPlaceholder(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${leagueId}/members`);
-    revalidatePath(`/leagues/${leagueId}/members/invite`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members`);
+    revalidatePath(`/leagues/${result.data.leagueId}/members/invite`);
   }
 
   return result;

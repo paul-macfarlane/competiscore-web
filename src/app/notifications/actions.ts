@@ -8,10 +8,12 @@ import {
 import { acceptInvitation, declineInvitation } from "@/services/invitations";
 import { acknowledgeModerationAction } from "@/services/moderation";
 import { getNotifications } from "@/services/notifications";
+import { formatZodErrors } from "@/services/shared";
 import {
   acceptTeamInvitation,
   declineTeamInvitation,
 } from "@/services/team-invitations";
+import { handleNotificationSchema } from "@/validators/notifications";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
@@ -26,11 +28,7 @@ export async function getNotificationsAction() {
   return getNotifications(session.user.id);
 }
 
-export async function handleNotificationAction(
-  notificationType: string,
-  notificationId: string,
-  action: NotificationAction,
-) {
+export async function handleNotificationAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -38,12 +36,24 @@ export async function handleNotificationAction(
     return { error: "Unauthorized" };
   }
 
+  const parsed = handleNotificationSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { notificationType, notificationId, action } = parsed.data;
+
   switch (notificationType) {
     case NotificationType.LEAGUE_INVITATION: {
       const invitationId = notificationId.replace("invitation_", "");
 
       if (action === NotificationAction.ACCEPT) {
-        const result = await acceptInvitation(invitationId, session.user.id);
+        const result = await acceptInvitation(session.user.id, {
+          invitationId,
+        });
         if (result.data) {
           revalidatePath("/invitations");
           revalidatePath("/leagues");
@@ -51,7 +61,9 @@ export async function handleNotificationAction(
         }
         return result;
       } else if (action === NotificationAction.DECLINE) {
-        const result = await declineInvitation(invitationId, session.user.id);
+        const result = await declineInvitation(session.user.id, {
+          invitationId,
+        });
         if (result.data) {
           revalidatePath("/invitations");
         }

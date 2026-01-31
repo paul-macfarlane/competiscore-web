@@ -29,7 +29,7 @@ export function TeamMemberActions({ memberId }: TeamMemberActionsProps) {
 
   const handleRemove = () => {
     startTransition(async () => {
-      const result = await removeTeamMemberAction(memberId);
+      const result = await removeTeamMemberAction({ teamMemberId: memberId });
       if (result.error) {
         toast.error(result.error);
       } else {

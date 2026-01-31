@@ -83,6 +83,9 @@ dependencies:
   react:
     specifier: 19.2.3
     version: 19.2.3
+  react-day-picker:
+    specifier: ^9.13.0
+    version: 9.13.0(react@19.2.3)
   react-dom:
     specifier: 19.2.3
     version: 19.2.3(react@19.2.3)
@@ -585,6 +588,13 @@ packages:
     resolution:
       {
         integrity: sha512-/ImESw0sskqlVR94jB+5+Pxjf+xBwDZF/N5+y2/q4EqD7IARUTSpPfIo8uf39SYpCxyOCtbyYpUrZ3F/k0zT4A==,
+      }
+    dev: false
+
+  /@date-fns/tz@1.4.1:
+    resolution:
+      {
+        integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==,
       }
     dev: false
 
@@ -5479,6 +5489,13 @@ packages:
       is-data-view: 1.0.2
     dev: true
 
+  /date-fns-jalali@4.1.0-0:
+    resolution:
+      {
+        integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==,
+      }
+    dev: false
+
   /date-fns@4.1.0:
     resolution:
       {
@@ -9727,6 +9744,21 @@ packages:
       iconv-lite: 0.7.2
       unpipe: 1.0.0
     dev: true
+
+  /react-day-picker@9.13.0(react@19.2.3):
+    resolution:
+      {
+        integrity: sha512-euzj5Hlq+lOHqI53NiuNhCP8HWgsPf/bBAVijR50hNaY1XwjKjShAnIe8jm8RD2W9IJUvihDIZ+KrmqfFzNhFQ==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      react: ">=16.8.0"
+    dependencies:
+      "@date-fns/tz": 1.4.1
+      date-fns: 4.1.0
+      date-fns-jalali: 4.1.0-0
+      react: 19.2.3
+    dev: false
 
   /react-dom@19.2.3(react@19.2.3):
     resolution:

@@ -48,7 +48,7 @@ export function MembersList({
   const handleRemove = (targetUserId: string) => {
     setError(null);
     startTransition(async () => {
-      const result = await removeMemberAction(leagueId, targetUserId);
+      const result = await removeMemberAction({ leagueId, targetUserId });
       if (result.error) {
         setError(result.error);
       }
@@ -61,11 +61,11 @@ export function MembersList({
   ) => {
     setError(null);
     startTransition(async () => {
-      const result = await updateMemberRoleAction(
+      const result = await updateMemberRoleAction({
         leagueId,
         targetUserId,
-        newRole,
-      );
+        role: newRole,
+      });
       if (result.error) {
         setError(result.error);
       }

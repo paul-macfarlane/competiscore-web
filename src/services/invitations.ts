@@ -20,6 +20,11 @@ import { InvitationStatus, LeagueMemberRole } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getAssignableRoles } from "@/lib/shared/roles";
 import {
+  cancelInvitationSchema,
+  invitationIdSchema,
+  joinViaTokenSchema,
+} from "@/validators/invitations";
+import {
   generateInviteLinkSchema,
   inviteUserSchema,
 } from "@/validators/members";
@@ -61,7 +66,9 @@ const inviteInputSchema = inviteUserSchema.extend({
 export async function inviteUser(
   inviterId: string,
   input: unknown,
-): Promise<ServiceResult<{ invited: boolean; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ invited: boolean; invitationId: string; leagueId: string }>
+> {
   const parsed = inviteInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -108,7 +115,9 @@ export async function inviteUser(
     status: InvitationStatus.PENDING,
   });
 
-  return { data: { invited: true, invitationId: invitation.id } };
+  return {
+    data: { invited: true, invitationId: invitation.id, leagueId: leagueId },
+  };
 }
 
 const generateLinkInputSchema = generateInviteLinkSchema.extend({
@@ -118,7 +127,9 @@ const generateLinkInputSchema = generateInviteLinkSchema.extend({
 export async function generateInviteLink(
   inviterId: string,
   input: unknown,
-): Promise<ServiceResult<{ token: string; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ token: string; invitationId: string; leagueId: string }>
+> {
   const parsed = generateLinkInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -151,7 +162,7 @@ export async function generateInviteLink(
     expiresAt: expiresAt ?? null,
   });
 
-  return { data: { token, invitationId: invitation.id } };
+  return { data: { token, invitationId: invitation.id, leagueId } };
 }
 
 export type InviteLinkDetails = {
@@ -198,9 +209,19 @@ export async function getInviteLinkDetails(
 }
 
 export async function acceptInvitation(
-  invitationId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ joined: boolean }>> {
+  const parsed = invitationIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { invitationId } = parsed.data;
+
   const invitation = await getInvitationByIdWithDetails(invitationId);
   if (!invitation) {
     return { error: "Invitation not found" };
@@ -238,9 +259,19 @@ export async function acceptInvitation(
 }
 
 export async function declineInvitation(
-  invitationId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ declined: boolean }>> {
+  const parsed = invitationIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { invitationId } = parsed.data;
+
   const invitation = await getInvitationByIdWithDetails(invitationId);
   if (!invitation) {
     return { error: "Invitation not found" };
@@ -260,9 +291,19 @@ export async function declineInvitation(
 }
 
 export async function joinViaInviteLink(
-  token: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ joined: boolean; leagueId: string }>> {
+  const parsed = joinViaTokenSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { token } = parsed.data;
+
   const invitation = await getInvitationByToken(token);
   if (!invitation) {
     return { error: "Invite link not found" };
@@ -308,18 +349,29 @@ export async function joinViaInviteLink(
 }
 
 export async function cancelInvitation(
-  invitationId: string,
   requestingUserId: string,
-): Promise<ServiceResult<{ cancelled: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ cancelled: boolean; leagueId: string }>> {
+  const parsed = cancelInvitationSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { invitationId, leagueId } = parsed.data;
+
   const invitation = await getInvitationByIdWithDetails(invitationId);
   if (!invitation) {
     return { error: "Invitation not found" };
   }
 
-  const membership = await getLeagueMember(
-    requestingUserId,
-    invitation.leagueId,
-  );
+  if (invitation.leagueId !== leagueId) {
+    return { error: "Invitation does not belong to this league" };
+  }
+
+  const membership = await getLeagueMember(requestingUserId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
   }
@@ -337,7 +389,7 @@ export async function cancelInvitation(
     return { error: "Failed to cancel invitation" };
   }
 
-  return { data: { cancelled: true } };
+  return { data: { cancelled: true, leagueId } };
 }
 
 export async function getUserPendingInvitations(

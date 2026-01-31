@@ -10,7 +10,11 @@ import { UserSearchResult, searchUsersByQuery } from "@/db/users";
 import { LeagueMemberRole } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { canActOnRole, getAssignableRoles } from "@/lib/shared/roles";
-import { updateMemberRoleSchema } from "@/validators/members";
+import {
+  removeMemberSchema,
+  searchUsersSchema,
+  updateMemberRoleSchema,
+} from "@/validators/members";
 import { z } from "zod";
 
 import { ServiceResult, formatZodErrors } from "./shared";
@@ -33,10 +37,18 @@ export async function getLeagueMembers(
 }
 
 export async function removeMember(
-  leagueId: string,
-  targetUserId: string,
   requestingUserId: string,
-): Promise<ServiceResult<{ removed: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ removed: boolean; leagueId: string }>> {
+  const parsed = removeMemberSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId, targetUserId } = parsed.data;
   if (targetUserId === requestingUserId) {
     return { error: "You cannot remove yourself. Use 'Leave League' instead." };
   }
@@ -66,7 +78,7 @@ export async function removeMember(
     return { error: "Failed to remove member" };
   }
 
-  return { data: { removed: true } };
+  return { data: { removed: true, leagueId } };
 }
 
 const updateRoleInputSchema = updateMemberRoleSchema.extend({
@@ -76,7 +88,7 @@ const updateRoleInputSchema = updateMemberRoleSchema.extend({
 export async function updateMemberRole(
   requestingUserId: string,
   input: unknown,
-): Promise<ServiceResult<{ updated: boolean }>> {
+): Promise<ServiceResult<{ updated: boolean; leagueId: string }>> {
   const parsed = updateRoleInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -142,16 +154,25 @@ export async function updateMemberRole(
     return { error: "Failed to update role" };
   }
 
-  return { data: { updated: true } };
+  return { data: { updated: true, leagueId } };
 }
 
 const searchQuerySchema = z.string().min(1).max(100);
 
 export async function searchUsersForInvite(
-  leagueId: string,
-  query: unknown,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<UserSearchResult[]>> {
+  const parsed = searchUsersSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId, query } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -161,17 +182,17 @@ export async function searchUsersForInvite(
     return { error: "You don't have permission to invite members" };
   }
 
-  const parsed = searchQuerySchema.safeParse(query);
-  if (!parsed.success) {
+  const queryParsed = searchQuerySchema.safeParse(query);
+  if (!queryParsed.success) {
     return {
       error: "Invalid search query",
-      fieldErrors: formatZodErrors(parsed.error),
+      fieldErrors: formatZodErrors(queryParsed.error),
     };
   }
 
   const members = await dbGetLeagueMembers(leagueId);
   const memberUserIds = members.map((m) => m.userId);
 
-  const users = await searchUsersByQuery(parsed.data, memberUserIds);
+  const users = await searchUsersByQuery(queryParsed.data, memberUserIds);
   return { data: users };
 }

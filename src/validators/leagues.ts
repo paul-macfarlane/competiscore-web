@@ -9,6 +9,8 @@ import {
 } from "@/services/constants";
 import { z } from "zod";
 
+import { uuidSchema } from "./common";
+
 export const leagueNameSchema = z
   .string()
   .min(1, "League name is required")
@@ -51,10 +53,35 @@ export const createLeagueFormSchema = z.object({
 export type CreateLeagueFormValues = z.infer<typeof createLeagueFormSchema>;
 
 export const updateLeagueFormSchema = z.object({
-  name: leagueNameSchema.optional(),
-  description: leagueDescriptionSchema.optional(),
-  visibility: leagueVisibilitySchema.optional(),
+  name: leagueNameSchema,
+  description: leagueDescriptionSchema,
+  visibility: leagueVisibilitySchema,
   logo: leagueLogoSchema,
 });
 
 export type UpdateLeagueFormValues = z.infer<typeof updateLeagueFormSchema>;
+
+export const leagueIdSchema = z.object({
+  leagueId: uuidSchema,
+});
+
+export const updateLeagueActionSchema = z.object({
+  leagueId: uuidSchema,
+  input: updateLeagueFormSchema,
+});
+
+export const archiveLeagueSchema = z.object({
+  leagueId: uuidSchema,
+});
+
+export const deleteLeagueSchema = z.object({
+  leagueId: uuidSchema,
+});
+
+export const leaveLeagueSchema = z.object({
+  leagueId: uuidSchema,
+});
+
+export const unarchiveLeagueSchema = z.object({
+  leagueId: uuidSchema,
+});

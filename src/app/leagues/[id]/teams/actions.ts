@@ -1,13 +1,11 @@
 "use server";
 
 import { Team, TeamMember } from "@/db/schema";
-import { TeamInvitationWithDetails } from "@/db/team-invitations";
 import { auth } from "@/lib/server/auth";
 import { ServiceResult } from "@/services/shared";
 import {
   cancelTeamInvitation as cancelTeamInvitationService,
   generateTeamInviteLink as generateTeamInviteLinkService,
-  getTeamPendingInvitations as getTeamPendingInvitationsService,
   inviteTeamMember as inviteTeamMemberService,
 } from "@/services/team-invitations";
 import {
@@ -24,7 +22,6 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 export async function createTeamAction(
-  leagueId: string,
   input: unknown,
 ): Promise<ServiceResult<Team>> {
   const session = await auth.api.getSession({
@@ -34,12 +31,12 @@ export async function createTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return createTeamService(session.user.id, leagueId, input);
+  return createTeamService(session.user.id, input);
 }
 
 export async function updateTeamAction(
-  teamId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<Team>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -48,11 +45,11 @@ export async function updateTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return updateTeamService(session.user.id, teamId, input);
+  return updateTeamService(session.user.id, idInput, dataInput);
 }
 
 export async function archiveTeamAction(
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -61,11 +58,11 @@ export async function archiveTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return archiveTeamService(session.user.id, teamId);
+  return archiveTeamService(session.user.id, input);
 }
 
 export async function unarchiveTeamAction(
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -74,11 +71,11 @@ export async function unarchiveTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return unarchiveTeamService(session.user.id, teamId);
+  return unarchiveTeamService(session.user.id, input);
 }
 
 export async function deleteTeamAction(
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -87,12 +84,12 @@ export async function deleteTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return deleteTeamService(session.user.id, teamId);
+  return deleteTeamService(session.user.id, input);
 }
 
 export async function addTeamMemberAction(
-  teamId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<TeamMember>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -101,11 +98,11 @@ export async function addTeamMemberAction(
     return { error: "Unauthorized" };
   }
 
-  return addTeamMemberService(session.user.id, teamId, input);
+  return addTeamMemberService(session.user.id, idInput, dataInput);
 }
 
 export async function removeTeamMemberAction(
-  teamMemberId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -114,11 +111,11 @@ export async function removeTeamMemberAction(
     return { error: "Unauthorized" };
   }
 
-  return removeTeamMemberService(session.user.id, teamMemberId);
+  return removeTeamMemberService(session.user.id, input);
 }
 
 export async function leaveTeamAction(
-  teamId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -127,13 +124,14 @@ export async function leaveTeamAction(
     return { error: "Unauthorized" };
   }
 
-  return leaveTeamService(session.user.id, teamId);
+  return leaveTeamService(session.user.id, input);
 }
 
 export async function inviteTeamMemberAction(
-  teamId: string,
   input: unknown,
-): Promise<ServiceResult<{ invited: boolean; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ invited: boolean; invitationId: string; teamId: string }>
+> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -143,20 +141,20 @@ export async function inviteTeamMemberAction(
 
   const result = await inviteTeamMemberService(session.user.id, {
     ...((input as object) || {}),
-    teamId,
   });
 
   if (result.data) {
-    revalidatePath(`/leagues/[id]/teams/${teamId}/settings`);
+    revalidatePath(`/leagues/[id]/teams/${result.data.teamId}/settings`);
   }
 
   return result;
 }
 
 export async function generateTeamInviteLinkAction(
-  teamId: string,
   input: unknown,
-): Promise<ServiceResult<{ token: string; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ token: string; invitationId: string; teamId: string }>
+> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -166,19 +164,20 @@ export async function generateTeamInviteLinkAction(
 
   const result = await generateTeamInviteLinkService(session.user.id, {
     ...((input as object) || {}),
-    teamId,
   });
 
   if (result.data) {
-    revalidatePath(`/leagues/[id]/teams/${teamId}/settings`);
+    revalidatePath(`/leagues/[id]/teams/${result.data.teamId}/settings`);
   }
 
   return result;
 }
 
 export async function cancelTeamInvitationAction(
-  invitationId: string,
-): Promise<ServiceResult<{ cancelled: boolean }>> {
+  input: unknown,
+): Promise<
+  ServiceResult<{ cancelled: boolean; teamId: string; leagueId: string }>
+> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -186,27 +185,18 @@ export async function cancelTeamInvitationAction(
     return { error: "Unauthorized" };
   }
 
+  const parsed = input as { invitationId?: string };
   const result = await cancelTeamInvitationService(
-    invitationId,
+    parsed.invitationId || "",
     session.user.id,
   );
 
   if (result.data) {
-    revalidatePath(`/leagues`);
+    revalidatePath(`/leagues/${result.data.leagueId}`);
+    revalidatePath(
+      `/leagues/${result.data.leagueId}/teams/${result.data.teamId}/settings`,
+    );
   }
 
   return result;
-}
-
-export async function getTeamPendingInvitationsAction(
-  teamId: string,
-): Promise<ServiceResult<TeamInvitationWithDetails[]>> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) {
-    return { error: "Unauthorized" };
-  }
-
-  return getTeamPendingInvitationsService(teamId, session.user.id);
 }

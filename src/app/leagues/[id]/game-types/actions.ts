@@ -13,7 +13,6 @@ import { ServiceResult } from "@/services/shared";
 import { headers } from "next/headers";
 
 export async function createGameTypeAction(
-  leagueId: string,
   input: unknown,
 ): Promise<ServiceResult<GameType>> {
   const session = await auth.api.getSession({
@@ -23,12 +22,12 @@ export async function createGameTypeAction(
     return { error: "Unauthorized" };
   }
 
-  return createGameTypeService(session.user.id, leagueId, input);
+  return createGameTypeService(session.user.id, input);
 }
 
 export async function updateGameTypeAction(
-  gameTypeId: string,
-  input: unknown,
+  idInput: unknown,
+  dataInput: unknown,
 ): Promise<ServiceResult<GameType>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -37,11 +36,11 @@ export async function updateGameTypeAction(
     return { error: "Unauthorized" };
   }
 
-  return updateGameTypeService(session.user.id, gameTypeId, input);
+  return updateGameTypeService(session.user.id, idInput, dataInput);
 }
 
 export async function archiveGameTypeAction(
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -50,11 +49,11 @@ export async function archiveGameTypeAction(
     return { error: "Unauthorized" };
   }
 
-  return archiveGameTypeService(session.user.id, gameTypeId);
+  return archiveGameTypeService(session.user.id, input);
 }
 
 export async function deleteGameTypeAction(
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -63,11 +62,11 @@ export async function deleteGameTypeAction(
     return { error: "Unauthorized" };
   }
 
-  return deleteGameTypeService(session.user.id, gameTypeId);
+  return deleteGameTypeService(session.user.id, input);
 }
 
 export async function unarchiveGameTypeAction(
-  gameTypeId: string,
+  input: unknown,
 ): Promise<ServiceResult<void>> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -76,5 +75,5 @@ export async function unarchiveGameTypeAction(
     return { error: "Unauthorized" };
   }
 
-  return unarchiveGameTypeService(session.user.id, gameTypeId);
+  return unarchiveGameTypeService(session.user.id, input);
 }

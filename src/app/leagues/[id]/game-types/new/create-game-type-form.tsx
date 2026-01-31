@@ -84,6 +84,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
+      leagueId,
     },
     mode: "onChange",
   });
@@ -145,8 +146,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
 
   const onSubmit = (values: CreateGameTypeFormValues) => {
     startTransition(async () => {
-      const result = await createGameTypeAction(leagueId, values);
-
+      const result = await createGameTypeAction(values);
       if (result.error) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
@@ -225,6 +225,8 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
             </span>
           </div>
         </div>
+
+        <input value={leagueId} type="hidden" {...form.register("leagueId")} />
 
         <FormField
           control={form.control}
@@ -434,7 +436,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                       className="h-4 w-4"
                     />
                   </FormControl>
-                  <FormLabel className="!mt-0">Allow Draws</FormLabel>
+                  <FormLabel className="mt-0!">Allow Draws</FormLabel>
                   <FormMessage />
                 </FormItem>
               )}

@@ -50,9 +50,10 @@ export function AddTeamMemberForm({
     if (!selectedMember) return;
 
     startTransition(async () => {
-      const result = await addTeamMemberAction(teamId, {
-        placeholderMemberId: selectedMember.id,
-      });
+      const result = await addTeamMemberAction(
+        { teamId },
+        { placeholderMemberId: selectedMember.id },
+      );
 
       if (result.error) {
         toast.error(result.error);
@@ -102,7 +103,7 @@ export function AddTeamMemberForm({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
+            <PopoverContent className="w-100 p-0" align="start">
               <Command>
                 <CommandInput placeholder="Search placeholder members..." />
                 <CommandList>

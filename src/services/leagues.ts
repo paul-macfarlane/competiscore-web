@@ -23,7 +23,12 @@ import { canUserJoinAnotherLeague } from "@/lib/server/limits";
 import { LeagueMemberRole, LeagueVisibility } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import {
+  archiveLeagueSchema,
   createLeagueFormSchema,
+  deleteLeagueSchema,
+  leagueIdSchema,
+  leaveLeagueSchema,
+  unarchiveLeagueSchema,
   updateLeagueFormSchema,
 } from "@/validators/leagues";
 import { z } from "zod";
@@ -168,9 +173,19 @@ export async function updateLeague(
 }
 
 export async function archiveLeague(
-  leagueId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ archived: boolean }>> {
+  const parsed = archiveLeagueSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -198,9 +213,19 @@ export async function archiveLeague(
 }
 
 export async function deleteLeague(
-  leagueId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ deleted: boolean }>> {
+  const parsed = deleteLeagueSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -262,9 +287,19 @@ export async function searchPublicLeagues(
 }
 
 export async function joinPublicLeague(
-  leagueId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ joined: boolean }>> {
+  const parsed = leagueIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const league = await dbGetLeagueById(leagueId);
   if (!league) {
     return { error: "League not found" };
@@ -282,9 +317,19 @@ export async function joinPublicLeague(
 }
 
 export async function leaveLeague(
-  leagueId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ left: boolean }>> {
+  const parsed = leaveLeagueSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -348,9 +393,19 @@ export async function getArchivedLeagueById(
 }
 
 export async function unarchiveLeague(
-  leagueId: string,
   userId: string,
+  input: unknown,
 ): Promise<ServiceResult<{ unarchived: boolean }>> {
+  const parsed = unarchiveLeagueSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };

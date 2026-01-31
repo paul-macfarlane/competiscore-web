@@ -5,7 +5,7 @@ import { joinTeamViaInviteLink } from "@/services/team-invitations";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-export async function joinTeamViaInviteLinkAction(token: string) {
+export async function joinTeamViaInviteLinkAction(input: unknown) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -13,7 +13,7 @@ export async function joinTeamViaInviteLinkAction(token: string) {
     return { error: "Unauthorized" };
   }
 
-  const result = await joinTeamViaInviteLink(token, session.user.id);
+  const result = await joinTeamViaInviteLink(input, session.user.id);
   if (result.data) {
     revalidatePath("/leagues");
     revalidatePath("/dashboard");

@@ -42,9 +42,12 @@ export function TeamInviteForm({
 
     setError(null);
     startTransition(async () => {
-      const result = await inviteTeamMemberAction(teamId, {
-        inviteeUserId: selectedUserId,
-        role,
+      const result = await inviteTeamMemberAction({
+        teamId,
+        input: {
+          inviteeUserId: selectedUserId,
+          role,
+        },
       });
       if (result.error) {
         setError(result.error);

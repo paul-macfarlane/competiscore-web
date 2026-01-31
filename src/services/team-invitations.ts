@@ -31,6 +31,7 @@ import {
 import {
   generateTeamInviteLinkSchema,
   inviteTeamMemberSchema,
+  joinTeamViaInviteLinkSchema,
 } from "@/validators/teams";
 import { z } from "zod";
 
@@ -80,7 +81,9 @@ const inviteInputSchema = inviteTeamMemberSchema.extend({
 export async function inviteTeamMember(
   inviterId: string,
   input: unknown,
-): Promise<ServiceResult<{ invited: boolean; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ invited: boolean; invitationId: string; teamId: string }>
+> {
   const parsed = inviteInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -132,7 +135,9 @@ export async function inviteTeamMember(
     status: InvitationStatus.PENDING,
   });
 
-  return { data: { invited: true, invitationId: invitation.id } };
+  return {
+    data: { invited: true, invitationId: invitation.id, teamId: team.id },
+  };
 }
 
 const generateLinkInputSchema = generateTeamInviteLinkSchema.extend({
@@ -142,7 +147,9 @@ const generateLinkInputSchema = generateTeamInviteLinkSchema.extend({
 export async function generateTeamInviteLink(
   inviterId: string,
   input: unknown,
-): Promise<ServiceResult<{ token: string; invitationId: string }>> {
+): Promise<
+  ServiceResult<{ token: string; invitationId: string; teamId: string }>
+> {
   const parsed = generateLinkInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -175,7 +182,7 @@ export async function generateTeamInviteLink(
     expiresAt: expiresAt ?? null,
   });
 
-  return { data: { token, invitationId: invitation.id } };
+  return { data: { token, invitationId: invitation.id, teamId: teamId } };
 }
 
 export type TeamInviteLinkDetails = {
@@ -338,7 +345,7 @@ export async function declineTeamInvitation(
 }
 
 export async function joinTeamViaInviteLink(
-  token: string,
+  input: unknown,
   userId: string,
 ): Promise<
   ServiceResult<{
@@ -348,6 +355,16 @@ export async function joinTeamViaInviteLink(
     joinedLeague: boolean;
   }>
 > {
+  const parsed = joinTeamViaInviteLinkSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { token } = parsed.data;
+
   const invitation = await getTeamInvitationByTokenWithDetails(token);
   if (!invitation) {
     return { error: "Invite link not found" };
@@ -421,7 +438,9 @@ export async function joinTeamViaInviteLink(
 export async function cancelTeamInvitation(
   invitationId: string,
   requestingUserId: string,
-): Promise<ServiceResult<{ cancelled: boolean }>> {
+): Promise<
+  ServiceResult<{ cancelled: boolean; teamId: string; leagueId: string }>
+> {
   const invitation = await getTeamInvitationByIdWithDetails(invitationId);
   if (!invitation) {
     return { error: "Invitation not found" };
@@ -449,7 +468,9 @@ export async function cancelTeamInvitation(
     return { error: "Failed to cancel invitation" };
   }
 
-  return { data: { cancelled: true } };
+  return {
+    data: { cancelled: true, teamId: team.id, leagueId: team.leagueId },
+  };
 }
 
 export async function getUserPendingTeamInvitations(

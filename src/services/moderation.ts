@@ -31,6 +31,8 @@ import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { canActOnRole } from "@/lib/shared/roles";
 import {
   createReportSchema,
+  getSuspendedMembersSchema,
+  liftSuspensionSchema,
   takeModerationActionSchema,
 } from "@/validators/moderation";
 
@@ -39,7 +41,7 @@ import { ServiceResult, formatZodErrors } from "./shared";
 export async function createReport(
   reporterId: string,
   input: unknown,
-): Promise<ServiceResult<{ created: boolean }>> {
+): Promise<ServiceResult<{ created: boolean; leagueId: string }>> {
   const parsed = createReportSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -96,7 +98,7 @@ export async function createReport(
     evidence: evidence ?? null,
   });
 
-  return { data: { created: true } };
+  return { data: { created: true, leagueId } };
 }
 
 export async function getPendingReports(
@@ -172,7 +174,7 @@ export async function getReportDetail(
 export async function takeModerationAction(
   moderatorId: string,
   input: unknown,
-): Promise<ServiceResult<{ actionTaken: boolean }>> {
+): Promise<ServiceResult<{ actionTaken: boolean; leagueId: string }>> {
   const parsed = takeModerationActionSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -273,7 +275,7 @@ export async function takeModerationAction(
     }
   });
 
-  return { data: { actionTaken: true } };
+  return { data: { actionTaken: true, leagueId: report.leagueId } };
 }
 
 export type OwnModerationHistory = {
@@ -364,8 +366,18 @@ export async function acknowledgeModerationAction(
 
 export async function getSuspendedMembers(
   userId: string,
-  leagueId: string,
+  input: unknown,
 ): Promise<ServiceResult<LeagueMemberWithUser[]>> {
+  const parsed = getSuspendedMembersSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId } = parsed.data;
+
   const membership = await getLeagueMember(userId, leagueId);
   if (!membership) {
     return { error: "You are not a member of this league" };
@@ -381,9 +393,18 @@ export async function getSuspendedMembers(
 
 export async function liftSuspension(
   moderatorId: string,
-  targetUserId: string,
-  leagueId: string,
-): Promise<ServiceResult<{ lifted: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ lifted: boolean; leagueId: string }>> {
+  const parsed = liftSuspensionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { leagueId, targetUserId } = parsed.data;
+
   const moderatorMembership = await getLeagueMember(moderatorId, leagueId);
   if (!moderatorMembership) {
     return { error: "You are not a member of this league" };
@@ -431,5 +452,5 @@ export async function liftSuspension(
     await unsuspendMember(targetUserId, leagueId, tx);
   });
 
-  return { data: { lifted: true } };
+  return { data: { lifted: true, leagueId: leagueId } };
 }

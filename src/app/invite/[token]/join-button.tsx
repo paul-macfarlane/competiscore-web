@@ -21,7 +21,7 @@ export function JoinButton({ token, leagueId }: JoinButtonProps) {
   const handleJoin = () => {
     setError(null);
     startTransition(async () => {
-      const result = await joinViaInviteLinkAction(token);
+      const result = await joinViaInviteLinkAction({ token });
       if (result.error) {
         setError(result.error);
       } else if (result.data) {

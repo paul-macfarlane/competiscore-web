@@ -59,7 +59,7 @@ export function TeamDangerZone({
 
   const handleArchive = () => {
     startTransition(async () => {
-      const result = await archiveTeamAction(team.id);
+      const result = await archiveTeamAction({ teamId: team.id });
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -71,7 +71,7 @@ export function TeamDangerZone({
 
   const handleUnarchive = () => {
     startTransition(async () => {
-      const result = await unarchiveTeamAction(team.id);
+      const result = await unarchiveTeamAction({ teamId: team.id });
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -85,7 +85,7 @@ export function TeamDangerZone({
     if (!canDelete) return;
 
     startTransition(async () => {
-      const result = await deleteTeamAction(team.id);
+      const result = await deleteTeamAction({ teamId: team.id });
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -98,7 +98,7 @@ export function TeamDangerZone({
 
   const handleLeave = () => {
     startTransition(async () => {
-      const result = await leaveTeamAction(teamId);
+      const result = await leaveTeamAction({ teamId });
       if (result.error) {
         toast.error(result.error);
       } else {

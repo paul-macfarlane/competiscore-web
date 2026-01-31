@@ -283,6 +283,7 @@ describe("team-invitations service", () => {
       expect(result.data).toEqual({
         invited: true,
         invitationId: "inv-123",
+        teamId: "team-123",
       });
       expect(dbTeamInvitations.createTeamInvitation).toHaveBeenCalledWith({
         teamId: "team-123",
@@ -424,7 +425,10 @@ describe("team-invitations service", () => {
         dbTeamInvitations.getTeamInvitationByTokenWithDetails,
       ).mockResolvedValue(undefined);
 
-      const result = await joinTeamViaInviteLink("test-token", "user-456");
+      const result = await joinTeamViaInviteLink(
+        { token: "test-token" },
+        "user-456",
+      );
 
       expect(result.error).toBe("Invite link not found");
     });
@@ -438,7 +442,10 @@ describe("team-invitations service", () => {
         isArchived: true,
       });
 
-      const result = await joinTeamViaInviteLink("test-token", "user-456");
+      const result = await joinTeamViaInviteLink(
+        { token: "test-token" },
+        "user-456",
+      );
 
       expect(result.error).toBe("This team has been archived");
     });
@@ -456,7 +463,10 @@ describe("team-invitations service", () => {
       });
       vi.mocked(dbTeams.createTeamMember).mockResolvedValue(mockTeamMember);
 
-      const result = await joinTeamViaInviteLink("test-token", "user-456");
+      const result = await joinTeamViaInviteLink(
+        { token: "test-token" },
+        "user-456",
+      );
 
       expect(result.data).toEqual({
         joined: true,
@@ -479,7 +489,10 @@ describe("team-invitations service", () => {
       );
       vi.mocked(dbTeams.createTeamMember).mockResolvedValue(mockTeamMember);
 
-      const result = await joinTeamViaInviteLink("test-token", "user-456");
+      const result = await joinTeamViaInviteLink(
+        { token: "test-token" },
+        "user-456",
+      );
 
       expect(result.data).toEqual({
         joined: true,
@@ -538,7 +551,11 @@ describe("team-invitations service", () => {
 
       const result = await cancelTeamInvitation("inv-123", "user-123");
 
-      expect(result.data).toEqual({ cancelled: true });
+      expect(result.data).toEqual({
+        cancelled: true,
+        teamId: "team-123",
+        leagueId: "league-123",
+      });
     });
   });
 

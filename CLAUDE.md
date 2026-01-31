@@ -27,6 +27,7 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 - Comments in the code should be minimal. Code comments should only ever be needed to explain WHY, but never WHAT. The code already says WHAT.
 - All text fields that can be filled out by a user should have a sensible limit both at the database layer and zod validation layer. They should re-use the same constant value
 - Shared domain constants (e.g., role hierarchies, labels) and utility functions should be placed in `src/lib` for reuse across services and UI components.
+- Use enums or equivalent types wherever possible as opposed to repeating string literals across the codebase
 
 ## Authentication Standards
 
@@ -60,18 +61,133 @@ We use Drizzle ORM for database operations and integration with Postgres and Neo
 - Server components that fetch data should be async functions and utilize [Streaming](https://nextjs.org/docs/app/getting-started/fetching-data#streaming) to fetch data from the server. A `loading.ts` file can be used for route segements (layouts and pages), but if the loading is more granular, Suspense can be used to handle the loading state.
 - In general, we should use Server Components where possible. Anytime client reactivity is needed, we should use Client Components, but instead of making a large component a client component, we should split it into smaller components that are client components where the interactivity is needed, but still maintain a server component that uses the client components to render the page.
 - All Next.js API routes should be in the `src/app/api` directory. API routes are only need if an external app needs to integrate with the app. Internally, we should use server actions.
-- Server Actions should always take in an "unknown" type for the input and then pass it to a service function to handle the business logic.
-- Server Actions should be thin, and should only focus on takin input from the client calling a service functions, and then returning the result to the client in the format that is needed.
 - Layouts should be used for shared UI layouts across different pages
+
+### Server Actions Standards
+
+- Server Actions should always take in an "unknown" type for the input and pass it to a service function to handle the business logic and validation
+- Server Actions should be thin, only focusing on:
+  1. Authenticating the user
+  2. Calling the service function with unknown input
+  3. Handling the service result (revalidating cache, redirecting, etc.)
+  4. Returning the result to the client
+- **Server Actions MUST NOT use unvalidated input for ANY purpose**, including:
+  - Cache invalidation paths
+  - Redirects
+  - Logging
+  - Any other operations
+- If data is needed for cache invalidation or redirects, it should be returned from the service function after validation
+- Use `revalidatePath()` with data returned from services, not from raw user input
+
+**Example of correct Server Action:**
+
+```typescript
+export async function createTeamAction(input: unknown) {
+  const user = await getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const result = await createTeam(user.id, input);
+
+  if (result.data) {
+    // Use validated data from service for cache invalidation
+    revalidatePath(`/leagues/${result.data.leagueId}/teams`);
+  }
+
+  return result;
+}
+```
+
+**Example of incorrect Server Action:**
+
+```typescript
+// BAD: Uses unvalidated input for cache invalidation
+export async function createTeamAction(input: unknown) {
+  const user = await getUser();
+  const result = await createTeam(user.id, input);
+
+  // WRONG: input.leagueId is unvalidated user input
+  revalidatePath(`/leagues/${input.leagueId}/teams`);
+
+  return result;
+}
+```
 
 ## Service Standards
 
 Business logic functions should be in the `src/services` directory.
 
+### General Service Principles
+
 - Services should call database functions, but nothing else should call them
 - Services should have unit tests, mocking external dependencies and only testing input and output. Tests should NOT use `toHaveBeenCalled` or `toHaveBeenCalledWith` - only verify outputs based on mocked inputs.
-- Services may take in an "unknown" type for the input and then use zod to validate the input.
 - The idea behind this is to put as much business logic in the service layer, so that if we ever want to change to a separate API layer, we can do so with minimal changes to the business logic.
+
+### Input Validation
+
+- Services MUST validate all input parameters FIRST before executing any business logic
+- Services should take in an "unknown" type for the input and use zod to validate it at the start of the function
+- Validation errors should be returned immediately before any database calls or permission checks
+- This ensures that validation failures are caught early and prevents unnecessary processing
+
+### Function Signature Patterns
+
+**For functions with simple inputs (single ID or simple data object):**
+
+```typescript
+export async function getGameType(
+  userId: string,
+  gameTypeId: string,
+): Promise<ServiceResult<GameType>>;
+```
+
+**For mutation functions where IDs and form data are separate:**
+Use the idInput/dataInput pattern to keep identifiers separate from form data:
+
+```typescript
+export async function updateGameType(
+  userId: string,
+  idInput: unknown, // e.g., { gameTypeId: string }
+  dataInput: unknown, // e.g., { name?: string, config?: {...} }
+): Promise<ServiceResult<GameType>>;
+```
+
+**For functions where the data itself contains the ID:**
+Include the ID (like leagueId) in the input schema rather than as a separate parameter:
+
+```typescript
+export async function createTeam(
+  userId: string,
+  input: unknown, // includes { leagueId, name, ... }
+): Promise<ServiceResult<Team>>;
+```
+
+**For simple action functions (archive, delete, etc.):**
+
+```typescript
+export async function archiveTeam(
+  userId: string,
+  input: unknown, // e.g., { teamId: string }
+): Promise<ServiceResult<void>>;
+```
+
+### Return Values for Cache Invalidation
+
+- Services should return data needed for client-side cache invalidation
+- For mutations, include relevant IDs (leagueId, teamId, etc.) in the return value
+- This allows server actions to invalidate the correct cache paths without using unvalidated input
+
+**Examples:**
+
+```typescript
+// Good: Returns leagueId for cache invalidation
+return { data: { created: true, leagueId } };
+
+// Good: Returns both confirmation and necessary IDs
+return { data: { invited: true, invitationId, leagueId } };
+
+// Bad: Only returns confirmation without cache invalidation data
+return { data: { created: true } };
+```
 
 ## Validation Standards
 

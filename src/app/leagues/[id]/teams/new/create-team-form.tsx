@@ -40,6 +40,7 @@ export function CreateTeamForm({ leagueId }: CreateTeamFormProps) {
   const form = useForm<CreateTeamFormValues>({
     resolver: zodResolver(createTeamFormSchema),
     defaultValues: {
+      leagueId,
       name: "",
       description: "",
       logo: undefined,
@@ -49,8 +50,7 @@ export function CreateTeamForm({ leagueId }: CreateTeamFormProps) {
 
   const onSubmit = (values: CreateTeamFormValues) => {
     startTransition(async () => {
-      const result = await createTeamAction(leagueId, values);
-
+      const result = await createTeamAction(values);
       if (result.error) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
