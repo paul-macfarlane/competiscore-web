@@ -17,12 +17,14 @@ import {
   getMatchesByUserParticipation as dbGetMatchesByUserParticipation,
   getMatchesWithGameTypeByLeagueId as dbGetMatchesWithGameTypeByLeagueId,
 } from "@/db/matches";
+import { getPlaceholderMemberById } from "@/db/placeholder-members";
 import {
   GameType,
   HighScoreEntry,
   Match,
   NewMatchParticipant,
 } from "@/db/schema";
+import { isUserMemberOfTeam } from "@/db/teams";
 import {
   GameCategory,
   H2HWinningSide,
@@ -71,6 +73,35 @@ function validateParticipantCount(
   return null;
 }
 
+async function isUserInvolvedInMatch(
+  userId: string,
+  participants: ParticipantInput[],
+): Promise<boolean> {
+  for (const participant of participants) {
+    if (participant.userId === userId) {
+      return true;
+    }
+
+    if (participant.teamId) {
+      const isTeamMember = await isUserMemberOfTeam(userId, participant.teamId);
+      if (isTeamMember) {
+        return true;
+      }
+    }
+
+    if (participant.placeholderMemberId) {
+      const placeholder = await getPlaceholderMemberById(
+        participant.placeholderMemberId,
+      );
+      if (placeholder?.linkedUserId === userId) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function recordH2HWinLossMatch(
   userId: string,
   input: unknown,
@@ -96,6 +127,19 @@ export async function recordH2HWinLossMatch(
 
   if (isSuspended(membership)) {
     return { error: "You cannot record matches while suspended" };
+  }
+
+  if (
+    !canPerformAction(membership.role, LeagueAction.RECORD_MATCHES_FOR_OTHERS)
+  ) {
+    const allParticipants = [
+      ...data.side1Participants,
+      ...data.side2Participants,
+    ];
+    const isInvolved = await isUserInvolvedInMatch(userId, allParticipants);
+    if (!isInvolved) {
+      return { error: "You can only record matches you're involved in" };
+    }
   }
 
   const gameType = await dbGetGameTypeById(data.gameTypeId);
@@ -219,6 +263,19 @@ export async function recordH2HScoreMatch(
 
   if (isSuspended(membership)) {
     return { error: "You cannot record matches while suspended" };
+  }
+
+  if (
+    !canPerformAction(membership.role, LeagueAction.RECORD_MATCHES_FOR_OTHERS)
+  ) {
+    const allParticipants = [
+      ...data.side1Participants,
+      ...data.side2Participants,
+    ];
+    const isInvolved = await isUserInvolvedInMatch(userId, allParticipants);
+    if (!isInvolved) {
+      return { error: "You can only record matches you're involved in" };
+    }
   }
 
   const gameType = await dbGetGameTypeById(data.gameTypeId);
@@ -353,6 +410,15 @@ export async function recordFFARankedMatch(
     return { error: "You cannot record matches while suspended" };
   }
 
+  if (
+    !canPerformAction(membership.role, LeagueAction.RECORD_MATCHES_FOR_OTHERS)
+  ) {
+    const isInvolved = await isUserInvolvedInMatch(userId, data.participants);
+    if (!isInvolved) {
+      return { error: "You can only record matches you're involved in" };
+    }
+  }
+
   const gameType = await dbGetGameTypeById(data.gameTypeId);
   if (!gameType || gameType.leagueId !== leagueId) {
     return { error: "Game type not found in this league" };
@@ -444,6 +510,15 @@ export async function recordFFAScoreMatch(
     return { error: "You cannot record matches while suspended" };
   }
 
+  if (
+    !canPerformAction(membership.role, LeagueAction.RECORD_MATCHES_FOR_OTHERS)
+  ) {
+    const isInvolved = await isUserInvolvedInMatch(userId, data.participants);
+    if (!isInvolved) {
+      return { error: "You can only record matches you're involved in" };
+    }
+  }
+
   const gameType = await dbGetGameTypeById(data.gameTypeId);
   if (!gameType || gameType.leagueId !== leagueId) {
     return { error: "Game type not found in this league" };
@@ -530,6 +605,15 @@ export async function submitHighScore(
 
   if (isSuspended(membership)) {
     return { error: "You cannot submit scores while suspended" };
+  }
+
+  if (
+    !canPerformAction(membership.role, LeagueAction.RECORD_MATCHES_FOR_OTHERS)
+  ) {
+    const isInvolved = await isUserInvolvedInMatch(userId, [data.participant]);
+    if (!isInvolved) {
+      return { error: "You can only submit scores for yourself or your team" };
+    }
   }
 
   const gameType = await dbGetGameTypeById(data.gameTypeId);

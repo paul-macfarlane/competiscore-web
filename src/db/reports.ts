@@ -1,7 +1,17 @@
 import { and, count, eq } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
-import { NewReport, Report, User, report, reportColumns, user } from "./schema";
+import {
+  ModerationAction,
+  NewReport,
+  Report,
+  User,
+  moderationAction,
+  moderationActionColumns,
+  report,
+  reportColumns,
+  user,
+} from "./schema";
 
 export async function createReport(
   data: Omit<NewReport, "id" | "createdAt" | "status">,
@@ -26,6 +36,10 @@ export async function getReportById(
 export type ReportWithUsers = Report & {
   reporter: Pick<User, "id" | "name" | "username" | "image">;
   reportedUser: Pick<User, "id" | "name" | "username" | "image">;
+};
+
+export type ReportWithOutcome = ReportWithUsers & {
+  moderationAction?: ModerationAction | null;
 };
 
 export async function getReportWithUsersById(
@@ -131,7 +145,7 @@ export async function getReportsByReporter(
   reporterId: string,
   leagueId: string,
   dbOrTx: DBOrTx = db,
-): Promise<ReportWithUsers[]> {
+): Promise<ReportWithOutcome[]> {
   const results = await dbOrTx
     .select({
       ...reportColumns,
@@ -141,9 +155,11 @@ export async function getReportsByReporter(
         username: user.username,
         image: user.image,
       },
+      moderationAction: moderationActionColumns,
     })
     .from(report)
     .innerJoin(user, eq(report.reporterId, user.id))
+    .leftJoin(moderationAction, eq(report.id, moderationAction.reportId))
     .where(
       and(eq(report.reporterId, reporterId), eq(report.leagueId, leagueId)),
     )
@@ -214,4 +230,32 @@ export async function hasExistingPendingReport(
       ),
     );
   return (result[0]?.count ?? 0) > 0;
+}
+
+export async function updateReport(
+  reportId: string,
+  data: {
+    reason?: Report["reason"];
+    description?: string;
+    evidence?: string | null;
+  },
+  dbOrTx: DBOrTx = db,
+): Promise<Report | undefined> {
+  const result = await dbOrTx
+    .update(report)
+    .set(data)
+    .where(eq(report.id, reportId))
+    .returning();
+  return result[0];
+}
+
+export async function deleteReport(
+  reportId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const result = await dbOrTx
+    .delete(report)
+    .where(eq(report.id, reportId))
+    .returning();
+  return result.length > 0;
 }

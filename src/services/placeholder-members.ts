@@ -1,12 +1,14 @@
 import { getLeagueMember } from "@/db/league-members";
 import {
   createPlaceholderMember as dbCreatePlaceholderMember,
+  deletePlaceholderMember as dbDeletePlaceholderMember,
   restorePlaceholderMember as dbRestorePlaceholderMember,
   retirePlaceholderMember as dbRetirePlaceholderMember,
   updatePlaceholderMember as dbUpdatePlaceholderMember,
   getActivePlaceholderMembersByLeague,
   getPlaceholderMemberById,
   getRetiredPlaceholderMembersByLeague,
+  hasPlaceholderActivity,
 } from "@/db/placeholder-members";
 import { PlaceholderMember } from "@/db/schema";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
@@ -211,4 +213,54 @@ export async function restorePlaceholder(
   }
 
   return { data: { restored: true, leagueId } };
+}
+
+export async function deletePlaceholder(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ deleted: boolean; leagueId: string }>> {
+  const parsed = placeholderIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { placeholderId, leagueId } = parsed.data;
+
+  const placeholder = await getPlaceholderMemberById(placeholderId);
+  if (!placeholder) {
+    return { error: "Placeholder member not found" };
+  }
+
+  if (placeholder.leagueId !== leagueId) {
+    return { error: "Placeholder member does not belong to this league" };
+  }
+
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  if (!canPerformAction(membership.role, LeagueAction.CREATE_PLACEHOLDERS)) {
+    return {
+      error: "You don't have permission to delete placeholder members",
+    };
+  }
+
+  const hasActivity = await hasPlaceholderActivity(placeholderId);
+  if (hasActivity) {
+    return {
+      error:
+        "Cannot delete placeholder with activity history. Use retire instead.",
+    };
+  }
+
+  const deleted = await dbDeletePlaceholderMember(placeholderId);
+  if (!deleted) {
+    return { error: "Failed to delete placeholder member" };
+  }
+
+  return { data: { deleted: true, leagueId } };
 }

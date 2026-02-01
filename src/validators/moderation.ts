@@ -130,3 +130,16 @@ export const liftSuspensionSchema = z.object({
   leagueId: uuidSchema,
   targetUserId: z.string().min(1, "User ID is required"),
 });
+
+export const updateReportSchema = z.object({
+  reportId: uuidSchema,
+  leagueId: uuidSchema,
+  reason: reportReasonSchema.optional(),
+  description: reportDescriptionSchema.optional(),
+  evidence: reportEvidenceSchema,
+});
+
+export const deleteReportSchema = z.object({
+  reportId: uuidSchema,
+  leagueId: uuidSchema,
+});

@@ -21,7 +21,6 @@ import {
   ScoringType,
 } from "@/lib/shared/constants";
 import { H2HConfig } from "@/lib/shared/game-templates";
-import { MAX_SCORE_VALUE } from "@/services/constants";
 import {
   recordH2HScoreMatchSchema,
   recordH2HWinLossMatchSchema,
@@ -378,8 +377,10 @@ function ScoreBasedForm({
       leagueId,
       gameTypeId,
       playedAt: formatLocalDateTime(new Date()),
-      side1Score: 0,
-      side2Score: 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      side1Score: "" as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      side2Score: "" as any,
       side1Participants: currentUser
         ? [{ userId: currentUser.id }]
         : [{ userId: undefined }],
@@ -511,12 +512,12 @@ function ScoreBasedForm({
                 <FormControl>
                   <Input
                     type="number"
-                    min={0}
-                    max={MAX_SCORE_VALUE}
+                    step="any"
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 0)
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : parseFloat(value));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -596,12 +597,12 @@ function ScoreBasedForm({
                 <FormControl>
                   <Input
                     type="number"
-                    min={0}
-                    max={MAX_SCORE_VALUE}
+                    step="any"
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 0)
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : parseFloat(value));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

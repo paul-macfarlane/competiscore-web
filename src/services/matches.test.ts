@@ -2,8 +2,11 @@ import * as dbGameTypes from "@/db/game-types";
 import * as dbHighScores from "@/db/high-scores";
 import * as dbLeagueMembers from "@/db/league-members";
 import * as dbMatches from "@/db/matches";
+import * as dbPlaceholderMembers from "@/db/placeholder-members";
+import * as dbTeams from "@/db/teams";
 import {
   GameCategory,
+  LeagueMemberRole,
   MatchStatus,
   ScoreOrder,
   ScoringType,
@@ -41,6 +44,14 @@ vi.mock("@/db/high-scores", () => ({
   createHighScoreEntry: vi.fn(),
 }));
 
+vi.mock("@/db/teams", () => ({
+  isUserMemberOfTeam: vi.fn(),
+}));
+
+vi.mock("@/db/placeholder-members", () => ({
+  getPlaceholderMemberById: vi.fn(),
+}));
+
 vi.mock("@/db/index", () => ({
   withTransaction: vi.fn(async (callback) => await callback({})),
 }));
@@ -63,9 +74,19 @@ const mockMember = {
   id: MEMBER_ID,
   userId: USER_ID_1,
   leagueId: LEAGUE_ID,
-  role: "member" as const,
+  role: LeagueMemberRole.MEMBER,
   joinedAt: new Date(),
   suspendedUntil: null,
+};
+
+const mockManager = {
+  ...mockMember,
+  role: LeagueMemberRole.MANAGER,
+};
+
+const mockExecutive = {
+  ...mockMember,
+  role: LeagueMemberRole.EXECUTIVE,
 };
 
 const mockSuspendedMember = {
@@ -306,6 +327,139 @@ describe("recordH2HWinLossMatch", () => {
     });
 
     expect(result.error).toBe("You cannot record matches while suspended");
+  });
+
+  it("should allow member to record match they are involved in", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+    vi.mocked(dbMatches.createMatch).mockResolvedValue(mockMatch);
+    vi.mocked(dbMatches.createMatchParticipants).mockResolvedValue([]);
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_1 }],
+      side2Participants: [{ userId: USER_ID_2 }],
+      winningSide: "side1",
+    });
+
+    expect(result.data).toEqual(mockMatch);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should fail when member tries to record match they are not involved in", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_2 }],
+      side2Participants: [{ userId: USER_ID_3 }],
+      winningSide: "side1",
+    });
+
+    expect(result.error).toBe("You can only record matches you're involved in");
+  });
+
+  it("should allow manager to record match they are not involved in", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockManager);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+    vi.mocked(dbMatches.createMatch).mockResolvedValue(mockMatch);
+    vi.mocked(dbMatches.createMatchParticipants).mockResolvedValue([]);
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_2 }],
+      side2Participants: [{ userId: USER_ID_3 }],
+      winningSide: "side1",
+    });
+
+    expect(result.data).toEqual(mockMatch);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should allow executive to record match they are not involved in", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockExecutive);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+    vi.mocked(dbMatches.createMatch).mockResolvedValue(mockMatch);
+    vi.mocked(dbMatches.createMatchParticipants).mockResolvedValue([]);
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_2 }],
+      side2Participants: [{ userId: USER_ID_3 }],
+      winningSide: "side1",
+    });
+
+    expect(result.data).toEqual(mockMatch);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should allow member to record match involving their team", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+    vi.mocked(dbTeams.isUserMemberOfTeam).mockResolvedValue(true);
+    vi.mocked(dbMatches.createMatch).mockResolvedValue(mockMatch);
+    vi.mocked(dbMatches.createMatchParticipants).mockResolvedValue([]);
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ teamId: TEAM_ID_1 }],
+      side2Participants: [{ userId: USER_ID_2 }],
+      winningSide: "side1",
+    });
+
+    expect(result.data).toEqual(mockMatch);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should allow member to record match involving placeholder linked to them", async () => {
+    const PLACEHOLDER_ID = "550e8400-e29b-41d4-a716-446655440701";
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
+      mockH2HWinLossGameType,
+    );
+    vi.mocked(dbPlaceholderMembers.getPlaceholderMemberById).mockResolvedValue({
+      id: PLACEHOLDER_ID,
+      leagueId: LEAGUE_ID,
+      displayName: "John Doe",
+      linkedUserId: USER_ID_1,
+      createdAt: new Date(),
+      retiredAt: null,
+    });
+    vi.mocked(dbMatches.createMatch).mockResolvedValue(mockMatch);
+    vi.mocked(dbMatches.createMatchParticipants).mockResolvedValue([]);
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ placeholderMemberId: PLACEHOLDER_ID }],
+      side2Participants: [{ userId: USER_ID_2 }],
+      winningSide: "side1",
+    });
+
+    expect(result.data).toEqual(mockMatch);
+    expect(result.error).toBeUndefined();
   });
 });
 

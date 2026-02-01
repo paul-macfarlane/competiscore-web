@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { LeagueMemberWithUser, getLeagueMembers } from "@/db/league-members";
 import { getActivePlaceholderMembersByLeague } from "@/db/placeholder-members";
 import { PlaceholderMember, Team } from "@/db/schema";
@@ -14,7 +15,6 @@ import { getGameType } from "@/services/game-types";
 import { getLeagueWithRole } from "@/services/leagues";
 import { isSuspended } from "@/services/shared";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { RecordFFAMatchForm } from "./record-ffa-match-form";
@@ -78,12 +78,22 @@ export default async function RecordMatchPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link
-        href={`/leagues/${leagueId}/game-types/${gameTypeId}`}
-        className="text-muted-foreground hover:text-foreground text-sm inline-block"
-      >
-        ← Back to {gameType.name}
-      </Link>
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Game Types", href: `/leagues/${leagueId}/game-types` },
+          {
+            label: gameType.name,
+            href: `/leagues/${leagueId}/game-types/${gameTypeId}`,
+          },
+          {
+            label:
+              gameType.category === GameCategory.HIGH_SCORE
+                ? "Submit Score"
+                : "Record Match",
+          },
+        ]}
+      />
 
       <div>
         <h1 className="text-2xl font-bold md:text-3xl">

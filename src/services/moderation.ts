@@ -17,10 +17,14 @@ import {
   getWarningsByUser,
 } from "@/db/moderation-actions";
 import {
+  ReportWithOutcome,
   ReportWithUsers,
   createReport as dbCreateReport,
+  deleteReport as dbDeleteReport,
   getPendingReportCount as dbGetPendingReportCount,
+  updateReport as dbUpdateReport,
   getPendingReportsByLeague,
+  getReportById,
   getReportWithUsersById,
   getReportsByReporter,
   hasExistingPendingReport,
@@ -31,9 +35,11 @@ import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { canActOnRole } from "@/lib/shared/roles";
 import {
   createReportSchema,
+  deleteReportSchema,
   getSuspendedMembersSchema,
   liftSuspensionSchema,
   takeModerationActionSchema,
+  updateReportSchema,
 } from "@/validators/moderation";
 
 import { ServiceResult, formatZodErrors } from "./shared";
@@ -322,7 +328,7 @@ export async function getMemberModerationHistory(
   return { data: history };
 }
 
-export type SubmittedReport = ReportWithUsers;
+export type SubmittedReport = ReportWithOutcome;
 
 export async function getOwnSubmittedReports(
   userId: string,
@@ -453,4 +459,96 @@ export async function liftSuspension(
   });
 
   return { data: { lifted: true, leagueId: leagueId } };
+}
+
+export async function updateReport(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ updated: boolean; leagueId: string }>> {
+  const parsed = updateReportSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { reportId, leagueId, reason, description, evidence } = parsed.data;
+
+  const report = await getReportById(reportId);
+  if (!report) {
+    return { error: "Report not found" };
+  }
+
+  if (report.reporterId !== userId) {
+    return { error: "You can only edit your own reports" };
+  }
+
+  if (report.status !== "pending") {
+    return { error: "You can only edit pending reports" };
+  }
+
+  if (report.leagueId !== leagueId) {
+    return { error: "Invalid league" };
+  }
+
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const updateData: {
+    reason?: typeof reason;
+    description?: string;
+    evidence?: string | null;
+  } = {};
+
+  if (reason !== undefined) updateData.reason = reason;
+  if (description !== undefined) updateData.description = description;
+  if (evidence !== undefined) updateData.evidence = evidence ?? null;
+
+  await dbUpdateReport(reportId, updateData);
+
+  return { data: { updated: true, leagueId } };
+}
+
+export async function deleteReport(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ deleted: boolean; leagueId: string }>> {
+  const parsed = deleteReportSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { reportId, leagueId } = parsed.data;
+
+  const report = await getReportById(reportId);
+  if (!report) {
+    return { error: "Report not found" };
+  }
+
+  if (report.reporterId !== userId) {
+    return { error: "You can only delete your own reports" };
+  }
+
+  if (report.status !== "pending") {
+    return { error: "You can only delete pending reports" };
+  }
+
+  if (report.leagueId !== leagueId) {
+    return { error: "Invalid league" };
+  }
+
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  await dbDeleteReport(reportId);
+
+  return { data: { deleted: true, leagueId } };
 }

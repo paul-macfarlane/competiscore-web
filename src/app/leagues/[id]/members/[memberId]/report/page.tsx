@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLeagueMemberWithUser } from "@/db/league-members";
@@ -42,14 +43,15 @@ export default async function ReportMemberPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Members", href: `/leagues/${leagueId}/members` },
+          { label: "Report Member" },
+        ]}
+      />
       <div>
-        <Link
-          href={`/leagues/${leagueId}/members`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to members
-        </Link>
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">Report Member</h1>
+        <h1 className="text-xl font-bold md:text-2xl">Report Member</h1>
         <p className="text-muted-foreground text-sm">
           Submit a report against a league member
         </p>

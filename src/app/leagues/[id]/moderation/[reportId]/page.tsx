@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,6 @@ import { idParamSchema } from "@/validators/shared";
 import { format } from "date-fns";
 import { AlertTriangle, Clock, FileText, History, Shield } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -51,14 +51,15 @@ export default async function ReportDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Moderation", href: `/leagues/${leagueId}/moderation` },
+          { label: "Report Details" },
+        ]}
+      />
       <div>
-        <Link
-          href={`/leagues/${leagueId}/moderation`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to moderation
-        </Link>
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">Report Details</h1>
+        <h1 className="text-xl font-bold md:text-2xl">Report Details</h1>
         <p className="text-muted-foreground text-sm">
           Review the report and take appropriate action
         </p>

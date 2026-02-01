@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { auth } from "@/lib/server/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -19,6 +20,13 @@ export default async function NewTeamPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-md space-y-4 md:space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Teams", href: `/leagues/${leagueId}/teams` },
+          { label: "Create Team" },
+        ]}
+      />
       <div className="text-center">
         <h1 className="text-xl font-bold md:text-2xl">Create a Team</h1>
         <p className="text-muted-foreground text-sm md:text-base">

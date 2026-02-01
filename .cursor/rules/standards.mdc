@@ -25,6 +25,7 @@ The overall vision for this project is in [product-vision.md](./docs/product-vis
 
 - Keep code DRY (Don't Repeat Yourself), do not repeat business logic in multiple place. Do not repeat UI fragments in multiple places. Make reusable functions and components.
 - Maintain type safety by defining input and output types for functions and components (one exception is components do not need output types).
+- **TypeScript error suppression is NOT allowed.** Never use `@ts-ignore`, `@ts-expect-error`, or `@ts-nocheck`. All type errors must be properly fixed, not suppressed. The build must pass TypeScript checks without any suppression comments.
 - Only write code that is going to be used. Do not make functions or components that are unused.
 - In general, less code is better. Its less to maintain, less bugs to have, less to read, etc.
 - Comments in the code should be minimal. Code comments should only ever be needed to explain WHY, but never WHAT. The code already says WHAT.
@@ -41,6 +42,65 @@ In this codebase in particular:
 - When working with auth on the server, use `src/lib/server/auth.ts` to authenticate requests.
 - When working with auth on the client, use `src/lib/client/auth.ts` to authenticate requests.
 
+## UI Component Standards
+
+### Participant Display
+When displaying participants (users, teams, or placeholder members) in the UI, always use the `ParticipantDisplay` component from `@/components/participant-display` for consistency:
+
+```typescript
+import { ParticipantData, ParticipantDisplay } from "@/components/participant-display";
+
+const participant: ParticipantData = {
+  user: entry.user,
+  team: entry.team,
+  placeholderMember: entry.placeholderMember,
+};
+
+<ParticipantDisplay
+  participant={participant}
+  showAvatar
+  showUsername
+  size="sm"
+/>
+```
+
+This ensures consistent rendering of avatars, names, and usernames across the entire application.
+
+### React List Keys
+When rendering lists in React where the same item might appear multiple times (e.g., leaderboards showing multiple scores from the same user), **always use unique identifiers for keys**, never participant IDs or composite keys that could duplicate:
+
+```typescript
+// Good: Uses unique entry ID
+{leaderboard.map((entry) => (
+  <div key={entry.entryId}>...</div>
+))}
+
+// Bad: Uses participant ID (same participant can appear multiple times)
+{leaderboard.map((entry) => (
+  <div key={entry.participantId}>...</div>
+))}
+```
+
+### Number Input Forms
+For number input fields that should allow decimals and empty values:
+
+1. **Default values**: Use empty string with type assertion: `score: "" as any`
+2. **Input attributes**: Add `step="any"` to allow decimals, remove `min` and `max` unless specifically needed
+3. **onChange handler**: Preserve empty string or parse as float:
+
+```typescript
+onChange={(e) => {
+  const value = e.target.value;
+  field.onChange(value === "" ? "" : parseFloat(value));
+}}
+```
+
+This allows users to:
+- Clear the field completely
+- Enter decimal values
+- Enter negative values
+- Backspace without issues
+
 ## Database Standards
 
 We use Drizzle ORM for database operations and integration with Postgres and Neon.
@@ -54,6 +114,7 @@ We use Drizzle ORM for database operations and integration with Postgres and Neo
 - Database functions should only be called by service functions, and never directly by other functions or components.
 - Database Types can be made by using DrizzleORM's `inferSelect` and `inferInsert` functions, and should be used. These can be defined in the `src/db/schema.ts` file.
 - Table column extractions using `getTableColumns` should be exported from `src/db/schema.ts` for reuse across db files, rather than duplicating the extraction in multiple files.
+- **Score columns must use `real()` type** (PostgreSQL REAL, 4-byte floating point) to support decimal and negative values. Never use `integer()` for score columns as this prevents decimal scores (e.g., 98.5) which are valid in many game types.
 
 ## Next.js Standards
 
@@ -191,6 +252,15 @@ We use Zod for validation. Validation schemas that are shared between the UI (fo
 - UI forms should import and use the shared schemas directly for react-hook-form validation.
 - Validation schemas that are only used in one place (e.g., only in a service or only in a form) do not need to be in `src/validators`.
 - **Form validation schemas MUST be shared between the client form and the service function** to ensure validation is consistent and avoid drift. If a form submits to a server action that calls a service, both the form and the service should use the same schema from `src/validators`.
+
+### Numeric Validation
+For score and numeric input fields:
+
+- **Allow decimals and negative numbers** unless the business logic specifically prohibits them: `z.number("A number is required")`
+- **Avoid `.int()` constraint** on scores - many games have decimal scores (e.g., Golf, Bowling)
+- **Avoid `.min(0)` constraint** on scores - some games use negative scores (e.g., card games, golf relative to par)
+- **Use user-friendly error messages**: `z.number("A number is required")` instead of `z.number()` which produces technical "Expected number, received string" errors
+- These constraints should only be added when the specific game type or business logic requires them, not as a blanket policy
 
 ## Styling Standards
 

@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
 import { LeagueMemberRole } from "@/lib/shared/constants";
@@ -5,7 +6,6 @@ import { LeaguePage, canAccessPage } from "@/lib/shared/permissions";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import { idParamSchema } from "@/validators/shared";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -39,12 +39,12 @@ export default async function LeagueSettingsPage({
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <Link
-          href={`/leagues/${id}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to league
-        </Link>
+        <LeagueBreadcrumb
+          items={[
+            { label: "League", href: `/leagues/${id}` },
+            { label: "Settings" },
+          ]}
+        />
         <h1 className="mt-2 text-xl font-bold md:text-2xl">League Settings</h1>
         <p className="text-muted-foreground text-sm">
           Manage your league settings

@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,12 +47,13 @@ export default async function TeamDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link
-        href={`/leagues/${leagueId}/teams`}
-        className="text-muted-foreground hover:text-foreground text-sm inline-block"
-      >
-        ← Back to teams
-      </Link>
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Teams", href: `/leagues/${leagueId}/teams` },
+          { label: team.name },
+        ]}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-1 items-start gap-3 sm:gap-4 min-w-0">
           {team.logo ? (
@@ -103,9 +105,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Team Members</CardTitle>
           {canManage && (
-            <Button variant="outline" size="sm" asChild>
+            <Button size="sm" asChild>
               <Link href={`/leagues/${leagueId}/teams/${teamId}/members`}>
-                Manage Members
+                Invite Members
               </Link>
             </Button>
           )}

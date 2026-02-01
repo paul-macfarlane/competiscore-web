@@ -50,6 +50,7 @@ export async function getHighScoreEntriesByGameTypeId(
     offset?: number;
     scoreOrder?: ScoreOrder;
     since?: Date;
+    sortBy?: "score" | "date";
   } = {},
   dbOrTx: DBOrTx = db,
 ): Promise<HighScoreEntryWithDetails[]> {
@@ -58,6 +59,7 @@ export async function getHighScoreEntriesByGameTypeId(
     offset = 0,
     scoreOrder = ScoreOrder.HIGHEST_WINS,
     since,
+    sortBy = "score",
   } = options;
 
   const conditions = [eq(highScoreEntry.gameTypeId, gameTypeId)];
@@ -70,7 +72,7 @@ export async function getHighScoreEntriesByGameTypeId(
       ? desc(highScoreEntry.score)
       : asc(highScoreEntry.score);
 
-  const result = await dbOrTx
+  const query = dbOrTx
     .select({
       ...highScoreEntryColumns,
       user: {
@@ -96,10 +98,14 @@ export async function getHighScoreEntriesByGameTypeId(
       placeholderMember,
       eq(highScoreEntry.placeholderMemberId, placeholderMember.id),
     )
-    .where(and(...conditions))
-    .orderBy(orderDirection, desc(highScoreEntry.achievedAt))
-    .limit(limit)
-    .offset(offset);
+    .where(and(...conditions));
+
+  const orderedQuery =
+    sortBy === "date"
+      ? query.orderBy(desc(highScoreEntry.achievedAt))
+      : query.orderBy(orderDirection, desc(highScoreEntry.achievedAt));
+
+  const result = await orderedQuery.limit(limit).offset(offset);
 
   return result;
 }
@@ -262,6 +268,7 @@ export async function getHighScoreCountByGameTypeId(
 }
 
 export type LeaderboardEntry = {
+  entryId: string;
   rank: number;
   participantId: string;
   participantType: "user" | "team" | "placeholder";
@@ -271,6 +278,30 @@ export type LeaderboardEntry = {
   bestScore: number;
   achievedAt: Date;
 };
+
+export async function countLeaderboardEntries(
+  gameTypeId: string,
+  options: {
+    since?: Date;
+  } = {},
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const { since } = options;
+
+  const conditions = [eq(highScoreEntry.gameTypeId, gameTypeId)];
+  if (since) {
+    conditions.push(gte(highScoreEntry.achievedAt, since));
+  }
+
+  const result = await dbOrTx
+    .select({
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(highScoreEntry)
+    .where(and(...conditions));
+
+  return result[0]?.count ?? 0;
+}
 
 export async function getLeaderboard(
   gameTypeId: string,
@@ -294,18 +325,14 @@ export async function getLeaderboard(
     conditions.push(gte(highScoreEntry.achievedAt, since));
   }
 
-  const aggregateFn =
-    scoreOrder === ScoreOrder.HIGHEST_WINS
-      ? sql<number>`MAX(${highScoreEntry.score})`
-      : sql<number>`MIN(${highScoreEntry.score})`;
-
   const orderDirection =
     scoreOrder === ScoreOrder.HIGHEST_WINS
-      ? sql`best_score DESC`
-      : sql`best_score ASC`;
+      ? desc(highScoreEntry.score)
+      : asc(highScoreEntry.score);
 
   const result = await dbOrTx
     .select({
+      entryId: highScoreEntry.id,
       participantId: sql<string>`COALESCE(${highScoreEntry.userId}, ${highScoreEntry.teamId}, ${highScoreEntry.placeholderMemberId})`,
       participantType: sql<string>`CASE
         WHEN ${highScoreEntry.userId} IS NOT NULL THEN 'user'
@@ -317,8 +344,8 @@ export async function getLeaderboard(
       participantImage: sql<
         string | null
       >`COALESCE(${user.image}, ${team.logo})`,
-      bestScore: aggregateFn.as("best_score"),
-      achievedAt: sql<Date>`MAX(${highScoreEntry.achievedAt})`,
+      bestScore: highScoreEntry.score,
+      achievedAt: highScoreEntry.achievedAt,
     })
     .from(highScoreEntry)
     .leftJoin(user, eq(highScoreEntry.userId, user.id))
@@ -328,22 +355,12 @@ export async function getLeaderboard(
       eq(highScoreEntry.placeholderMemberId, placeholderMember.id),
     )
     .where(and(...conditions))
-    .groupBy(
-      highScoreEntry.userId,
-      highScoreEntry.teamId,
-      highScoreEntry.placeholderMemberId,
-      user.name,
-      user.username,
-      user.image,
-      team.name,
-      team.logo,
-      placeholderMember.displayName,
-    )
-    .orderBy(orderDirection)
+    .orderBy(orderDirection, desc(highScoreEntry.achievedAt))
     .limit(limit)
     .offset(offset);
 
   return result.map((row, index) => ({
+    entryId: row.entryId,
     rank: offset + index + 1,
     participantId: row.participantId,
     participantType: row.participantType as "user" | "team" | "placeholder",

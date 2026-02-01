@@ -23,6 +23,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -758,7 +759,7 @@ export const matchParticipant = pgTable(
       { onDelete: "cascade" },
     ),
     side: integer("side"),
-    score: integer("score"),
+    score: real("score"),
     rank: integer("rank"),
     result: matchResult("result"),
     isChallenged: boolean("is_challenged"),
@@ -793,7 +794,7 @@ export const highScoreEntry = pgTable(
       () => placeholderMember.id,
       { onDelete: "cascade" },
     ),
-    score: integer("score").notNull(),
+    score: real("score").notNull(),
     recorderId: text("recorder_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

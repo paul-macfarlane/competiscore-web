@@ -325,3 +325,12 @@ export async function getUserTeamsByLeagueId(
 
   return results;
 }
+
+export async function isUserMemberOfTeam(
+  userId: string,
+  teamId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const member = await getTeamMemberByUserId(teamId, userId, dbOrTx);
+  return member !== undefined;
+}

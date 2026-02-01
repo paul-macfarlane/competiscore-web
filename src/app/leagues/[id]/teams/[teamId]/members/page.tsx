@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import {
   Card,
   CardContent,
@@ -12,7 +13,6 @@ import { auth } from "@/lib/server/auth";
 import { TeamAction, canPerformTeamAction } from "@/lib/shared/permissions";
 import { getTeam } from "@/services/teams";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { AddTeamMemberForm } from "../settings/add-team-member-form";
@@ -84,17 +84,17 @@ export default async function TeamMembersPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Teams", href: `/leagues/${leagueId}/teams` },
+          { label: team.name, href: `/leagues/${leagueId}/teams/${teamId}` },
+          { label: "Members" },
+        ]}
+      />
       <div>
-        <Link
-          href={`/leagues/${leagueId}/teams/${teamId}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to team
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">Manage Team Members</h1>
-        <p className="text-muted-foreground">
-          Invite and manage members for {team.name}
-        </p>
+        <h1 className="text-2xl font-bold">Invite Team Members</h1>
+        <p className="text-muted-foreground">Invite members to {team.name}</p>
       </div>
 
       <Card>

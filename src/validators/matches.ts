@@ -81,8 +81,8 @@ export const recordH2HScoreMatchSchema = z
       }),
     side1Participants: z.array(participantSchema).min(1),
     side2Participants: z.array(participantSchema).min(1),
-    side1Score: z.number().int().min(0),
-    side2Score: z.number().int().min(0),
+    side1Score: z.number("A number is required"),
+    side2Score: z.number("A number is required"),
   })
   .refine(
     (data) =>
@@ -134,7 +134,7 @@ export type RecordFFARankedMatchInput = z.infer<
 >;
 
 export const ffaScoreParticipantSchema = participantSchema.extend({
-  score: z.number().int().min(0),
+  score: z.number("A number is required"),
 });
 
 export const recordFFAScoreMatchSchema = z
@@ -170,7 +170,7 @@ export const submitHighScoreSchema = z.object({
   leagueId: uuidSchema,
   gameTypeId: z.uuid(),
   participant: participantSchema,
-  score: z.number().int(),
+  score: z.number("A number is required"),
   achievedAt: z
     .union([z.string(), z.date()])
     .pipe(z.coerce.date())
@@ -210,8 +210,8 @@ export const recordChallengeH2HScoreResultSchema = z.object({
     .refine((date) => date <= new Date(), {
       message: "Match date cannot be in the future",
     }),
-  challengerScore: z.number().int().min(0),
-  challengedScore: z.number().int().min(0),
+  challengerScore: z.number("A number is required"),
+  challengedScore: z.number("A number is required"),
 });
 
 export type RecordChallengeH2HScoreResultInput = z.infer<

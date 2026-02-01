@@ -1,11 +1,10 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getInitials } from "@/lib/client/utils";
+import { getLeagueMembers } from "@/db/league-members";
 import { auth } from "@/lib/server/auth";
-import { REPORT_REASON_LABELS, ReportStatus } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import {
@@ -18,11 +17,12 @@ import { idParamSchema } from "@/validators/shared";
 import { format, formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Clock, FileText, Flag, Shield } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { MyReportCard } from "./my-report-card";
 import { ReportsList } from "./reports-list";
+import { SubmitReportDialog } from "./submit-report-dialog";
 import { SuspendedMembersList } from "./suspended-members-list";
 
 interface ModerationPageProps {
@@ -48,12 +48,12 @@ export default async function ModerationPage({ params }: ModerationPageProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <Link
-          href={`/leagues/${id}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to league
-        </Link>
+        <LeagueBreadcrumb
+          items={[
+            { label: "League", href: `/leagues/${id}` },
+            { label: "Moderation" },
+          ]}
+        />
         <h1 className="mt-2 text-xl font-bold md:text-2xl">Moderation</h1>
         <p className="text-muted-foreground text-sm">
           Manage reports, warnings, and moderation actions
@@ -94,6 +94,9 @@ async function ModerationContent({
     suspendedUntil: null,
   };
 
+  const members = await getLeagueMembers(leagueId);
+  const filteredMembers = members.filter((m) => m.userId !== userId);
+
   if (canViewReports) {
     const [reportsResult, suspendedResult] = await Promise.all([
       getPendingReports(userId, leagueId),
@@ -104,91 +107,103 @@ async function ModerationContent({
     const suspendedMembers = suspendedResult.data ?? [];
 
     return (
-      <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending">
-            Pending
-            {reports.length > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {reports.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="suspended">Suspended</TabsTrigger>
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <SubmitReportDialog leagueId={leagueId} members={filteredMembers} />
+        </div>
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="pending">
+              Pending
+              {reports.length > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {reports.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="suspended">Suspended</TabsTrigger>
+            <TabsTrigger value="my-reports">My Reports</TabsTrigger>
+            <TabsTrigger value="my-warnings">My Warnings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Flag className="h-5 w-5" />
+                  Pending Reports
+                  {reports.length > 0 && (
+                    <Badge variant="destructive">{reports.length}</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReportsList reports={reports} leagueId={leagueId} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="suspended" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Suspended Members
+                  {suspendedMembers.length > 0 && (
+                    <Badge variant="secondary">{suspendedMembers.length}</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SuspendedMembersList
+                  members={suspendedMembers}
+                  leagueId={leagueId}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="my-reports" className="space-y-6">
+            <MyReportsTab reports={myReports} leagueId={leagueId} />
+          </TabsContent>
+
+          <TabsContent value="my-warnings" className="space-y-6">
+            <MyWarningsTab history={myHistory} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <SubmitReportDialog leagueId={leagueId} members={filteredMembers} />
+      </div>
+      <Tabs defaultValue="my-reports" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="my-reports">My Reports</TabsTrigger>
           <TabsTrigger value="my-warnings">My Warnings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Flag className="h-5 w-5" />
-                Pending Reports
-                {reports.length > 0 && (
-                  <Badge variant="destructive">{reports.length}</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReportsList reports={reports} leagueId={leagueId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="suspended" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Suspended Members
-                {suspendedMembers.length > 0 && (
-                  <Badge variant="secondary">{suspendedMembers.length}</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SuspendedMembersList
-                members={suspendedMembers}
-                leagueId={leagueId}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="my-reports" className="space-y-6">
-          <MyReportsTab reports={myReports} />
+          <MyReportsTab reports={myReports} leagueId={leagueId} />
         </TabsContent>
 
         <TabsContent value="my-warnings" className="space-y-6">
           <MyWarningsTab history={myHistory} />
         </TabsContent>
       </Tabs>
-    );
-  }
-
-  return (
-    <Tabs defaultValue="my-reports" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="my-reports">My Reports</TabsTrigger>
-        <TabsTrigger value="my-warnings">My Warnings</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="my-reports" className="space-y-6">
-        <MyReportsTab reports={myReports} />
-      </TabsContent>
-
-      <TabsContent value="my-warnings" className="space-y-6">
-        <MyWarningsTab history={myHistory} />
-      </TabsContent>
-    </Tabs>
+    </div>
   );
 }
 
 function MyReportsTab({
   reports,
+  leagueId,
 }: {
   reports: Awaited<ReturnType<typeof getOwnSubmittedReports>>["data"];
+  leagueId: string;
 }) {
   return (
     <Card>
@@ -212,49 +227,11 @@ function MyReportsTab({
         ) : (
           <div className="space-y-3">
             {reports.map((report) => (
-              <div
+              <MyReportCard
                 key={report.id}
-                className="flex items-start gap-3 rounded-lg border p-3"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={report.reportedUser.image ?? undefined} />
-                  <AvatarFallback>
-                    {getInitials(report.reportedUser.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">
-                      {report.reportedUser.name}
-                    </p>
-                    <Badge
-                      variant={
-                        report.status === ReportStatus.PENDING
-                          ? "secondary"
-                          : "outline"
-                      }
-                    >
-                      {report.status === ReportStatus.PENDING
-                        ? "Pending"
-                        : "Resolved"}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    @{report.reportedUser.username}
-                  </p>
-                  <p className="text-sm mt-2">
-                    <span className="font-medium">Reason:</span>{" "}
-                    {REPORT_REASON_LABELS[report.reason]}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {report.description}
-                  </p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(report.createdAt), "PPp")}
-                  </div>
-                </div>
-              </div>
+                report={report}
+                leagueId={leagueId}
+              />
             ))}
           </div>
         )}

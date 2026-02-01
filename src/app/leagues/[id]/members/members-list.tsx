@@ -17,8 +17,7 @@ import {
   ROLE_LABELS,
   canActOnRole,
 } from "@/lib/shared/roles";
-import { Flag, MoreHorizontal, Shield, UserMinus, Users } from "lucide-react";
-import Link from "next/link";
+import { MoreHorizontal, Shield, UserMinus, Users } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { removeMemberAction, updateMemberRoleAction } from "./actions";
@@ -29,7 +28,6 @@ interface MembersListProps {
   currentUserRole: LeagueMemberRole;
   canManageRoles: boolean;
   canRemove: boolean;
-  canReport: boolean;
   leagueId: string;
 }
 
@@ -39,7 +37,6 @@ export function MembersList({
   currentUserRole,
   canManageRoles,
   canRemove,
-  canReport,
   leagueId,
 }: MembersListProps) {
   const [isPending, startTransition] = useTransition();
@@ -128,8 +125,7 @@ export function MembersList({
             >
               {ROLE_LABELS[member.role]}
             </Badge>
-            {((canManageRoles || canRemove) && canModify) ||
-            (canReport && !isCurrentUser) ? (
+            {(canManageRoles || canRemove) && canModify ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -192,16 +188,6 @@ export function MembersList({
                     >
                       <UserMinus className="mr-2 h-4 w-4" />
                       Remove from League
-                    </DropdownMenuItem>
-                  )}
-                  {canReport && !isCurrentUser && (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={`/leagues/${leagueId}/members/${member.userId}/report`}
-                      >
-                        <Flag className="mr-2 h-4 w-4" />
-                        Report Member
-                      </Link>
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>

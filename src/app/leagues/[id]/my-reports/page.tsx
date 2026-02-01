@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,6 @@ import { idParamSchema } from "@/validators/shared";
 import { format } from "date-fns";
 import { Clock, FileText, Flag } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -37,14 +37,14 @@ export default async function MyReportsPage({ params }: MyReportsPageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${id}` },
+          { label: "My Reports" },
+        ]}
+      />
       <div>
-        <Link
-          href={`/leagues/${id}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to league
-        </Link>
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">My Reports</h1>
+        <h1 className="text-xl font-bold md:text-2xl">My Reports</h1>
         <p className="text-muted-foreground text-sm">
           View reports you&apos;ve submitted in this league
         </p>

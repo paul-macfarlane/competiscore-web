@@ -8,9 +8,9 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 | --------------------------- | -------------- | -------- |
 | 1. Game Types               | ✅ Complete    | 100%     |
 | 2. Team Management          | ✅ Complete    | 100%     |
-| 3. Match Recording          | ⏳ Not Started | 0%       |
+| 3. Match Recording          | 🔄 In Progress | 75%      |
 | 4. ELO & Rankings           | ⏳ Not Started | 0%       |
-| 5. Standings & Leaderboards | ⏳ Not Started | 0%       |
+| 5. Standings & Leaderboards | 🔄 In Progress | 40%      |
 | 6. Integration & Polish     | ⏳ Not Started | 0%       |
 
 ---
@@ -95,33 +95,46 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 
 ## 3. Match Recording
 
-**Status: ⏳ Not Started**
+**Status: 🔄 In Progress (75%)**
 
 ### Database Schema
 
-- [ ] Match table (id, leagueId, gameTypeId, date, status, recorderId)
-- [ ] Match participant table (matchId, teamId/userId, score, rank, result)
-- [ ] Match status enum (pending, completed, disputed)
+- [x] Match table (id, leagueId, gameTypeId, date, status, recorderId)
+- [x] Match participant table (matchId, teamId/userId/placeholderId, score, rank, result)
+- [x] Match status enum (pending, accepted, completed, declined, cancelled)
+- [x] High score entry table (id, leagueId, gameTypeId, userId/teamId/placeholderId, score, achievedAt)
+- [x] Score columns use `real` type for decimal/negative support
 
 ### Match Operations
 
-- [ ] Record match form (dynamic based on game type config)
-- [ ] Support for H2H (1v1, Team vs Team)
-- [ ] Support for FFA (Multiple players/teams)
-- [ ] Support for High Score submissions
-- [ ] Validation (valid scores, participants)
+- [x] Record match form (dynamic based on game type config)
+- [x] Support for H2H Win/Loss (1v1, Team vs Team, Placeholder members)
+- [x] Support for H2H Score-based (1v1, Team vs Team, Placeholder members)
+- [x] Support for FFA Ranked Finish (Multiple players/teams/placeholders)
+- [x] Support for FFA Score-based Ranking (Multiple players/teams/placeholders)
+- [x] Support for High Score submissions (Individual or Team based)
+- [x] Validation (valid scores including decimals/negatives, participant uniqueness, date validation)
+- [x] Permissions enforcement (PLAY_GAMES permission required)
+- [x] Score flexibility (decimal and negative scores supported)
+- [x] Unit tests for match recording services
 
 ### Challenge System
 
-- [ ] Create challenge (pending match)
+- [x] Create challenge (pending match)
 - [ ] Accept/Reject challenge
 - [ ] Record result for pending challenge
+- [ ] Challenge notifications
 
 ### UI/UX
 
-- [ ] "Record Match" button (prominent)
-- [ ] Match history list
-- [ ] Match detail view
+- [x] "Record Match" button (prominent on game type page)
+- [x] Dynamic match recording forms based on game type configuration
+- [x] Match history list (activity history page with pagination)
+- [x] Match detail view with participant information
+- [x] Match cards with avatars, usernames, and proper mobile responsiveness
+- [x] Participant selector component for choosing users/teams/placeholders
+- [x] Number inputs supporting decimal and negative values
+- [x] User-friendly validation error messages
 
 ---
 
@@ -151,13 +164,31 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 
 ## 5. Standings & Leaderboards
 
-**Status: ⏳ Not Started**
+**Status: 🔄 In Progress (40%)**
+
+### High Score Leaderboards
+
+- [x] Leaderboard query (all individual scores, arcade-style display)
+- [x] Leaderboard page with pagination (10 items per page)
+- [x] Time period filtering (week, month, year, all-time)
+- [x] Rank display with theme colors (gold/silver/bronze for top 3)
+- [x] Personal best tracking
+- [x] User rank calculation
+- [x] Recent scores display with avatars and usernames
+- [x] Leaderboard allows same participant multiple times (shows all top scores)
+- [x] Unique entry IDs for React keys (supports duplicate participants)
 
 ### UI/UX
 
-- [ ] Leaderboard component (sortable columns)
-- [ ] Game type dashboard (Standings + Recent Matches)
-- [ ] Filtering (Time period, active/inactive)
+- [x] Leaderboard component with proper participant display
+- [x] Game type dashboard (Recent scores/matches + Leaderboard preview)
+- [x] Time period filtering (week, month, year, all-time)
+- [x] Personal performance card (rank and personal best)
+- [x] ParticipantDisplay component for consistent rendering
+- [x] Mobile-responsive leaderboard design
+- [ ] Head-to-head standings (ELO rankings)
+- [ ] Free-for-all standings (ELO rankings)
+- [ ] Overall win/loss/draw records
 - [ ] Personal stats page (Performance across game types)
 - [ ] League dashboard activity feed
 

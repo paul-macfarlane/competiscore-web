@@ -1,4 +1,5 @@
 import { GameTypeCard } from "@/components/game-type-card";
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,12 +41,12 @@ export default async function GameTypesPage({ params }: PageProps) {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link
-            href={`/leagues/${leagueId}`}
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
-            ← Back to league
-          </Link>
+          <LeagueBreadcrumb
+            items={[
+              { label: "League", href: `/leagues/${leagueId}` },
+              { label: "Game Types" },
+            ]}
+          />
           <h1 className="mt-2 text-xl font-bold md:text-2xl">Game Types</h1>
           <p className="text-muted-foreground text-sm">
             Manage the games you compete in

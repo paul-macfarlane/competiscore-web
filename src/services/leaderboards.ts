@@ -1,6 +1,7 @@
 import { getGameTypeById as dbGetGameTypeById } from "@/db/game-types";
 import {
   LeaderboardEntry,
+  countLeaderboardEntries as dbCountLeaderboardEntries,
   getHighScoreEntriesByGameTypeId as dbGetHighScoreEntriesByGameTypeId,
   getLeaderboard as dbGetLeaderboard,
   getPersonalBestByTeam as dbGetPersonalBestByTeam,
@@ -32,11 +33,18 @@ function getTimeRangeDate(timeRange: TimeRange): Date | undefined {
   }
 }
 
+export type PaginatedLeaderboardResult = {
+  leaderboard: LeaderboardEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export async function getHighScoreLeaderboard(
   userId: string,
   gameTypeId: string,
   options: { limit?: number; offset?: number; timeRange?: TimeRange } = {},
-): Promise<ServiceResult<LeaderboardEntry[]>> {
+): Promise<ServiceResult<PaginatedLeaderboardResult>> {
   const gameType = await dbGetGameTypeById(gameTypeId);
   if (!gameType) {
     return { error: "Game type not found" };
@@ -55,21 +63,38 @@ export async function getHighScoreLeaderboard(
   const scoreOrder = config.scoreOrder;
 
   const since = getTimeRangeDate(options.timeRange ?? "all");
+  const limit = options.limit ?? 50;
+  const offset = options.offset ?? 0;
 
-  const leaderboard = await dbGetLeaderboard(gameTypeId, {
-    limit: options.limit ?? 50,
-    offset: options.offset ?? 0,
-    scoreOrder,
-    since,
-  });
+  const [leaderboard, total] = await Promise.all([
+    dbGetLeaderboard(gameTypeId, {
+      limit,
+      offset,
+      scoreOrder,
+      since,
+    }),
+    dbCountLeaderboardEntries(gameTypeId, { since }),
+  ]);
 
-  return { data: leaderboard };
+  return {
+    data: {
+      leaderboard,
+      total,
+      limit,
+      offset,
+    },
+  };
 }
 
 export async function getHighScoreEntries(
   userId: string,
   gameTypeId: string,
-  options: { limit?: number; offset?: number; timeRange?: TimeRange } = {},
+  options: {
+    limit?: number;
+    offset?: number;
+    timeRange?: TimeRange;
+    sortBy?: "score" | "date";
+  } = {},
 ): Promise<
   ServiceResult<
     (HighScoreEntry & {
@@ -108,6 +133,7 @@ export async function getHighScoreEntries(
     offset: options.offset ?? 0,
     scoreOrder,
     since,
+    sortBy: options.sortBy ?? "score",
   });
 
   return { data: entries };

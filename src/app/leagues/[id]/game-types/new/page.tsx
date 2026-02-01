@@ -1,4 +1,5 @@
 import { AtLimitMessage } from "@/components/at-limit-message";
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
@@ -38,6 +39,13 @@ async function CreateGameTypeContent({ leagueId }: { leagueId: string }) {
   if (limitInfo.isAtLimit) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 md:space-y-6">
+        <LeagueBreadcrumb
+          items={[
+            { label: "League", href: `/leagues/${leagueId}` },
+            { label: "Game Types", href: `/leagues/${leagueId}/game-types` },
+            { label: "Create Game Type" },
+          ]}
+        />
         <div className="text-center">
           <h1 className="text-xl font-bold md:text-2xl">Create a Game Type</h1>
         </div>
@@ -57,6 +65,13 @@ async function CreateGameTypeContent({ leagueId }: { leagueId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 md:space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Game Types", href: `/leagues/${leagueId}/game-types` },
+          { label: "Create Game Type" },
+        ]}
+      />
       <div className="text-center">
         <h1 className="text-xl font-bold md:text-2xl">Create a Game Type</h1>
         <p className="text-muted-foreground text-sm md:text-base">

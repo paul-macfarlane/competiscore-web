@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createPlaceholder,
+  deletePlaceholder,
   getPlaceholders,
   getRetiredPlaceholders,
   restorePlaceholder,
@@ -459,6 +460,150 @@ describe("placeholder-members service", () => {
       });
 
       expect(result.error).toBe("Failed to restore placeholder member");
+    });
+  });
+
+  describe("deletePlaceholder", () => {
+    it("returns validation error for invalid input", async () => {
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: "",
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe("Validation failed");
+      expect(result.fieldErrors).toBeDefined();
+    });
+
+    it("returns error when placeholder not found", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(undefined);
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe("Placeholder member not found");
+    });
+
+    it("returns error when placeholder does not belong to league", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue({
+        ...mockPlaceholder,
+        leagueId: "different-league-id",
+      });
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe(
+        "Placeholder member does not belong to this league",
+      );
+    });
+
+    it("returns error when user is not a league member", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(mockPlaceholder);
+      vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe("You are not a member of this league");
+    });
+
+    it("returns error when user lacks permission", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(mockPlaceholder);
+      vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue({
+        ...mockLeagueMember,
+        role: LeagueMemberRole.MEMBER,
+      });
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe(
+        "You don't have permission to delete placeholder members",
+      );
+    });
+
+    it("returns error when placeholder has activity history", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(mockPlaceholder);
+      vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(
+        mockLeagueMember,
+      );
+      vi.mocked(dbPlaceholderMembers.hasPlaceholderActivity).mockResolvedValue(
+        true,
+      );
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe(
+        "Cannot delete placeholder with activity history. Use retire instead.",
+      );
+    });
+
+    it("successfully deletes placeholder with no activity", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(mockPlaceholder);
+      vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(
+        mockLeagueMember,
+      );
+      vi.mocked(dbPlaceholderMembers.hasPlaceholderActivity).mockResolvedValue(
+        false,
+      );
+      vi.mocked(dbPlaceholderMembers.deletePlaceholderMember).mockResolvedValue(
+        true,
+      );
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.data).toEqual({
+        deleted: true,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+    });
+
+    it("returns error when delete operation fails", async () => {
+      vi.mocked(
+        dbPlaceholderMembers.getPlaceholderMemberById,
+      ).mockResolvedValue(mockPlaceholder);
+      vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(
+        mockLeagueMember,
+      );
+      vi.mocked(dbPlaceholderMembers.hasPlaceholderActivity).mockResolvedValue(
+        false,
+      );
+      vi.mocked(dbPlaceholderMembers.deletePlaceholderMember).mockResolvedValue(
+        false,
+      );
+
+      const result = await deletePlaceholder(TEST_IDS.USER_ID, {
+        placeholderId: TEST_IDS.PLACEHOLDER_ID,
+        leagueId: TEST_IDS.LEAGUE_ID,
+      });
+
+      expect(result.error).toBe("Failed to delete placeholder member");
     });
   });
 });

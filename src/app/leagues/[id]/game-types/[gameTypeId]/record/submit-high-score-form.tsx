@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { MatchParticipantType, ParticipantType } from "@/lib/shared/constants";
 import { HighScoreConfig } from "@/lib/shared/game-templates";
-import { MAX_SCORE_VALUE } from "@/services/constants";
 import { submitHighScoreSchema } from "@/validators/matches";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -68,7 +67,8 @@ export function SubmitHighScoreForm({
       leagueId,
       gameTypeId,
       achievedAt: formatLocalDateTime(new Date()),
-      score: 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      score: "" as any,
       participant: {
         userId:
           config.participantType === ParticipantType.INDIVIDUAL
@@ -197,12 +197,12 @@ export function SubmitHighScoreForm({
               <FormControl>
                 <Input
                   type="number"
-                  min={0}
-                  max={MAX_SCORE_VALUE}
+                  step="any"
                   {...field}
-                  onChange={(e) =>
-                    field.onChange(parseInt(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(value === "" ? "" : parseFloat(value));
+                  }}
                 />
               </FormControl>
               <FormMessage />

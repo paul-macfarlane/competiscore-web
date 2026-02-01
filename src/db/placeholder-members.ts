@@ -1,10 +1,13 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
 import {
   NewPlaceholderMember,
   PlaceholderMember,
+  highScoreEntry,
+  matchParticipant,
   placeholderMember,
+  teamMember,
 } from "./schema";
 
 export async function createPlaceholderMember(
@@ -101,4 +104,39 @@ export async function restorePlaceholderMember(
     .where(eq(placeholderMember.id, id))
     .returning();
   return result[0];
+}
+
+export async function hasPlaceholderActivity(
+  placeholderId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const [matchCount, teamCount, highScoreCount] = await Promise.all([
+    dbOrTx
+      .select({ count: count() })
+      .from(matchParticipant)
+      .where(eq(matchParticipant.placeholderMemberId, placeholderId))
+      .then((r) => r[0]?.count ?? 0),
+    dbOrTx
+      .select({ count: count() })
+      .from(teamMember)
+      .where(eq(teamMember.placeholderMemberId, placeholderId))
+      .then((r) => r[0]?.count ?? 0),
+    dbOrTx
+      .select({ count: count() })
+      .from(highScoreEntry)
+      .where(eq(highScoreEntry.placeholderMemberId, placeholderId))
+      .then((r) => r[0]?.count ?? 0),
+  ]);
+
+  return matchCount > 0 || teamCount > 0 || highScoreCount > 0;
+}
+
+export async function deletePlaceholderMember(
+  placeholderId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const result = await dbOrTx
+    .delete(placeholderMember)
+    .where(eq(placeholderMember.id, placeholderId));
+  return result.rowCount !== null && result.rowCount > 0;
 }

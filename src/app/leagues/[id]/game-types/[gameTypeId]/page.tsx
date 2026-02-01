@@ -1,4 +1,11 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { MarkdownViewer } from "@/components/markdown-viewer";
+import { MatchCard } from "@/components/match-card";
+import {
+  ParticipantData,
+  ParticipantDisplay,
+} from "@/components/participant-display";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +13,7 @@ import { auth } from "@/lib/server/auth";
 import {
   GAME_CATEGORY_LABELS,
   GameCategory,
-  MATCH_RESULT_LABELS,
-  MatchResult,
-  MatchStatus,
+  MatchParticipantType,
   ParticipantType,
   ScoreOrder,
   ScoringType,
@@ -29,7 +34,7 @@ import {
 import { getLeagueWithRole } from "@/services/leagues";
 import { getGameTypeMatches } from "@/services/matches";
 import { formatDistanceToNow } from "date-fns";
-import { Plus, Settings, Trophy } from "lucide-react";
+import { Archive, Plus, Settings, Trophy } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -79,25 +84,31 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
         ? getGameTypeMatches(session.user.id, gameTypeId, { limit: 5 })
         : Promise.resolve({ data: [] }),
       isHighScore
-        ? getHighScoreEntries(session.user.id, gameTypeId, { limit: 5 })
+        ? getHighScoreEntries(session.user.id, gameTypeId, {
+            limit: 5,
+            sortBy: "date",
+          })
         : Promise.resolve({ data: [] }),
       isHighScore
         ? getHighScoreLeaderboard(session.user.id, gameTypeId, { limit: 5 })
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({
+            data: { leaderboard: [], total: 0, limit: 5, offset: 0 },
+          }),
     ]);
 
   const matches = matchesResult.data || [];
   const highScores = highScoresResult.data || [];
-  const leaderboard = leaderboardResult.data || [];
+  const leaderboard = leaderboardResult.data?.leaderboard || [];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link
-        href={`/leagues/${leagueId}/game-types`}
-        className="text-muted-foreground hover:text-foreground text-sm inline-block"
-      >
-        ← Back to game types
-      </Link>
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Game Types", href: `/leagues/${leagueId}/game-types` },
+          { label: gameType.name },
+        ]}
+      />
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           {gameType.logo && (
@@ -111,7 +122,22 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">{gameType.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1
+                className={cn(
+                  "text-2xl font-bold md:text-3xl",
+                  gameType.isArchived && "text-muted-foreground",
+                )}
+              >
+                {gameType.name}
+              </h1>
+              {gameType.isArchived && (
+                <Badge variant="secondary">
+                  <Archive className="mr-1 h-3 w-3" />
+                  Archived
+                </Badge>
+              )}
+            </div>
             {gameType.description && (
               <p className="text-muted-foreground mt-1">
                 {gameType.description}
@@ -133,20 +159,8 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
               </Link>
             </Button>
           )}
-          {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
-            <Button size="sm" asChild>
-              <Link
-                href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {gameType.category === GameCategory.HIGH_SCORE
-                  ? "Submit Score"
-                  : "Record Match"}
-              </Link>
-            </Button>
-          )}
           {canManage && (
-            <Button variant="outline" size="sm" asChild>
+            <Button size="sm" asChild>
               <Link
                 href={`/leagues/${leagueId}/game-types/${gameTypeId}/settings`}
               >
@@ -157,6 +171,16 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
           )}
         </div>
       </div>
+
+      {gameType.isArchived && (
+        <Alert>
+          <Archive className="h-4 w-4" />
+          <AlertDescription>
+            This game type is archived. No new matches or scores can be
+            recorded.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -180,23 +204,25 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Match History</CardTitle>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" asChild>
+              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) &&
+                !gameType.isArchived && (
+                  <Button size="sm" asChild>
+                    <Link
+                      href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Record
+                    </Link>
+                  </Button>
+                )}
+
+              <Button size="sm" asChild>
                 <Link
                   href={`/leagues/${leagueId}/matches?gameTypeId=${gameTypeId}`}
                 >
                   View All
                 </Link>
               </Button>
-              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link
-                    href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Record
-                  </Link>
-                </Button>
-              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -207,11 +233,14 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
             ) : (
               <div className="space-y-3">
                 {matches.map((match) => (
-                  <MatchHistoryItem
+                  <MatchCard
                     key={match.id}
-                    match={match}
+                    matchId={match.id}
                     leagueId={leagueId}
-                    category={gameType.category as GameCategory}
+                    playedAt={match.playedAt}
+                    status={match.status}
+                    participants={match.participants}
+                    variant="compact"
                   />
                 ))}
               </div>
@@ -225,16 +254,17 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Scores</CardTitle>
-              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link
-                    href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Submit
-                  </Link>
-                </Button>
-              )}
+              {canPerformAction(league.role, LeagueAction.PLAY_GAMES) &&
+                !gameType.isArchived && (
+                  <Button size="sm" asChild>
+                    <Link
+                      href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Submit
+                    </Link>
+                  </Button>
+                )}
             </CardHeader>
             <CardContent>
               {highScores.length === 0 ? (
@@ -242,30 +272,38 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
                   <p>No scores submitted yet</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {highScores.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex items-center justify-between py-2 border-b last:border-0"
-                    >
-                      <div>
-                        <span className="font-medium">
-                          {entry.user?.name ||
-                            entry.team?.name ||
-                            entry.placeholderMember?.displayName ||
-                            "Unknown"}
-                        </span>
-                        <span className="text-muted-foreground text-sm ml-2">
-                          {formatDistanceToNow(new Date(entry.achievedAt), {
-                            addSuffix: true,
-                          })}
+                <div className="space-y-3">
+                  {highScores.map((entry) => {
+                    const participant: ParticipantData = {
+                      user: entry.user,
+                      team: entry.team,
+                      placeholderMember: entry.placeholderMember,
+                    };
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between gap-3 py-2 border-b last:border-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <ParticipantDisplay
+                            participant={participant}
+                            showAvatar
+                            showUsername
+                            size="sm"
+                          />
+                          <span className="text-muted-foreground text-xs mt-1 block">
+                            {formatDistanceToNow(new Date(entry.achievedAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        </div>
+                        <span className="font-bold text-lg shrink-0">
+                          {entry.score.toLocaleString()}
                         </span>
                       </div>
-                      <span className="font-bold text-lg">
-                        {entry.score.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -274,7 +312,7 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Leaderboard</CardTitle>
-              <Button variant="ghost" size="sm" asChild>
+              <Button size="sm" asChild>
                 <Link
                   href={`/leagues/${leagueId}/game-types/${gameTypeId}/leaderboard`}
                 >
@@ -288,34 +326,69 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
                   <p>No scores submitted yet</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {leaderboard.map((entry) => (
-                    <div
-                      key={`${entry.participantType}-${entry.participantId}`}
-                      className="flex items-center gap-3 py-2"
-                    >
-                      <span
-                        className={cn(
-                          "w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold",
-                          entry.rank === 1 &&
-                            "bg-rank-gold-bg text-rank-gold-text",
-                          entry.rank === 2 &&
-                            "bg-rank-silver-bg text-rank-silver-text",
-                          entry.rank === 3 &&
-                            "bg-rank-bronze-bg text-rank-bronze-text",
-                          entry.rank > 3 && "bg-muted text-muted-foreground",
-                        )}
+                <div className="space-y-3">
+                  {leaderboard.map((entry) => {
+                    const participant: ParticipantData = {
+                      user:
+                        entry.participantType === MatchParticipantType.USER
+                          ? {
+                              id: entry.participantId,
+                              name: entry.participantName,
+                              username: entry.participantUsername || undefined,
+                              image: entry.participantImage,
+                            }
+                          : null,
+                      team:
+                        entry.participantType === MatchParticipantType.TEAM
+                          ? {
+                              id: entry.participantId,
+                              name: entry.participantName,
+                              logo: entry.participantImage,
+                            }
+                          : null,
+                      placeholderMember:
+                        entry.participantType ===
+                        MatchParticipantType.PLACEHOLDER
+                          ? {
+                              id: entry.participantId,
+                              displayName: entry.participantName,
+                            }
+                          : null,
+                    };
+
+                    return (
+                      <div
+                        key={entry.entryId}
+                        className="flex items-center gap-3 py-2"
                       >
-                        {entry.rank}
-                      </span>
-                      <span className="font-medium flex-1">
-                        {entry.participantName}
-                      </span>
-                      <span className="font-bold">
-                        {entry.bestScore.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                        <span
+                          className={cn(
+                            "w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold shrink-0",
+                            entry.rank === 1 &&
+                              "bg-rank-gold-bg text-rank-gold-text",
+                            entry.rank === 2 &&
+                              "bg-rank-silver-bg text-rank-silver-text",
+                            entry.rank === 3 &&
+                              "bg-rank-bronze-bg text-rank-bronze-text",
+                            entry.rank > 3 && "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {entry.rank}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <ParticipantDisplay
+                            participant={participant}
+                            showAvatar
+                            showUsername
+                            size="sm"
+                          />
+                        </div>
+                        <span className="font-bold shrink-0">
+                          {entry.bestScore.toLocaleString()}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -323,142 +396,6 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
         </>
       )}
     </div>
-  );
-}
-
-type MatchHistoryItemProps = {
-  match: {
-    id: string;
-    status: string;
-    playedAt: Date;
-    participants: Array<{
-      id: string;
-      side: number | null;
-      result: string | null;
-      score: number | null;
-      rank: number | null;
-      user?: { id: string; name: string } | null;
-      team?: { id: string; name: string } | null;
-      placeholderMember?: { id: string; displayName: string } | null;
-    }>;
-  };
-  leagueId: string;
-  category: GameCategory;
-};
-
-function MatchHistoryItem({
-  match,
-  leagueId,
-  category,
-}: MatchHistoryItemProps) {
-  const getParticipantName = (
-    p: MatchHistoryItemProps["match"]["participants"][0],
-  ) => {
-    if (p.user) return p.user.name;
-    if (p.team) return p.team.name;
-    if (p.placeholderMember) return p.placeholderMember.displayName;
-    return "Unknown";
-  };
-
-  const side1 = match.participants.filter((p) => p.side === 1);
-  const side2 = match.participants.filter((p) => p.side === 2);
-  const isH2H = category === GameCategory.HEAD_TO_HEAD;
-
-  return (
-    <Link
-      href={`/leagues/${leagueId}/matches/${match.id}`}
-      className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(match.playedAt), { addSuffix: true })}
-        </span>
-        {match.status === MatchStatus.COMPLETED && (
-          <Badge variant="secondary" className="text-xs">
-            Completed
-          </Badge>
-        )}
-      </div>
-      {isH2H && (
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            {side1.map((p) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <span className="font-medium">{getParticipantName(p)}</span>
-                {p.result && (
-                  <Badge
-                    variant={
-                      p.result === MatchResult.WIN
-                        ? "default"
-                        : p.result === MatchResult.LOSS
-                          ? "destructive"
-                          : "secondary"
-                    }
-                    className="text-xs"
-                  >
-                    {MATCH_RESULT_LABELS[p.result as MatchResult]}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
-          <span className="text-muted-foreground">vs</span>
-          <div className="flex-1 text-right">
-            {side2.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 justify-end">
-                {p.result && (
-                  <Badge
-                    variant={
-                      p.result === MatchResult.WIN
-                        ? "default"
-                        : p.result === MatchResult.LOSS
-                          ? "destructive"
-                          : "secondary"
-                    }
-                    className="text-xs"
-                  >
-                    {MATCH_RESULT_LABELS[p.result as MatchResult]}
-                  </Badge>
-                )}
-                <span className="font-medium">{getParticipantName(p)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {!isH2H && (
-        <div className="space-y-1">
-          {match.participants
-            .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-            .slice(0, 3)
-            .map((p, index) => (
-              <div key={p.id} className="flex items-center gap-2 text-sm">
-                <span
-                  className={cn(
-                    "w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium",
-                    index === 0 && "bg-rank-gold-bg text-rank-gold-text",
-                    index === 1 && "bg-rank-silver-bg text-rank-silver-text",
-                    index === 2 && "bg-rank-bronze-bg text-rank-bronze-text",
-                  )}
-                >
-                  {p.rank || index + 1}
-                </span>
-                <span>{getParticipantName(p)}</span>
-                {p.score !== null && (
-                  <span className="text-muted-foreground ml-auto">
-                    {p.score}
-                  </span>
-                )}
-              </div>
-            ))}
-          {match.participants.length > 3 && (
-            <p className="text-xs text-muted-foreground pl-8">
-              +{match.participants.length - 3} more
-            </p>
-          )}
-        </div>
-      )}
-    </Link>
   );
 }
 

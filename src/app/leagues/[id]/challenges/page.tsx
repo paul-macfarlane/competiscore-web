@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +42,12 @@ export default async function ChallengesPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Challenges" },
+        ]}
+      />
       <div>
         <h1 className="text-2xl font-bold md:text-3xl">Challenges</h1>
         <p className="text-muted-foreground mt-1">

@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { auth } from "@/lib/server/auth";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getGameType } from "@/services/game-types";
@@ -42,6 +43,17 @@ export default async function GameTypeSettingsPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Game Types", href: `/leagues/${leagueId}/game-types` },
+          {
+            label: gameType.name,
+            href: `/leagues/${leagueId}/game-types/${gameTypeId}`,
+          },
+          { label: "Settings" },
+        ]}
+      />
       <div>
         <h1 className="text-2xl font-bold">Game Type Settings</h1>
         <p className="text-muted-foreground">Edit {gameType.name} settings</p>

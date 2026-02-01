@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/server/limits";
 import { LeagueMemberRole } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { ROLE_BADGE_VARIANTS } from "@/lib/shared/roles";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import {
   getOwnReportCount,
@@ -140,6 +142,8 @@ async function LeagueDashboardContent({
 
   return (
     <>
+      <LeagueBreadcrumb items={[{ label: league.name }]} />
+
       {isSuspended && (
         <Card className="border-destructive bg-destructive/5">
           <CardContent className="flex items-start gap-3 pt-6">
@@ -196,7 +200,10 @@ async function LeagueDashboardContent({
               >
                 {league.visibility === "public" ? "Public" : "Private"}
               </Badge>
-              <Badge variant="outline" className="capitalize">
+              <Badge
+                variant={ROLE_BADGE_VARIANTS[league.role]}
+                className="capitalize"
+              >
                 {league.role}
               </Badge>
             </div>
@@ -207,7 +214,7 @@ async function LeagueDashboardContent({
         </div>
         <div className="flex gap-2 shrink-0">
           {isExecutive && (
-            <Button variant="outline" size="sm" asChild>
+            <Button size="sm" asChild>
               <Link href={`/leagues/${leagueId}/settings`}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
@@ -230,13 +237,13 @@ async function LeagueDashboardContent({
           <TeamsCard leagueId={leagueId} userId={userId} />
         </Suspense>
 
-        <Link href={`/leagues/${leagueId}/members`} className="block h-full">
-          <Card className="hover:bg-muted hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Members</CardTitle>
-              <Users className="text-muted-foreground h-4 w-4" />
-            </CardHeader>
-            <CardContent className="space-y-2">
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Members</CardTitle>
+            <Users className="text-muted-foreground h-4 w-4" />
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-between space-y-2">
+            <div>
               <div className="text-2xl font-bold">{league.memberCount}</div>
               <UsageIndicator
                 current={memberLimitInfo.current}
@@ -244,17 +251,20 @@ async function LeagueDashboardContent({
                 label="capacity"
                 showProgressBar={memberLimitInfo.max !== null}
               />
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+            <Button asChild size="sm">
+              <Link href={`/leagues/${leagueId}/members`}>View Members</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-        <Link href={`/leagues/${leagueId}/moderation`} className="block h-full">
-          <Card className="hover:bg-muted hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Moderation</CardTitle>
-              <Flag className="text-muted-foreground h-4 w-4" />
-            </CardHeader>
-            <CardContent className="space-y-2">
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Moderation</CardTitle>
+            <Flag className="text-muted-foreground h-4 w-4" />
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-between space-y-2">
+            <div>
               {canViewReports && pendingReportCount > 0 ? (
                 <>
                   <div className="text-2xl font-bold flex items-center gap-2">
@@ -280,9 +290,14 @@ async function LeagueDashboardContent({
                   </p>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+            <Button asChild size="sm">
+              <Link href={`/leagues/${leagueId}/moderation`}>
+                View Moderation
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -303,13 +318,13 @@ async function GameTypesCard({ leagueId }: { leagueId: string }) {
   const gameTypeLimitInfo = await getLeagueGameTypeLimitInfo(leagueId);
 
   return (
-    <Link href={`/leagues/${leagueId}/game-types`} className="block h-full">
-      <Card className="hover:bg-muted hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer h-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Game Types</CardTitle>
-          <Gamepad2 className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent className="space-y-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Game Types</CardTitle>
+        <Gamepad2 className="text-muted-foreground h-4 w-4" />
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-between space-y-2">
+        <div>
           <div className="text-2xl font-bold">{gameTypeLimitInfo.current}</div>
           <UsageIndicator
             current={gameTypeLimitInfo.current}
@@ -317,9 +332,12 @@ async function GameTypesCard({ leagueId }: { leagueId: string }) {
             label="game types"
             showProgressBar={gameTypeLimitInfo.max !== null}
           />
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+        <Button asChild size="sm">
+          <Link href={`/leagues/${leagueId}/game-types`}>View Game Types</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -335,20 +353,23 @@ async function TeamsCard({
   const activeTeams = teams.filter((t) => !t.isArchived);
 
   return (
-    <Link href={`/leagues/${leagueId}/teams`} className="block h-full">
-      <Card className="hover:bg-muted hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer h-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Teams</CardTitle>
-          <UsersRound className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent className="space-y-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Teams</CardTitle>
+        <UsersRound className="text-muted-foreground h-4 w-4" />
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-between space-y-2">
+        <div>
           <div className="text-2xl font-bold">{activeTeams.length}</div>
           <p className="text-muted-foreground text-xs">
             {activeTeams.length === 1 ? "team" : "teams"} created
           </p>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+        <Button asChild size="sm">
+          <Link href={`/leagues/${leagueId}/teams`}>View Teams</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

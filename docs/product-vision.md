@@ -160,9 +160,13 @@ Asynchronous competition where players submit scores over time against an eterna
 - Individual or Team: Who can submit scores
 - Rules: Optional markdown-formatted rules text
 
+**Leaderboard Display:** Shows all individual score submissions (arcade-style), not just best scores per participant. If a player has multiple top scores, they can occupy multiple positions on the leaderboard (e.g., ranks 1, 3, and 7). This creates the classic arcade game high score experience where dedication is rewarded with board dominance.
+
+**Score Flexibility:** Scores support both decimal values (e.g., 98.5 for Bowling) and negative values (e.g., -5 for golf relative to par) to accommodate diverse game types.
+
 **ELO Calculation:** No (leaderboard ranking only).
 
-**Examples:** Pacman, arcade games, most pushups in 1 minute, fastest mile run, typing speed test, Nerf basketball high score, paper airplane distance, waste bin toss streak, darts 501 high score
+**Examples:** Pacman, arcade games, most pushups in 1 minute, fastest mile run, typing speed test, Nerf basketball high score, paper airplane distance, waste bin toss streak, darts 501 high score, Bowling (decimal scores), Golf (negative scores relative to par)
 
 ### 3.4 Game Type Templates
 
@@ -192,10 +196,11 @@ Members can record match results in two ways:
 
 - Date and time played (defaults to now, backdating allowed)
 - Game type
-- Participants (individuals or teams)
+- Participants (individuals, teams, or placeholder members)
 - Result (winner/loser, scores, or rankings depending on game type)
 - Draw indicator (if applicable)
 - Recorder (who submitted the result)
+- Scores support decimal values (e.g., 21.5) and negative values (e.g., -3) to accommodate diverse game types
 
 ### 4.3 Match Verification
 
@@ -249,22 +254,36 @@ Each game type has its own standings page showing:
 - Recent form (last 10 games)
 - Leaderboard position (for High Score games)
 
-### 6.2 Filtering Options
+### 6.2 High Score Leaderboards
+
+High Score Challenge leaderboards display all individual score submissions in descending order (or ascending for "lowest wins" games). The same participant can appear multiple times if they have multiple top scores, creating a classic arcade-style leaderboard where skill and dedication are rewarded with board dominance.
+
+Each leaderboard entry shows:
+
+- Rank position with special highlighting for top 3 (gold, silver, bronze)
+- Participant avatar, name, and username
+- Score value with appropriate label (points, time, etc.)
+- Date achieved
+- Time period filter (week, month, year, all-time)
+
+Personal statistics show the user's best score and their best rank position.
+
+### 6.3 Filtering Options
 
 All standings and leaderboards can be filtered by:
 
 - Time period: This week, this month, this year, all-time
 - Individual vs Team (where applicable)
 
-### 6.3 Head-to-Head Records
+### 6.4 Head-to-Head Records
 
 Users can view their personal record against any specific opponent, including win/loss breakdown and recent matches.
 
-### 6.4 Personal Stats Page
+### 6.5 Personal Stats Page
 
 Each user has a personal stats page showing their performance across all game types in the league, including overall records and rivalries (frequent opponents).
 
-### 6.5 League-Wide Stats
+### 6.6 League-Wide Stats
 
 The league dashboard shows aggregate statistics:
 

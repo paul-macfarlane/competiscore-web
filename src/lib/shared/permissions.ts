@@ -3,6 +3,7 @@ import { LeagueMemberRole, TeamMemberRole } from "./constants";
 export const LeagueAction = {
   VIEW_MEMBERS: "view_members",
   PLAY_GAMES: "play_games",
+  RECORD_MATCHES_FOR_OTHERS: "record_matches_for_others",
   CREATE_GAME_TYPES: "create_game_types",
   CREATE_TOURNAMENTS: "create_tournaments",
   CREATE_SEASONS: "create_seasons",
@@ -34,6 +35,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
   [LeagueMemberRole.MANAGER]: new Set([
     LeagueAction.VIEW_MEMBERS,
     LeagueAction.PLAY_GAMES,
+    LeagueAction.RECORD_MATCHES_FOR_OTHERS,
     LeagueAction.CREATE_GAME_TYPES,
     LeagueAction.CREATE_TOURNAMENTS,
     LeagueAction.CREATE_SEASONS,
@@ -49,6 +51,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
   [LeagueMemberRole.EXECUTIVE]: new Set([
     LeagueAction.VIEW_MEMBERS,
     LeagueAction.PLAY_GAMES,
+    LeagueAction.RECORD_MATCHES_FOR_OTHERS,
     LeagueAction.CREATE_GAME_TYPES,
     LeagueAction.CREATE_TOURNAMENTS,
     LeagueAction.CREATE_SEASONS,

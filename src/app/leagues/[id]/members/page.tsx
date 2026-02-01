@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,10 +14,7 @@ import { getLeagueMemberLimitInfo } from "@/lib/server/limits";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import { getLeagueMembers } from "@/services/members";
-import {
-  getPlaceholders,
-  getRetiredPlaceholders,
-} from "@/services/placeholder-members";
+import { getPlaceholders } from "@/services/placeholder-members";
 import { idParamSchema } from "@/validators/shared";
 import { UserPlus, Users } from "lucide-react";
 import { headers } from "next/headers";
@@ -25,7 +23,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { MembersList } from "./members-list";
-import { PlaceholdersList, RetiredPlaceholdersList } from "./placeholders-list";
+import { PlaceholdersList } from "./placeholders-list";
 
 interface MembersPageProps {
   params: Promise<{ id: string }>;
@@ -51,12 +49,12 @@ export default async function MembersPage({ params }: MembersPageProps) {
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <Link
-            href={`/leagues/${id}`}
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
-            ← Back to league
-          </Link>
+          <LeagueBreadcrumb
+            items={[
+              { label: "League", href: `/leagues/${id}` },
+              { label: "Members" },
+            ]}
+          />
           <h1 className="mt-2 text-xl font-bold md:text-2xl">Members</h1>
           <p className="text-muted-foreground text-sm">
             View and manage league members
@@ -93,62 +91,21 @@ async function MembersContent({
     league.role,
     LeagueAction.CREATE_PLACEHOLDERS,
   );
-  const canReport = canPerformAction(league.role, LeagueAction.REPORT_MEMBER);
 
-  const [
-    membersResult,
-    placeholdersResult,
-    retiredPlaceholdersResult,
-    memberLimitInfo,
-  ] = await Promise.all([
-    getLeagueMembers(leagueId, userId),
-    getPlaceholders(leagueId, userId),
-    canManagePlaceholders
-      ? getRetiredPlaceholders(leagueId, userId)
-      : Promise.resolve({ data: [] }),
-    getLeagueMemberLimitInfo(leagueId),
-  ]);
+  const [membersResult, placeholdersResult, memberLimitInfo] =
+    await Promise.all([
+      getLeagueMembers(leagueId, userId),
+      getPlaceholders(leagueId, userId),
+      getLeagueMemberLimitInfo(leagueId),
+    ]);
 
   const members = membersResult.data ?? [];
   const placeholders = placeholdersResult.data ?? [];
-  const retiredPlaceholders = retiredPlaceholdersResult.data ?? [];
 
   const isAtMemberLimit = memberLimitInfo.isAtLimit;
 
   return (
     <div className="space-y-6">
-      {canInvite && (
-        <div className="flex items-center gap-4">
-          {isAtMemberLimit ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button disabled>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Invite Members
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    This league has reached its limit of {memberLimitInfo.max}{" "}
-                    members
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <Button asChild>
-              <Link href={`/leagues/${leagueId}/members/invite`}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Invite Members
-              </Link>
-            </Button>
-          )}
-        </div>
-      )}
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex flex-col gap-1">
@@ -166,6 +123,37 @@ async function MembersContent({
               />
             )}
           </div>
+          {canInvite && (
+            <>
+              {isAtMemberLimit ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button disabled size="sm">
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Invite Members
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        This league has reached its limit of{" "}
+                        {memberLimitInfo.max} members
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href={`/leagues/${leagueId}/members/invite`}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite Members
+                  </Link>
+                </Button>
+              )}
+            </>
+          )}
         </CardHeader>
         <CardContent>
           <MembersList
@@ -174,7 +162,6 @@ async function MembersContent({
             currentUserRole={league.role}
             canManageRoles={canManageRoles}
             canRemove={canRemove}
-            canReport={canReport}
             leagueId={leagueId}
           />
         </CardContent>
@@ -186,27 +173,18 @@ async function MembersContent({
             <CardTitle className="flex items-center gap-2">
               Placeholder Members ({placeholders.length})
             </CardTitle>
+            {canManagePlaceholders && (
+              <Button asChild size="sm">
+                <Link href={`/leagues/${leagueId}/members/placeholders`}>
+                  Manage
+                </Link>
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <PlaceholdersList
               placeholders={placeholders}
               canManage={canManagePlaceholders}
-              leagueId={leagueId}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {canManagePlaceholders && retiredPlaceholders.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2 text-muted-foreground">
-              Retired Placeholders ({retiredPlaceholders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RetiredPlaceholdersList
-              placeholders={retiredPlaceholders}
               leagueId={leagueId}
             />
           </CardContent>

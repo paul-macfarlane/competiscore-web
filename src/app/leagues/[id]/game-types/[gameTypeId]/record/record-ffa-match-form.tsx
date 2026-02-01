@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { MatchParticipantType, ScoringType } from "@/lib/shared/constants";
 import { FFAConfig } from "@/lib/shared/game-templates";
-import { MAX_SCORE_VALUE } from "@/services/constants";
 import {
   recordFFARankedMatchSchema,
   recordFFAScoreMatchSchema,
@@ -331,12 +330,16 @@ function ScoreBasedForm({
       playedAt: formatLocalDateTime(new Date()),
       participants: currentUser
         ? [
-            { userId: currentUser.id, score: 0 },
-            { userId: undefined, score: 0 },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { userId: currentUser.id, score: "" as any },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { userId: undefined, score: "" as any },
           ]
         : [
-            { userId: undefined, score: 0 },
-            { userId: undefined, score: 0 },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { userId: undefined, score: "" as any },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { userId: undefined, score: "" as any },
           ],
     },
     mode: "onChange",
@@ -402,7 +405,8 @@ function ScoreBasedForm({
                 onClick={() =>
                   participantsArray.append({
                     userId: undefined,
-                    score: 0,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    score: "" as any,
                   })
                 }
               >
@@ -453,13 +457,15 @@ function ScoreBasedForm({
                     <FormControl>
                       <Input
                         type="number"
-                        min={0}
-                        max={MAX_SCORE_VALUE}
+                        step="any"
                         placeholder="Score"
                         {...scoreField}
-                        onChange={(e) =>
-                          scoreField.onChange(parseInt(e.target.value) || 0)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          scoreField.onChange(
+                            value === "" ? "" : parseFloat(value),
+                          );
+                        }}
                       />
                     </FormControl>
                   </FormItem>

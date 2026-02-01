@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,12 +33,12 @@ export default async function TeamsPage({ params }: PageProps) {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link
-            href={`/leagues/${leagueId}`}
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
-            ← Back to league
-          </Link>
+          <LeagueBreadcrumb
+            items={[
+              { label: "League", href: `/leagues/${leagueId}` },
+              { label: "Teams" },
+            ]}
+          />
           <h1 className="mt-2 text-xl font-bold md:text-2xl">Teams</h1>
           <p className="text-muted-foreground text-sm">
             Create and manage teams for competitions

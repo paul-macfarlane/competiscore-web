@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import {
   ParticipantData,
   ParticipantDisplay,
@@ -60,12 +61,13 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link
-        href={`/leagues/${leagueId}/matches`}
-        className="text-muted-foreground hover:text-foreground text-sm inline-block"
-      >
-        ← Back to matches
-      </Link>
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${leagueId}` },
+          { label: "Matches", href: `/leagues/${leagueId}/matches` },
+          { label: "Match Details" },
+        ]}
+      />
 
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -85,8 +87,8 @@ export default async function MatchDetailPage({ params }: PageProps) {
             <CardTitle>Match Result</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex-1 w-full sm:w-auto min-w-0">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   {match.challengerId ? "Challenger" : "Side 1"}
                 </h3>
@@ -97,9 +99,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="text-center px-4">
+              <div className="text-center shrink-0 w-full sm:w-auto">
                 {match.status === MatchStatus.COMPLETED && (
-                  <div className="text-3xl font-bold">
+                  <div className="text-2xl sm:text-3xl font-bold">
                     {side1[0]?.score !== null && side2[0]?.score !== null ? (
                       <>
                         {side1[0].score} - {side2[0].score}
@@ -128,7 +130,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 )}
               </div>
 
-              <div className="flex-1 text-right">
+              <div className="flex-1 w-full sm:w-auto min-w-0 sm:text-right">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   {match.challengerId ? "Challenged" : "Side 2"}
                 </h3>
@@ -250,17 +252,19 @@ function ParticipantRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3",
-        align === "right" && "flex-row-reverse",
+        "flex items-center gap-2 sm:gap-3 min-w-0",
+        align === "right" && "sm:flex-row-reverse",
       )}
     >
-      <ParticipantDisplay
-        participant={participant}
-        showAvatar
-        showUsername
-        size="lg"
-        align={align}
-      />
+      <div className="flex-1 min-w-0">
+        <ParticipantDisplay
+          participant={participant}
+          showAvatar
+          showUsername
+          size="lg"
+          align={align}
+        />
+      </div>
       {participant.result && showResult && (
         <Badge
           variant={
@@ -270,7 +274,7 @@ function ParticipantRow({
                 ? "destructive"
                 : "secondary"
           }
-          className={cn("ml-2", align === "right" && "mr-2 ml-0")}
+          className="shrink-0"
         >
           {MATCH_RESULT_LABELS[participant.result as MatchResult]}
         </Badge>

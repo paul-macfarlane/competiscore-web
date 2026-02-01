@@ -17,8 +17,8 @@ export const ROLE_BADGE_VARIANTS: Record<
   "secondary" | "default" | "outline"
 > = {
   [LeagueMemberRole.MEMBER]: "secondary",
-  [LeagueMemberRole.MANAGER]: "default",
-  [LeagueMemberRole.EXECUTIVE]: "default",
+  [LeagueMemberRole.MANAGER]: "secondary",
+  [LeagueMemberRole.EXECUTIVE]: "secondary",
 };
 
 export const TEAM_ROLE_LABELS: Record<TeamMemberRole, string> = {

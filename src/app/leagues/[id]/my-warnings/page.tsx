@@ -1,3 +1,4 @@
+import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +9,6 @@ import { idParamSchema } from "@/validators/shared";
 import { format, formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Clock, Shield } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -34,14 +34,14 @@ export default async function MyWarningsPage({ params }: MyWarningsPageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LeagueBreadcrumb
+        items={[
+          { label: "League", href: `/leagues/${id}` },
+          { label: "My Warnings" },
+        ]}
+      />
       <div>
-        <Link
-          href={`/leagues/${id}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Back to league
-        </Link>
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">My Warnings</h1>
+        <h1 className="text-xl font-bold md:text-2xl">My Warnings</h1>
         <p className="text-muted-foreground text-sm">
           View your moderation history in this league
         </p>
