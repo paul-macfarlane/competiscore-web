@@ -1,4 +1,5 @@
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
+import { LocalDateTime } from "@/components/local-date-time";
 import {
   ParticipantData,
   ParticipantDisplay,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/shared/constants";
 import { cn } from "@/lib/shared/utils";
 import { getMatch } from "@/services/matches";
-import { format } from "date-fns";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -73,7 +73,10 @@ export default async function MatchDetailPage({ params }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">Match Details</h1>
           <p className="text-muted-foreground mt-1">
-            {format(new Date(match.playedAt), "MMMM d, yyyy 'at' h:mm a")}
+            <LocalDateTime
+              date={match.playedAt}
+              formatString="MMMM d, yyyy 'at' h:mm a"
+            />
           </p>
         </div>
         <Badge variant={statusBadgeVariant(match.status)}>
@@ -183,13 +186,19 @@ export default async function MatchDetailPage({ params }: PageProps) {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Played At</span>
             <span className="font-medium">
-              {format(new Date(match.playedAt), "MMM d, yyyy h:mm a")}
+              <LocalDateTime
+                date={match.playedAt}
+                formatString="MMM d, yyyy h:mm a"
+              />
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Recorded At</span>
             <span className="font-medium">
-              {format(new Date(match.createdAt), "MMM d, yyyy h:mm a")}
+              <LocalDateTime
+                date={match.createdAt}
+                formatString="MMM d, yyyy h:mm a"
+              />
             </span>
           </div>
           {match.challengerId && (
@@ -198,7 +207,10 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Challenged At</span>
                   <span className="font-medium">
-                    {format(new Date(match.challengedAt), "MMM d, yyyy h:mm a")}
+                    <LocalDateTime
+                      date={match.challengedAt}
+                      formatString="MMM d, yyyy h:mm a"
+                    />
                   </span>
                 </div>
               )}
@@ -206,7 +218,10 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Accepted At</span>
                   <span className="font-medium">
-                    {format(new Date(match.acceptedAt), "MMM d, yyyy h:mm a")}
+                    <LocalDateTime
+                      date={match.acceptedAt}
+                      formatString="MMM d, yyyy h:mm a"
+                    />
                   </span>
                 </div>
               )}
