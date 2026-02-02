@@ -81,8 +81,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Badge variant="secondary">
-                {team.members.length}{" "}
-                {team.members.length === 1 ? "member" : "members"}
+                {team.members.filter((m) => m.user).length}{" "}
+                {team.members.filter((m) => m.user).length === 1
+                  ? "member"
+                  : "members"}
               </Badge>
               {isTeamManager && <Badge variant="outline">Manager</Badge>}
             </div>
@@ -103,7 +105,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Team Members</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Members ({team.members.filter((m) => m.user).length})
+          </CardTitle>
           {canManage && (
             <Button size="sm" asChild>
               <Link href={`/leagues/${leagueId}/teams/${teamId}/members`}>
@@ -113,61 +118,108 @@ export default async function TeamDetailPage({ params }: PageProps) {
           )}
         </CardHeader>
         <CardContent>
-          {team.members.length === 0 ? (
+          {team.members.filter((m) => m.user).length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>No members yet</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {team.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-start gap-3 rounded-lg border p-3 sm:items-center"
-                >
-                  {member.user ? (
+              {team.members
+                .filter((member) => member.user)
+                .map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-start gap-3 rounded-lg border p-3 sm:items-center"
+                  >
                     <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage
-                        src={member.user.image || undefined}
-                        alt={member.user.name}
+                        src={member.user!.image || undefined}
+                        alt={member.user!.name}
                       />
                       <AvatarFallback>
-                        {member.user.name.charAt(0).toUpperCase()}
+                        {member.user!.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                  ) : member.placeholderMember ? (
-                    <Avatar className="h-10 w-10 shrink-0">
-                      <AvatarFallback>
-                        {member.placeholderMember.displayName
-                          .charAt(0)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    {member.user ? (
-                      <>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-medium wrap-break-word">
+                          {member.user!.name}
+                        </span>
+                        {member.role === TeamMemberRole.MANAGER && (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 sm:hidden"
+                          >
+                            Manager
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        @{member.user!.username}
+                      </p>
+                    </div>
+                    {member.role === TeamMemberRole.MANAGER && (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 hidden sm:inline-flex"
+                      >
+                        Manager
+                      </Badge>
+                    )}
+                    {canManage &&
+                      member.role !== TeamMemberRole.MANAGER &&
+                      member.userId !== session.user.id && (
+                        <TeamMemberActions memberId={member.id} />
+                      )}
+                  </div>
+                ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {(team.members.some((m) => m.placeholderMember) || canManage) && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>
+              Placeholder Members (
+              {team.members.filter((m) => m.placeholderMember).length})
+            </CardTitle>
+            {canManage && (
+              <Button size="sm" asChild>
+                <Link
+                  href={`/leagues/${leagueId}/teams/${teamId}/placeholders`}
+                >
+                  Manage
+                </Link>
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {team.members.filter((m) => m.placeholderMember).length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No placeholder members</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {team.members
+                  .filter((member) => member.placeholderMember)
+                  .map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-start gap-3 rounded-lg border p-3 sm:items-center"
+                    >
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarFallback>
+                          {member
+                            .placeholderMember!.displayName.charAt(0)
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="font-medium wrap-break-word">
-                            {member.user.name}
-                          </span>
-                          {member.role === TeamMemberRole.MANAGER && (
-                            <Badge
-                              variant="outline"
-                              className="shrink-0 sm:hidden"
-                            >
-                              Manager
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          @{member.user.username}
-                        </p>
-                      </>
-                    ) : member.placeholderMember ? (
-                      <>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-medium wrap-break-word">
-                            {member.placeholderMember.displayName}
+                            {member.placeholderMember!.displayName}
                           </span>
                           {member.role === TeamMemberRole.MANAGER && (
                             <Badge
@@ -181,28 +233,25 @@ export default async function TeamDetailPage({ params }: PageProps) {
                         <p className="text-sm text-muted-foreground">
                           Placeholder member
                         </p>
-                      </>
-                    ) : null}
-                  </div>
-                  {member.role === TeamMemberRole.MANAGER && (
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 hidden sm:inline-flex"
-                    >
-                      Manager
-                    </Badge>
-                  )}
-                  {canManage &&
-                    member.role !== TeamMemberRole.MANAGER &&
-                    member.userId !== session.user.id && (
-                      <TeamMemberActions memberId={member.id} />
-                    )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                      {member.role === TeamMemberRole.MANAGER && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 hidden sm:inline-flex"
+                        >
+                          Manager
+                        </Badge>
+                      )}
+                      {canManage && member.role !== TeamMemberRole.MANAGER && (
+                        <TeamMemberActions memberId={member.id} />
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

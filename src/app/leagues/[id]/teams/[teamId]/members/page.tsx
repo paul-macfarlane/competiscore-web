@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getLeagueMembers } from "@/db/league-members";
-import { getActivePlaceholderMembersByLeague } from "@/db/placeholder-members";
 import { getPendingTeamInvitationsForTeam } from "@/db/team-invitations";
 import { auth } from "@/lib/server/auth";
 import { TeamAction, canPerformTeamAction } from "@/lib/shared/permissions";
@@ -15,7 +14,6 @@ import { getTeam } from "@/services/teams";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { AddTeamMemberForm } from "../settings/add-team-member-form";
 import { PendingTeamInvitationsList } from "../settings/pending-team-invitations-list";
 import { TeamInviteForm } from "../settings/team-invite-form";
 import { TeamInviteLinkGenerator } from "../settings/team-invite-link-generator";
@@ -53,24 +51,13 @@ export default async function TeamMembersPage({ params }: PageProps) {
     redirect(`/leagues/${leagueId}/teams/${teamId}`);
   }
 
-  const [leagueMembers, placeholderMembers, pendingInvitations] =
-    await Promise.all([
-      getLeagueMembers(leagueId),
-      getActivePlaceholderMembersByLeague(leagueId),
-      getPendingTeamInvitationsForTeam(teamId),
-    ]);
+  const [leagueMembers, pendingInvitations] = await Promise.all([
+    getLeagueMembers(leagueId),
+    getPendingTeamInvitationsForTeam(teamId),
+  ]);
 
   const existingUserIds = new Set(
     team.members.filter((m) => m.userId).map((m) => m.userId),
-  );
-  const existingPlaceholderIds = new Set(
-    team.members
-      .filter((m) => m.placeholderMemberId)
-      .map((m) => m.placeholderMemberId),
-  );
-
-  const availablePlaceholders = placeholderMembers.filter(
-    (p) => !existingPlaceholderIds.has(p.id) && !p.retiredAt,
   );
 
   const pendingInviteeIds = new Set(
@@ -94,7 +81,9 @@ export default async function TeamMembersPage({ params }: PageProps) {
       />
       <div>
         <h1 className="text-2xl font-bold">Invite Team Members</h1>
-        <p className="text-muted-foreground">Invite members to {team.name}</p>
+        <p className="text-muted-foreground">
+          Invite league members to join {team.name}
+        </p>
       </div>
 
       <Card>
@@ -124,11 +113,6 @@ export default async function TeamMembersPage({ params }: PageProps) {
           <TeamInviteLinkGenerator teamId={teamId} />
         </CardContent>
       </Card>
-
-      <AddTeamMemberForm
-        teamId={teamId}
-        availablePlaceholders={availablePlaceholders}
-      />
 
       {pendingInvitations.length > 0 && (
         <Card>

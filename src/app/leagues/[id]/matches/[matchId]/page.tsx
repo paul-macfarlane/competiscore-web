@@ -100,31 +100,14 @@ export default async function MatchDetailPage({ params }: PageProps) {
               </div>
 
               <div className="text-center shrink-0 w-full sm:w-auto">
-                {match.status === MatchStatus.COMPLETED && (
-                  <div className="text-2xl sm:text-3xl font-bold">
-                    {side1[0]?.score !== null && side2[0]?.score !== null ? (
-                      <>
-                        {side1[0].score} - {side2[0].score}
-                      </>
-                    ) : (
-                      <>
-                        {side1[0]?.result === MatchResult.WIN
-                          ? "W"
-                          : side1[0]?.result === MatchResult.LOSS
-                            ? "L"
-                            : "D"}{" "}
-                        -{" "}
-                        {side2[0]?.result === MatchResult.WIN
-                          ? "W"
-                          : side2[0]?.result === MatchResult.LOSS
-                            ? "L"
-                            : "D"}
-                      </>
-                    )}
+                {match.status === MatchStatus.COMPLETED &&
+                side1[0]?.score !== null &&
+                side2[0]?.score !== null ? (
+                  <div className="text-2xl sm:text-3xl font-bold tabular-nums">
+                    {side1[0].score} - {side2[0].score}
                   </div>
-                )}
-                {match.status !== MatchStatus.COMPLETED && (
-                  <span className="text-lg font-medium text-muted-foreground">
+                ) : (
+                  <span className="text-lg font-medium text-muted-foreground uppercase tracking-wider">
                     vs
                   </span>
                 )}
