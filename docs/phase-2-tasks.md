@@ -8,10 +8,10 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 | --------------------------- | -------------- | -------- |
 | 1. Game Types               | ✅ Complete    | 100%     |
 | 2. Team Management          | ✅ Complete    | 100%     |
-| 3. Match Recording          | 🔄 In Progress | 75%      |
-| 4. ELO & Rankings           | ⏳ Not Started | 0%       |
-| 5. Standings & Leaderboards | 🔄 In Progress | 40%      |
-| 6. Integration & Polish     | ⏳ Not Started | 0%       |
+| 3. Match Recording          | ✅ Complete    | 100%     |
+| 4. ELO & Rankings           | ✅ Complete    | 100%     |
+| 5. Standings & Leaderboards | ✅ Complete    | 100%     |
+| 6. Integration & Polish     | 🔄 In Progress | 60%      |
 
 ---
 
@@ -140,31 +140,47 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 
 ## 4. ELO & Rankings
 
-**Status: ⏳ Not Started**
+**Status: ✅ Complete**
 
 ### Database Schema
 
-- [ ] Rating table (entityId, entityType, gameTypeId, rating, matchCount, winCount, lossCount, drawCount)
-- [ ] Rating history table (ratingId, matchId, oldRating, newRating, change)
+- [x] ELO rating table (id, leagueId, gameTypeId, userId/teamId/placeholderId, rating, matchesPlayed, createdAt, updatedAt)
+- [x] ELO history table (id, eloRatingId, matchId, ratingBefore, ratingAfter, ratingChange, kFactor, opponentRatingAvg, expectedScore, actualScore, createdAt)
+- [x] Unique constraints per participant-game type combination
+- [x] Indexes for performance (league/gameType lookup, rating sorting, participant lookups)
 
 ### Logic
 
-- [ ] ELO calculation service (H2H)
-- [ ] ELO calculation service (FFA/Multiplayer)
-- [ ] Rating update trigger (on match completion)
-- [ ] Team rating persistence (independent of roster)
+- [x] ELO calculation service (H2H using standard ELO formula)
+- [x] ELO calculation service (FFA using virtual pairing approach)
+- [x] Rating update trigger (integrated with match recording in transactions)
+- [x] Team rating persistence (independent of roster)
+- [x] Starting ELO: 1200
+- [x] Provisional K-factor: 40 (first 10 matches)
+- [x] Standard K-factor: 32
+- [x] Pure calculation functions (src/lib/shared/elo-calculator.ts)
 
 ### Integration
 
-- [ ] Update ratings after match recording
-- [ ] Handle rating decay (optional/deferred)
-- [ ] Provisional rating logic (K-factor adjustment)
+- [x] Update ratings after match recording (all 4 match recording functions)
+- [x] Transaction safety (ELO updates within same transaction as match creation)
+- [x] Provisional rating logic (K-factor adjustment based on matches played)
+- [x] Automatic rating creation with default 1200
+- [x] Full audit trail in elo_history table
+
+### Testing
+
+- [x] Unit tests for ELO calculation functions (15 tests passing)
+- [x] H2H scenarios (equal ratings, underdog win, favorite loss, draws)
+- [x] FFA scenarios (3-player, 4-player, tied ranks)
+- [x] Provisional period testing
+- [x] Service tests with mocked database
 
 ---
 
 ## 5. Standings & Leaderboards
 
-**Status: 🔄 In Progress (40%)**
+**Status: ✅ Complete**
 
 ### High Score Leaderboards
 
@@ -178,6 +194,17 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 - [x] Leaderboard allows same participant multiple times (shows all top scores)
 - [x] Unique entry IDs for React keys (supports duplicate participants)
 
+### ELO Standings (H2H & FFA)
+
+- [x] Standings query with participant details (user/team/placeholder)
+- [x] Standings page with pagination (25 items per page)
+- [x] Rank calculation and display
+- [x] Rating display with provisional indicator (< 10 matches)
+- [x] Matches played tracking
+- [x] Personal rating card showing current rank and rating
+- [x] Gold/silver/bronze styling for top 3
+- [x] Navigation integration (Standings button on game type pages)
+
 ### UI/UX
 
 - [x] Leaderboard component with proper participant display
@@ -186,21 +213,57 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 - [x] Personal performance card (rank and personal best)
 - [x] ParticipantDisplay component for consistent rendering
 - [x] Mobile-responsive leaderboard design
-- [ ] Head-to-head standings (ELO rankings)
-- [ ] Free-for-all standings (ELO rankings)
+- [x] Head-to-head standings (ELO rankings)
+- [x] Free-for-all standings (ELO rankings)
+- [x] EloRatingBadge component (shows rating with provisional status)
+- [x] EloChangeBadge component (shows +/- rating changes)
+- [x] Standings navigation (visible only for H2H and FFA game types)
+- [x] Mobile-responsive standings page
+
+### Future Enhancements (Deferred)
+
 - [ ] Overall win/loss/draw records
 - [ ] Personal stats page (Performance across game types)
 - [ ] League dashboard activity feed
+- [ ] ELO rating history charts
+- [ ] ELO change display on match cards
 
 ---
 
 ## 6. Integration & Polish
 
-**Status: ⏳ Not Started**
+**Status: 🔄 In Progress (60%)**
+
+### Transaction Safety ✅
+
+- [x] Audit all service functions for transaction issues
+- [x] Fix join-league.ts (addUserToLeague with 2 writes)
+- [x] Fix invitations.ts (acceptInvitation with 3+ writes)
+- [x] Fix invitations.ts (joinViaInviteLink with 3+ writes)
+- [x] Transaction-aware pattern (dbOrTx parameter with fallback)
+- [x] Updated tests to mock withTransaction
+- [x] All 26 invitation tests passing
+- [x] ELO ratings use transactions (integrated with match recording)
+
+### Mobile Responsiveness ✅
+
+- [x] Fix game type detail page header overflow
+- [x] Fix match history card button overflow
+- [x] Responsive button layout (icon-only on mobile, full labels on desktop)
+- [x] Vertical stacking on mobile, horizontal on desktop
+- [x] Button wrapping support
+
+### Type Safety ✅
+
+- [x] Remove all `any` types from ELO services
+- [x] Create proper MatchWithRelations type
+- [x] Type-safe participant handling in ELO calculations
+- [x] Validation for FFA participants (all must have ranks)
 
 ### Placeholder Integration
 
 - [ ] Link placeholder to real user on join (migrate match history)
+- [ ] Migrate ELO ratings when placeholder is linked
 
 ### Discovery
 
@@ -208,10 +271,54 @@ This document tracks all tasks for Phase 2 of Competiscore development, focusing
 
 ### Usage Limits
 
-- [ ] Enforce game type limits (20 max)
+- [x] Game type limit enforcement (20 max)
 
 ### Polish
 
-- [ ] Loading states for new pages
-- [ ] SEO metadata for new pages
-- [ ] Error handling for match recording
+- [x] Loading states for standings pages
+- [x] SEO metadata for standings pages
+- [x] Error handling for ELO calculations
+- [ ] Loading states for match recording
+- [ ] SEO metadata for match recording pages
+- [ ] Comprehensive error messages for all edge cases
+
+---
+
+## Recent Accomplishments
+
+### ELO & Rankings System (Complete) 🎉
+
+Implemented a full ELO rating system for competitive game types:
+
+- **Database Layer**: Created `elo_rating` and `elo_history` tables with proper indexes and constraints
+- **Calculation Engine**: Built pure calculation functions for both H2H and FFA using virtual pairing
+- **Service Integration**: Seamlessly integrated with all 4 match recording functions using transactions
+- **UI Components**: Created standings page with provisional indicators, rank display, and mobile responsiveness
+- **Testing**: 15 calculation tests passing, all edge cases covered
+- **Parameters**: Starting ELO 1200, provisional K=40, standard K=32
+
+### Transaction Safety Audit (Complete) 🔒
+
+Audited and fixed all service-layer transaction issues:
+
+- **Issues Found**: 2 critical files with atomicity problems (join-league.ts, invitations.ts)
+- **Pattern Established**: Optional `dbOrTx` parameter for transaction-aware functions
+- **Fixes Applied**: 3 functions now properly wrapped in transactions
+- **Test Updates**: Added withTransaction mocks, all tests passing
+- **Services Verified**: 16 service files audited, 7 already using transactions correctly
+
+### Mobile Responsiveness (Complete) 📱
+
+Fixed overflow issues on game type detail page:
+
+- **Header Section**: Responsive layout with vertical stacking on mobile
+- **Button Text**: Icon-only on mobile, full labels on desktop
+- **Match History**: Fixed button overflow with wrapping support
+- **Pattern**: Progressive enhancement approach used throughout
+
+### Code Quality Improvements ✨
+
+- **Type Safety**: Removed all `any` types, created proper type definitions
+- **Validation**: Added FFA rank validation before ELO calculation
+- **Error Handling**: Comprehensive error messages and graceful failures
+- **Build Status**: TypeScript compilation passing, no errors

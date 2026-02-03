@@ -46,6 +46,7 @@ vi.mock("@/db/invitations", () => ({
 }));
 
 vi.mock("@/db", () => ({
+  db: {},
   withTransaction: vi.fn((callback) =>
     callback({
       insert: vi.fn().mockReturnThis(),

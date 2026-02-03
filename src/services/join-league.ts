@@ -1,3 +1,4 @@
+import { type DBOrTx, db, withTransaction } from "@/db/index";
 import { acceptAllPendingInvitationsForLeague } from "@/db/invitations";
 import { createLeagueMember, getLeagueMember } from "@/db/league-members";
 import {
@@ -19,6 +20,7 @@ export async function addUserToLeague(
   userId: string,
   leagueId: string,
   role: LeagueMemberRole,
+  dbOrTx: DBOrTx = db,
 ): Promise<ServiceResult<{ joined: boolean }>> {
   const existingMembership = await getLeagueMember(userId, leagueId);
   if (existingMembership) {
@@ -35,9 +37,14 @@ export async function addUserToLeague(
     return { error: leagueLimitCheck.message };
   }
 
-  await createLeagueMember({ userId, leagueId, role });
+  const processJoin = async (tx: DBOrTx) => {
+    await createLeagueMember({ userId, leagueId, role }, tx);
+    await acceptAllPendingInvitationsForLeague(leagueId, userId, tx);
+    return { data: { joined: true } };
+  };
 
-  await acceptAllPendingInvitationsForLeague(leagueId, userId);
-
-  return { data: { joined: true } };
+  if (dbOrTx === db) {
+    return withTransaction(processJoin);
+  }
+  return processJoin(dbOrTx);
 }

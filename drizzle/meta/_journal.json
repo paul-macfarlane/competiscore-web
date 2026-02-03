@@ -127,6 +127,13 @@
       "when": 1769921797423,
       "tag": "0017_clear_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1770082038558,
+      "tag": "0018_smart_makkari",
+      "breakpoints": true
     }
   ]
 }

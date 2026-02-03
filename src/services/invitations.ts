@@ -1,3 +1,4 @@
+import { withTransaction } from "@/db/index";
 import {
   InvitationWithDetails,
   checkExistingPendingInvitation,
@@ -241,21 +242,28 @@ export async function acceptInvitation(
     return { error: "This invitation has expired" };
   }
 
-  const joinResult = await addUserToLeague(
-    userId,
-    invitation.leagueId,
-    invitation.role,
-  );
-  if (joinResult.error) {
-    if (joinResult.error === "You are already a member of this league") {
-      await updateInvitationStatus(invitationId, InvitationStatus.ACCEPTED);
+  return withTransaction(async (tx) => {
+    const joinResult = await addUserToLeague(
+      userId,
+      invitation.leagueId,
+      invitation.role,
+      tx,
+    );
+    if (joinResult.error) {
+      if (joinResult.error === "You are already a member of this league") {
+        await updateInvitationStatus(
+          invitationId,
+          InvitationStatus.ACCEPTED,
+          tx,
+        );
+      }
+      return joinResult;
     }
-    return joinResult;
-  }
 
-  await updateInvitationStatus(invitationId, InvitationStatus.ACCEPTED);
+    await updateInvitationStatus(invitationId, InvitationStatus.ACCEPTED, tx);
 
-  return { data: { joined: true } };
+    return { data: { joined: true } };
+  });
 }
 
 export async function declineInvitation(
@@ -334,18 +342,21 @@ export async function joinViaInviteLink(
     return { error: "This league has been archived" };
   }
 
-  const joinResult = await addUserToLeague(
-    userId,
-    invitation.leagueId,
-    invitation.role,
-  );
-  if (joinResult.error) {
-    return { error: joinResult.error };
-  }
+  return withTransaction(async (tx) => {
+    const joinResult = await addUserToLeague(
+      userId,
+      invitation.leagueId,
+      invitation.role,
+      tx,
+    );
+    if (joinResult.error) {
+      return { error: joinResult.error };
+    }
 
-  await incrementInvitationUseCount(invitation.id);
+    await incrementInvitationUseCount(invitation.id, tx);
 
-  return { data: { joined: true, leagueId: invitation.leagueId } };
+    return { data: { joined: true, leagueId: invitation.leagueId } };
+  });
 }
 
 export async function cancelInvitation(

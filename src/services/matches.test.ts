@@ -53,7 +53,12 @@ vi.mock("@/db/placeholder-members", () => ({
 }));
 
 vi.mock("@/db/index", () => ({
+  db: {},
   withTransaction: vi.fn(async (callback) => await callback({})),
+}));
+
+vi.mock("./elo-ratings", () => ({
+  updateEloRatingsForMatch: vi.fn().mockResolvedValue({ data: undefined }),
 }));
 
 const GAME_TYPE_H2H_WL_ID = "550e8400-e29b-41d4-a716-446655440001";

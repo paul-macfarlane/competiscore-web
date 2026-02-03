@@ -890,3 +890,125 @@ export const highScoreEntryRelations = relations(highScoreEntry, ({ one }) => ({
 export const matchColumns = getTableColumns(match);
 export const matchParticipantColumns = getTableColumns(matchParticipant);
 export const highScoreEntryColumns = getTableColumns(highScoreEntry);
+
+export const eloRating = pgTable(
+  "elo_rating",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    gameTypeId: text("game_type_id")
+      .notNull()
+      .references(() => gameType.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    teamId: text("team_id").references(() => team.id, { onDelete: "cascade" }),
+    placeholderMemberId: text("placeholder_member_id").references(
+      () => placeholderMember.id,
+      { onDelete: "cascade" },
+    ),
+    rating: real("rating").notNull().default(1200),
+    matchesPlayed: integer("matches_played").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("elo_rating_league_game_type_idx").on(
+      table.leagueId,
+      table.gameTypeId,
+    ),
+    index("elo_rating_user_idx").on(table.userId),
+    index("elo_rating_team_idx").on(table.teamId),
+    index("elo_rating_placeholder_idx").on(table.placeholderMemberId),
+    index("elo_rating_rating_idx").on(table.rating),
+    uniqueIndex("elo_rating_user_game_type_unique").on(
+      table.userId,
+      table.gameTypeId,
+    ),
+    uniqueIndex("elo_rating_team_game_type_unique").on(
+      table.teamId,
+      table.gameTypeId,
+    ),
+    uniqueIndex("elo_rating_placeholder_game_type_unique").on(
+      table.placeholderMemberId,
+      table.gameTypeId,
+    ),
+  ],
+);
+
+export type EloRating = InferSelectModel<typeof eloRating>;
+export type NewEloRating = InferInsertModel<typeof eloRating>;
+
+export const eloHistory = pgTable(
+  "elo_history",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eloRatingId: text("elo_rating_id")
+      .notNull()
+      .references(() => eloRating.id, { onDelete: "cascade" }),
+    matchId: text("match_id")
+      .notNull()
+      .references(() => match.id, { onDelete: "cascade" }),
+    ratingBefore: real("rating_before").notNull(),
+    ratingAfter: real("rating_after").notNull(),
+    ratingChange: real("rating_change").notNull(),
+    kFactor: integer("k_factor").notNull(),
+    opponentRatingAvg: real("opponent_rating_avg").notNull(),
+    expectedScore: real("expected_score").notNull(),
+    actualScore: real("actual_score").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("elo_history_elo_rating_idx").on(table.eloRatingId),
+    index("elo_history_match_idx").on(table.matchId),
+    index("elo_history_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type EloHistory = InferSelectModel<typeof eloHistory>;
+export type NewEloHistory = InferInsertModel<typeof eloHistory>;
+
+export const eloRatingRelations = relations(eloRating, ({ one, many }) => ({
+  league: one(league, {
+    fields: [eloRating.leagueId],
+    references: [league.id],
+  }),
+  gameType: one(gameType, {
+    fields: [eloRating.gameTypeId],
+    references: [gameType.id],
+  }),
+  user: one(user, {
+    fields: [eloRating.userId],
+    references: [user.id],
+  }),
+  team: one(team, {
+    fields: [eloRating.teamId],
+    references: [team.id],
+  }),
+  placeholderMember: one(placeholderMember, {
+    fields: [eloRating.placeholderMemberId],
+    references: [placeholderMember.id],
+  }),
+  history: many(eloHistory),
+}));
+
+export const eloHistoryRelations = relations(eloHistory, ({ one }) => ({
+  eloRating: one(eloRating, {
+    fields: [eloHistory.eloRatingId],
+    references: [eloRating.id],
+  }),
+  match: one(match, {
+    fields: [eloHistory.matchId],
+    references: [match.id],
+  }),
+}));
+
+export const eloRatingColumns = getTableColumns(eloRating);
+export const eloHistoryColumns = getTableColumns(eloHistory);

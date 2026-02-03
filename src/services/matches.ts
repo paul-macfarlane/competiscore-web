@@ -50,6 +50,7 @@ import {
   submitHighScoreSchema,
 } from "@/validators/matches";
 
+import { updateEloRatingsForMatch } from "./elo-ratings";
 import { ServiceResult, formatZodErrors, isSuspended } from "./shared";
 
 function parseGameTypeConfig(
@@ -234,6 +235,8 @@ export async function recordH2HWinLossMatch(
 
     await dbCreateMatchParticipants(participants, tx);
 
+    await updateEloRatingsForMatch(match.id, tx);
+
     return { data: match };
   });
 }
@@ -379,6 +382,8 @@ export async function recordH2HScoreMatch(
 
     await dbCreateMatchParticipants(participants, tx);
 
+    await updateEloRatingsForMatch(match.id, tx);
+
     return { data: match };
   });
 }
@@ -479,6 +484,8 @@ export async function recordFFARankedMatch(
 
     await dbCreateMatchParticipants(participants, tx);
 
+    await updateEloRatingsForMatch(match.id, tx);
+
     return { data: match };
   });
 }
@@ -575,6 +582,8 @@ export async function recordFFAScoreMatch(
       }));
 
     await dbCreateMatchParticipants(participants, tx);
+
+    await updateEloRatingsForMatch(match.id, tx);
 
     return { data: match };
   });

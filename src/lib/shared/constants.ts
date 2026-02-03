@@ -309,3 +309,10 @@ export const ChallengeType = {
 } as const;
 
 export type ChallengeType = (typeof ChallengeType)[keyof typeof ChallengeType];
+
+export const ELO_CONSTANTS = {
+  STARTING_ELO: 1200,
+  STANDARD_K_FACTOR: 32,
+  PROVISIONAL_K_FACTOR: 40,
+  PROVISIONAL_MATCH_THRESHOLD: 10,
+} as const;
