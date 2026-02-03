@@ -109,7 +109,7 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
           { label: gameType.name },
         ]}
       />
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           {gameType.logo && (
             <div className="relative w-16 h-16 flex items-center justify-center bg-muted rounded-lg shrink-0 overflow-hidden">
@@ -121,8 +121,8 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
               />
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1
                 className={cn(
                   "text-2xl font-bold md:text-3xl",
@@ -148,14 +148,25 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
             </Badge>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           {gameType.category === GameCategory.HIGH_SCORE && (
             <Button variant="outline" size="sm" asChild>
               <Link
                 href={`/leagues/${leagueId}/game-types/${gameTypeId}/leaderboard`}
               >
-                <Trophy className="mr-2 h-4 w-4" />
-                Leaderboard
+                <Trophy className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Leaderboard</span>
+              </Link>
+            </Button>
+          )}
+          {(gameType.category === GameCategory.HEAD_TO_HEAD ||
+            gameType.category === GameCategory.FREE_FOR_ALL) && (
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/leagues/${leagueId}/game-types/${gameTypeId}/standings`}
+              >
+                <Trophy className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Standings</span>
               </Link>
             </Button>
           )}
@@ -164,8 +175,8 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
               <Link
                 href={`/leagues/${leagueId}/game-types/${gameTypeId}/settings`}
               >
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Settings</span>
               </Link>
             </Button>
           )}
@@ -201,9 +212,9 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
 
       {!isHighScore && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Match History</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {canPerformAction(league.role, LeagueAction.PLAY_GAMES) &&
                 !gameType.isArchived && (
                   <>
@@ -212,8 +223,8 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
                         <Link
                           href={`/leagues/${leagueId}/game-types/${gameTypeId}/challenge`}
                         >
-                          <Swords className="mr-2 h-4 w-4" />
-                          Challenge
+                          <Swords className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Challenge</span>
                         </Link>
                       </Button>
                     )}
@@ -221,8 +232,8 @@ export default async function GameTypeDetailPage({ params }: PageProps) {
                       <Link
                         href={`/leagues/${leagueId}/game-types/${gameTypeId}/record`}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Record
+                        <Plus className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Record</span>
                       </Link>
                     </Button>
                   </>

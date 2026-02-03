@@ -52,6 +52,11 @@ vi.mock("@/db/users", () => ({
   getUserById: vi.fn(),
 }));
 
+vi.mock("@/db/index", () => ({
+  db: {},
+  withTransaction: vi.fn((callback) => callback({})),
+}));
+
 vi.mock("@/lib/server/limits", () => ({
   canUserJoinAnotherLeague: vi.fn(),
   canLeagueAddMember: vi.fn(),
