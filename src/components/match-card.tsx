@@ -19,7 +19,7 @@ import {
 import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Trophy } from "lucide-react";
 import Link from "next/link";
 
 type MatchParticipant = {
@@ -33,6 +33,14 @@ type MatchParticipant = {
   placeholderMember?: { displayName: string } | null;
 };
 
+type MatchCardTournament = {
+  tournamentId: string;
+  tournamentName: string;
+  leagueId: string;
+  round: number;
+  totalRounds: number | null;
+};
+
 type MatchCardProps = {
   matchId: string;
   leagueId: string;
@@ -40,6 +48,7 @@ type MatchCardProps = {
   playedAt: Date | string;
   status: string;
   participants: MatchParticipant[];
+  tournament?: MatchCardTournament | null;
   variant?: "compact" | "full";
 };
 
@@ -50,6 +59,7 @@ export function MatchCard({
   playedAt,
   status,
   participants,
+  tournament,
   variant = "full",
 }: MatchCardProps) {
   const side1 = participants.filter((p) => p.side === 1);
@@ -91,6 +101,17 @@ export function MatchCard({
               {MATCH_STATUS_LABELS[status as MatchStatus]}
             </Badge>
           </div>
+          {tournament && (
+            <Link
+              href={`/leagues/${tournament.leagueId}/tournaments/${tournament.tournamentId}`}
+              className="shrink-0"
+            >
+              <Badge variant="outline" className="gap-1 hover:bg-accent">
+                <Trophy className="h-3 w-3" />
+                {tournament.tournamentName}
+              </Badge>
+            </Link>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {formatDistanceToNow(new Date(playedAt), {

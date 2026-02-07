@@ -26,7 +26,7 @@ Friend groups, offices, and clubs frequently play casual competitive games but l
 - ELO rankings for head-to-head and free-for-all games
 - Eternal leaderboards for high score games like arcade classics
 - Tournament brackets with multiple formats
-- Seasons that aggregate multiple competitions into unified standings
+- Events that aggregate multiple competitions into unified standings with flexible point scoring
 - Placeholder members allow tracking before everyone has signed up
 
 ---
@@ -35,7 +35,7 @@ Friend groups, offices, and clubs frequently play casual competitive games but l
 
 ### 2.1 Leagues
 
-A **League** is a community of players who compete against each other. Each league has its own game types, tournaments, seasons, and leaderboards. Users can belong to multiple leagues. Leagues can be public (discoverable and open to join) or private (invite-only).
+A **League** is a community of players who compete against each other. Each league has its own game types, tournaments, events, and leaderboards. Users can belong to multiple leagues. Leagues can be public (discoverable and open to join) or private (invite-only).
 
 ### 2.2 Members & Roles
 
@@ -50,7 +50,7 @@ Each league has three member roles with escalating permissions:
 | Record matches for others  |        | ✓       | ✓         |
 | Create game types          |        | ✓       | ✓         |
 | Create tournaments         |        | ✓       | ✓         |
-| Create seasons             |        | ✓       | ✓         |
+| Create events              |        | ✓       | ✓         |
 | Invite members             |        | ✓       | ✓         |
 | Create placeholder members |        | ✓       | ✓         |
 | Remove members             |        | ✓       | ✓         |
@@ -326,70 +326,90 @@ _Future feature._ The league dashboard will show aggregate statistics:
 
 ### 7.1 Tournament Overview
 
-Tournaments are structured bracket competitions using any game type as the match format. Managers create tournaments, set the format, and manage progression.
+Tournaments are structured bracket competitions using any game type as the match format. Managers create tournaments, set the format, and manage progression. Multiple tournament types are supported to accommodate different competition styles.
 
-### 7.2 Tournament Configuration
+### 7.2 Tournament Types
+
+- **Single Elimination:** Standard bracket where losers are eliminated. Supports bye handling for non-power-of-2 participant counts.
+- **Group Play → Single Elimination:** Participants are divided into groups for a round-robin phase. Top finishers from each group advance to a single elimination bracket. _(Future)_
+- **Series:** A best-of-X series between two participants (individuals or teams), such as best of 3, best of 5, or best of 7. The first participant to win the majority of games wins the series. _(Future)_
+
+_Future: Round Robin (standalone), Swiss, Double Elimination_
+
+### 7.3 Tournament Configuration
 
 - Name and optional logo
-- Format: Single Elimination, Round Robin, Swiss
-- Match format: Best-of-X series (e.g., best of 1, best of 3, best of 5)
+- Tournament type: Single Elimination (MVP), Group Play → Single Elimination _(Future)_, Series _(Future)_
+- Match format: Best-of-X series per round (e.g., best of 1, best of 3, best of 5) — applies to Single Elimination and Group Play types
 - Variation: Single game type for all rounds, or different game types per round
 - Participant type: Individuals or Teams
 - Seeding: Manual or Random
 - Start date/time (manager-specified)
 
-_Future: ELO-based seeding, Double Elimination format_
+_Future: ELO-based seeding_
 
-### 7.3 Tournament Formats (MVP)
+### 7.4 Tournament Formats (MVP)
 
-**Single Elimination:** Standard bracket where losers are eliminated. Supports bye handling for non-power-of-2 participant counts.
+**Single Elimination** is the only format supported for initial implementation. Standard bracket where losers are eliminated. Supports bye handling for non-power-of-2 participant counts.
 
-**Round Robin:** Every participant plays every other participant. Final standings based on win count.
-
-**Swiss:** Fixed number of rounds where participants are paired against others with similar records. No elimination.
-
-### 7.4 Tournament Operations
+### 7.5 Tournament Operations
 
 - Bracket generation handles byes automatically for non-power-of-2 counts
 - Matches can be scheduled within the tournament
 - No-shows are recorded as losses (forfeit)
 - Tournaments can span any period of time (no time limits per round)
-- Tournament history is preserved and browsable
+- Only draft tournaments can be deleted; started and completed tournaments are preserved for history
 
-### 7.5 ELO Impact
+### 7.6 ELO Impact
 
 Tournament matches affect ELO ratings the same as regular matches. There is no separate tournament ELO.
 
 ---
 
-## 8. Seasons
+## 8. Events
 
-### 8.1 Season Overview
+### 8.1 Event Overview
 
-Seasons are defined periods where multiple competitions (matches, tournaments) contribute to unified standings. They allow leagues to crown an overall champion across different game types.
+Events are flexible, time-bounded competitions where participating in matches, free-for-alls, tournaments, and other activities earns points toward an overall event leaderboard. Events allow leagues to run multi-game competitions like "War Week" where diverse competitions all contribute to a single standings. Events can be individual-based or team-based.
 
-### 8.2 Season Configuration
+### 8.2 Event Configuration
 
 - Name and optional logo
-- Participant type: Solo (individuals) or Team
-- Start and end dates
-- Included game types and their point values
-- Included tournaments and their point values
-- Scoring rules for each component
+- Scoring type: Individual or Team
+  - **Individual:** Points are earned by individual participants. The winner is the person with the most points.
+  - **Team:** Players are assigned to event teams. Individual match/tournament results contribute points to the player's team score. Events can also include team-vs-team matches, free-for-alls, and tournaments where the winning team earns points directly.
+- Start date (manager-specified)
+- No fixed end date — events run until a Manager or Executive manually stops them
+- Point rules: Configurable point values for different competition outcomes (see 8.3)
 
-### 8.3 Season Scoring
+### 8.3 Event Point Rules
 
-Managers define how each competition type contributes to the season leaderboard. Examples:
+Managers define how each competition outcome earns points in the event. Points are arbitrary and fully configurable per event. Examples:
 
-- H2H match win: +3 points
-- H2H match draw: +1 point
-- FFA 1st place: +5 points, 2nd: +3 points, 3rd: +1 point
-- High Score top 3 finish: +2 points
-- Tournament winner: +10 points, finalist: +5 points
+- 1st place in a tournament: +10 points
+- 2nd place in a tournament: +5 points
+- Winning a head-to-head match: +1 point
+- 2nd place in a free-for-all: +3 points
+- 1st place in a free-for-all: +5 points
+- Winning a team-vs-team match: +2 points for the winning team
 
-### 8.4 Season Leaderboard
+Different events can have completely different point structures. This flexibility supports everything from casual "most wins" events to elaborate multi-day competitions with varying point values across different game types and formats.
 
-The season leaderboard shows accumulated points, ranking, and breakdown by competition type. Historical seasons are preserved for reference.
+### 8.4 Event Scoring (Team-Based)
+
+In a team-based event:
+
+- Individual match results (H2H wins, FFA placements, tournament results) earn points for the player's assigned team
+- Team-vs-team matches, free-for-alls, and tournaments can also be included, where the winning team directly earns the configured point value
+- The event leaderboard ranks teams by total accumulated points
+
+### 8.5 Event Leaderboard
+
+The event leaderboard shows:
+
+- Accumulated points and ranking (individuals or teams, based on event scoring type)
+- Breakdown by competition type / point source
+- Historical events are preserved for reference after they end
 
 ---
 
@@ -614,7 +634,14 @@ When `/dashboard` returns, it should show cross-league personal data:
 - **Performance Summary**: Overall W/L/D record, win rate trends
 - **League Quick Access**: Cards for each league with activity indicators
 
-### Phase 3: Enhanced Stats & Records
+### Phase 3: Tournaments
+
+1. Single Elimination tournaments (MVP tournament type)
+2. Bracket management and bye handling
+3. Tournament history
+4. _Future: Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination_
+
+### Phase 4: Enhanced Stats & Records
 
 1. Per-game-type detailed stats (win/loss/draw record, win percentage, streaks, recent form)
 2. Head-to-head records between opponents
@@ -623,24 +650,16 @@ When `/dashboard` returns, it should show cross-league personal data:
 5. Ad-hoc teams for one-off match groupings
 6. Admin UI for managing usage limit overrides
 
-### Phase 4: Tournaments
+### Phase 5: Events
 
-1. Single Elimination tournaments
-2. Round Robin tournaments
-3. Swiss tournaments
-4. Bracket management and bye handling
-5. Tournament history
-
-### Phase 5: Seasons
-
-1. Season creation and configuration
-2. Season scoring rules
-3. Season leaderboards
-4. Season history
+1. Event creation and configuration (individual and team-based)
+2. Event point rules (configurable per event)
+3. Event leaderboards
+4. Event history
 
 ### Post-MVP Features
 
-- Double Elimination tournaments
+- Additional tournament types (Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination)
 - ELO-based tournament seeding
 - Match dispute/confirmation system
 - Match result notifications
@@ -676,7 +695,7 @@ The app will launch with all features available but with usage limits clearly co
 - Up to 3 leagues (as creator or member)
 - Up to 20 active members per league (placeholder members do not count toward this limit)
 - Up to 20 game types per league
-- Full access to all features: tournaments, seasons, all game types, full stats
+- Full access to all features: tournaments, events, all game types, full stats
 - Community support only
 
 **Pro Tier (pricing TBD):**

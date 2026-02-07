@@ -66,7 +66,9 @@ export function ParticipantDisplay({
 
   if (!showAvatar) {
     return (
-      <div className={cn(align === "right" && "text-right", className)}>
+      <div
+        className={cn("truncate", align === "right" && "text-right", className)}
+      >
         <span className={cn("font-medium", sizes.name)}>{name}</span>
         {showUsername && username && (
           <span className={cn("text-muted-foreground ml-1", sizes.username)}>
@@ -95,10 +97,10 @@ export function ParticipantDisplay({
           )}
         </AvatarFallback>
       </Avatar>
-      <div className={cn(align === "right" && "text-right")}>
-        <p className={cn("font-medium", sizes.name)}>{name}</p>
+      <div className={cn("min-w-0", align === "right" && "text-right")}>
+        <p className={cn("font-medium truncate", sizes.name)}>{name}</p>
         {showUsername && username && (
-          <p className={cn("text-muted-foreground", sizes.username)}>
+          <p className={cn("text-muted-foreground truncate", sizes.username)}>
             @{username}
           </p>
         )}

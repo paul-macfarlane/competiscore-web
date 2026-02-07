@@ -283,6 +283,7 @@ async function RecentMatchesSection({
                 playedAt={item.playedAt}
                 status={item.status}
                 participants={item.participants}
+                tournament={item.tournament}
                 variant="compact"
               />
             ) : (

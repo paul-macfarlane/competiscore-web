@@ -321,3 +321,41 @@ export const ELO_CONSTANTS = {
   PROVISIONAL_K_FACTOR: 40,
   PROVISIONAL_MATCH_THRESHOLD: 10,
 } as const;
+
+export const TournamentStatus = {
+  DRAFT: "draft",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+} as const;
+
+export type TournamentStatus =
+  (typeof TournamentStatus)[keyof typeof TournamentStatus];
+
+export const TOURNAMENT_STATUS_LABELS: Record<TournamentStatus, string> = {
+  [TournamentStatus.DRAFT]: "Draft",
+  [TournamentStatus.IN_PROGRESS]: "In Progress",
+  [TournamentStatus.COMPLETED]: "Completed",
+};
+
+export const TournamentType = {
+  SINGLE_ELIMINATION: "single_elimination",
+} as const;
+
+export type TournamentType =
+  (typeof TournamentType)[keyof typeof TournamentType];
+
+export const TOURNAMENT_TYPE_LABELS: Record<TournamentType, string> = {
+  [TournamentType.SINGLE_ELIMINATION]: "Single Elimination",
+};
+
+export const SeedingType = {
+  MANUAL: "manual",
+  RANDOM: "random",
+} as const;
+
+export type SeedingType = (typeof SeedingType)[keyof typeof SeedingType];
+
+export const SEEDING_TYPE_LABELS: Record<SeedingType, string> = {
+  [SeedingType.MANUAL]: "Manual",
+  [SeedingType.RANDOM]: "Random",
+};

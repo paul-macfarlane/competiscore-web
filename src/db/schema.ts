@@ -8,7 +8,10 @@ import {
   ModerationActionType,
   ReportReason,
   ReportStatus,
+  SeedingType,
   TeamMemberRole,
+  TournamentStatus,
+  TournamentType,
 } from "@/lib/shared/constants";
 import { LimitType } from "@/services/constants";
 import {
@@ -26,6 +29,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -1019,3 +1023,236 @@ export const eloHistoryRelations = relations(eloHistory, ({ one }) => ({
 
 export const eloRatingColumns = getTableColumns(eloRating);
 export const eloHistoryColumns = getTableColumns(eloHistory);
+
+export const tournamentStatusEnum = pgEnum("tournament_status", [
+  TournamentStatus.DRAFT,
+  TournamentStatus.IN_PROGRESS,
+  TournamentStatus.COMPLETED,
+]);
+
+export const tournamentTypeEnum = pgEnum("tournament_type", [
+  TournamentType.SINGLE_ELIMINATION,
+]);
+
+export const seedingTypeEnum = pgEnum("seeding_type", [
+  SeedingType.MANUAL,
+  SeedingType.RANDOM,
+]);
+
+export const tournament = pgTable(
+  "tournament",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => league.id, { onDelete: "cascade" }),
+    gameTypeId: text("game_type_id")
+      .notNull()
+      .references(() => gameType.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    logo: text("logo"),
+    tournamentType: tournamentTypeEnum("tournament_type")
+      .notNull()
+      .default(TournamentType.SINGLE_ELIMINATION),
+    status: tournamentStatusEnum("status")
+      .notNull()
+      .default(TournamentStatus.DRAFT),
+    participantType: text("participant_type").notNull(),
+    seedingType: seedingTypeEnum("seeding_type").notNull(),
+    bestOf: integer("best_of").notNull().default(1),
+    totalRounds: integer("total_rounds"),
+    startDate: timestamp("start_date"),
+    completedAt: timestamp("completed_at"),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("tournament_league_idx").on(table.leagueId),
+    index("tournament_game_type_idx").on(table.gameTypeId),
+    index("tournament_status_idx").on(table.status),
+    index("tournament_created_by_idx").on(table.createdById),
+  ],
+);
+
+export type Tournament = InferSelectModel<typeof tournament>;
+export type NewTournament = InferInsertModel<typeof tournament>;
+
+export const tournamentParticipant = pgTable(
+  "tournament_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    tournamentId: text("tournament_id")
+      .notNull()
+      .references(() => tournament.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    teamId: text("team_id").references(() => team.id, { onDelete: "cascade" }),
+    placeholderMemberId: text("placeholder_member_id").references(
+      () => placeholderMember.id,
+      { onDelete: "cascade" },
+    ),
+    seed: integer("seed"),
+    isEliminated: boolean("is_eliminated").default(false).notNull(),
+    eliminatedInRound: integer("eliminated_in_round"),
+    finalPlacement: integer("final_placement"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("tournament_participant_tournament_idx").on(table.tournamentId),
+    index("tournament_participant_user_idx").on(table.userId),
+    index("tournament_participant_team_idx").on(table.teamId),
+    index("tournament_participant_placeholder_idx").on(
+      table.placeholderMemberId,
+    ),
+  ],
+);
+
+export type TournamentParticipant = InferSelectModel<
+  typeof tournamentParticipant
+>;
+export type NewTournamentParticipant = InferInsertModel<
+  typeof tournamentParticipant
+>;
+
+export const tournamentRoundMatch = pgTable(
+  "tournament_round_match",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    tournamentId: text("tournament_id")
+      .notNull()
+      .references(() => tournament.id, { onDelete: "cascade" }),
+    round: integer("round").notNull(),
+    position: integer("position").notNull(),
+    participant1Id: text("participant1_id").references(
+      () => tournamentParticipant.id,
+      { onDelete: "set null" },
+    ),
+    participant2Id: text("participant2_id").references(
+      () => tournamentParticipant.id,
+      { onDelete: "set null" },
+    ),
+    winnerId: text("winner_id").references(() => tournamentParticipant.id, {
+      onDelete: "set null",
+    }),
+    matchId: text("match_id").references(() => match.id, {
+      onDelete: "set null",
+    }),
+    isBye: boolean("is_bye").default(false).notNull(),
+    isForfeit: boolean("is_forfeit").default(false).notNull(),
+    nextMatchId: text("next_match_id"),
+    nextMatchSlot: integer("next_match_slot"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("tournament_round_match_tournament_idx").on(table.tournamentId),
+    index("tournament_round_match_tournament_round_idx").on(
+      table.tournamentId,
+      table.round,
+    ),
+    index("tournament_round_match_match_idx").on(table.matchId),
+    unique("tournament_round_match_unique").on(
+      table.tournamentId,
+      table.round,
+      table.position,
+    ),
+  ],
+);
+
+export type TournamentRoundMatch = InferSelectModel<
+  typeof tournamentRoundMatch
+>;
+export type NewTournamentRoundMatch = InferInsertModel<
+  typeof tournamentRoundMatch
+>;
+
+export const tournamentRelations = relations(tournament, ({ one, many }) => ({
+  league: one(league, {
+    fields: [tournament.leagueId],
+    references: [league.id],
+  }),
+  gameType: one(gameType, {
+    fields: [tournament.gameTypeId],
+    references: [gameType.id],
+  }),
+  createdBy: one(user, {
+    fields: [tournament.createdById],
+    references: [user.id],
+  }),
+  participants: many(tournamentParticipant),
+  roundMatches: many(tournamentRoundMatch),
+}));
+
+export const tournamentParticipantRelations = relations(
+  tournamentParticipant,
+  ({ one }) => ({
+    tournament: one(tournament, {
+      fields: [tournamentParticipant.tournamentId],
+      references: [tournament.id],
+    }),
+    user: one(user, {
+      fields: [tournamentParticipant.userId],
+      references: [user.id],
+    }),
+    team: one(team, {
+      fields: [tournamentParticipant.teamId],
+      references: [team.id],
+    }),
+    placeholderMember: one(placeholderMember, {
+      fields: [tournamentParticipant.placeholderMemberId],
+      references: [placeholderMember.id],
+    }),
+  }),
+);
+
+export const tournamentRoundMatchRelations = relations(
+  tournamentRoundMatch,
+  ({ one }) => ({
+    tournament: one(tournament, {
+      fields: [tournamentRoundMatch.tournamentId],
+      references: [tournament.id],
+    }),
+    participant1: one(tournamentParticipant, {
+      fields: [tournamentRoundMatch.participant1Id],
+      references: [tournamentParticipant.id],
+      relationName: "participant1Matches",
+    }),
+    participant2: one(tournamentParticipant, {
+      fields: [tournamentRoundMatch.participant2Id],
+      references: [tournamentParticipant.id],
+      relationName: "participant2Matches",
+    }),
+    winner: one(tournamentParticipant, {
+      fields: [tournamentRoundMatch.winnerId],
+      references: [tournamentParticipant.id],
+      relationName: "wonMatches",
+    }),
+    match: one(match, {
+      fields: [tournamentRoundMatch.matchId],
+      references: [match.id],
+    }),
+  }),
+);
+
+export const tournamentColumns = getTableColumns(tournament);
+export const tournamentParticipantColumns = getTableColumns(
+  tournamentParticipant,
+);
+export const tournamentRoundMatchColumns =
+  getTableColumns(tournamentRoundMatch);

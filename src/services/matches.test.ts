@@ -52,6 +52,10 @@ vi.mock("@/db/placeholder-members", () => ({
   getPlaceholderMemberById: vi.fn(),
 }));
 
+vi.mock("@/db/tournaments", () => ({
+  getTournamentInfoByMatchIds: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@/db/index", () => ({
   db: {},
   withTransaction: vi.fn(async (callback) => await callback({})),
@@ -921,6 +925,7 @@ describe("getMatch", () => {
         name: mockHighScoreGameType.name,
         category: mockHighScoreGameType.category,
       },
+      tournament: null,
     });
     expect(result.error).toBeUndefined();
   });

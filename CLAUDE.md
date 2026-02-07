@@ -114,6 +114,14 @@ This allows users to:
 - Enter negative values
 - Backspace without issues
 
+### UI Consistency
+
+- **Page widths**: League sub-pages should rely on the layout's `max-w-4xl` container for consistent width. Do not add custom max-width wrappers that break consistency with sibling pages.
+- **Card patterns**: Cards across the app should follow a consistent structure: `<Card>` with `<CardHeader>`, `<CardContent>`, and optionally `<CardFooter>` with an action button (e.g., "View" link). Do not make entire cards clickable links — use a button/link inside the card instead.
+- **Creation flows**: Prefer dialog/modal-based creation (like `RecordMatchDialog`) over dedicated pages for simple forms. This keeps users in context and reduces navigation.
+- **Reuse components**: Use existing shared components (`ParticipantDisplay`, `LeagueBreadcrumb`, card components, etc.) rather than building one-off variants. If a new pattern is needed in multiple places, extract it as a shared component.
+- **Layouts**: Use Next.js layouts to enforce consistent page structure (navigation, containers, spacing) across related pages.
+
 ## Database Standards
 
 We use Drizzle ORM for database operations and integration with Postgres and Neon.

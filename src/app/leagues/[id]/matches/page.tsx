@@ -168,6 +168,7 @@ export default async function LeagueMatchesPage({
                   playedAt={item.playedAt}
                   status={item.status}
                   participants={item.participants}
+                  tournament={item.tournament}
                   variant="full"
                 />
               ) : (
