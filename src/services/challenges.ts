@@ -65,6 +65,10 @@ export async function createChallenge(
     return { error: "Game type not found in this league" };
   }
 
+  if (gameType.isArchived) {
+    return { error: "Cannot create challenges for an archived game type" };
+  }
+
   if (gameType.category !== GameCategory.HEAD_TO_HEAD) {
     return {
       error: "Challenges are only available for head-to-head game types",
@@ -502,7 +506,7 @@ export async function getPendingChallenges(
   for (const challenge of challenges) {
     const participants = await dbGetMatchParticipants(challenge.id);
     const gameType = await dbGetGameTypeById(challenge.gameTypeId);
-    if (gameType) {
+    if (gameType && !gameType.isArchived) {
       challengesWithParticipants.push({
         ...challenge,
         participants,
@@ -541,7 +545,7 @@ export async function getSentChallenges(
   for (const challenge of challenges) {
     const participants = await dbGetMatchParticipants(challenge.id);
     const gameType = await dbGetGameTypeById(challenge.gameTypeId);
-    if (gameType) {
+    if (gameType && !gameType.isArchived) {
       challengesWithParticipants.push({
         ...challenge,
         participants,

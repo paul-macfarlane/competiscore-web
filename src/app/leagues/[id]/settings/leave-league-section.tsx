@@ -46,7 +46,7 @@ export function LeaveLeagueSection({
   };
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-card text-card-foreground p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold">Leave League</h3>

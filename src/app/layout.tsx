@@ -1,11 +1,8 @@
-import { BottomNav } from "@/components/bottom-nav";
 import { Header } from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/toaster";
-import { auth } from "@/lib/server/auth";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
 
 import "./globals.css";
 
@@ -46,15 +43,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -67,12 +60,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Header />
-          <main
-            className={`flex-1 container mx-auto px-4 py-4 md:px-6 md:py-6 ${session ? "pb-20 md:pb-6" : ""}`}
-          >
+          <main className="flex-1 container mx-auto px-4 py-4 md:px-6 md:py-6">
             {children}
           </main>
-          {session && <BottomNav />}
           <Toaster />
         </ThemeProvider>
       </body>

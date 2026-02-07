@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  recordFFARankedMatchAction,
+  recordFFAScoreMatchAction,
+} from "@/actions/match-recording";
 import { Button } from "@/components/ui/button";
 import {
   DateTimePicker,
@@ -16,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MatchParticipantType, ScoringType } from "@/lib/shared/constants";
 import { FFAConfig } from "@/lib/shared/game-templates";
+import { ParticipantOption } from "@/lib/shared/participant-options";
 import {
   recordFFARankedMatchSchema,
   recordFFAScoreMatchSchema,
@@ -28,11 +33,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  recordFFARankedMatchAction,
-  recordFFAScoreMatchAction,
-} from "./actions";
-import { ParticipantOption } from "./page";
 import { ParticipantSelector } from "./participant-selector";
 
 type RecordFFAMatchFormProps = {
@@ -41,6 +41,8 @@ type RecordFFAMatchFormProps = {
   config: FFAConfig;
   participantOptions: ParticipantOption[];
   currentUserId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
 type RankedFormValues = z.input<typeof recordFFARankedMatchSchema>;
@@ -52,6 +54,8 @@ export function RecordFFAMatchForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordFFAMatchFormProps) {
   if (config.scoringType === ScoringType.RANKED_FINISH) {
     return (
@@ -61,6 +65,8 @@ export function RecordFFAMatchForm({
         config={config}
         participantOptions={participantOptions}
         currentUserId={currentUserId}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
       />
     );
   }
@@ -72,6 +78,8 @@ export function RecordFFAMatchForm({
       config={config}
       participantOptions={participantOptions}
       currentUserId={currentUserId}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
     />
   );
 }
@@ -82,6 +90,8 @@ function RankedForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordFFAMatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -128,7 +138,11 @@ function RankedForm({
         }
       } else if (result.data) {
         toast.success("Match recorded successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        }
       }
     });
   };
@@ -294,7 +308,7 @@ function RankedForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel
@@ -314,6 +328,8 @@ function ScoreBasedForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordFFAMatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -364,7 +380,11 @@ function ScoreBasedForm({
         }
       } else if (result.data) {
         toast.success("Match recorded successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        }
       }
     });
   };
@@ -495,7 +515,7 @@ function ScoreBasedForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel

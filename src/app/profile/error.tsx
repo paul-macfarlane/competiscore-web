@@ -28,7 +28,7 @@ export default function ProfileError({
       <div className="mt-6 flex gap-3">
         <Button onClick={reset}>Try Again</Button>
         <Button variant="outline" asChild>
-          <Link href="/dashboard">Go to Dashboard</Link>
+          <Link href="/leagues">Go to Leagues</Link>
         </Button>
       </div>
     </div>

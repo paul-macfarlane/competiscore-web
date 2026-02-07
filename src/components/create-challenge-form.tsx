@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormLabel } from "@/components/ui/form";
 import { MatchParticipantType } from "@/lib/shared/constants";
 import { H2HConfig } from "@/lib/shared/game-templates";
+import { ParticipantOption } from "@/lib/shared/participant-options";
 import { createChallengeSchema } from "@/validators/matches";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Minus, Plus } from "lucide-react";
@@ -14,8 +15,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { ParticipantOption } from "../record/page";
-import { ParticipantSelector } from "../record/participant-selector";
+import { ParticipantSelector } from "./participant-selector";
 
 type CreateChallengeFormProps = {
   leagueId: string;
@@ -23,6 +23,8 @@ type CreateChallengeFormProps = {
   config: H2HConfig;
   participantOptions: ParticipantOption[];
   currentUserId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
 type FormValues = z.input<typeof createChallengeSchema>;
@@ -33,6 +35,8 @@ export function CreateChallengeForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: CreateChallengeFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -77,7 +81,11 @@ export function CreateChallengeForm({
         }
       } else if (result.data) {
         toast.success("Challenge created successfully!");
-        router.push(`/leagues/${leagueId}/challenges`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/challenges`);
+        }
       }
     });
   };
@@ -217,7 +225,7 @@ export function CreateChallengeForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel

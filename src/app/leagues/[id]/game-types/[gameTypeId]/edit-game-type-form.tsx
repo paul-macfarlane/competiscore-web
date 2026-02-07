@@ -24,11 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GameType } from "@/db/schema";
-import {
-  GAME_TYPE_ICONS,
-  GameCategory,
-  ICON_PATHS,
-} from "@/lib/shared/constants";
+import { GAME_ICON_OPTIONS, GameCategory } from "@/lib/shared/constants";
 import { parseGameConfig } from "@/lib/shared/game-config-parser";
 import {
   GAME_TYPE_DESCRIPTION_MAX_LENGTH,
@@ -50,15 +46,7 @@ import {
   archiveGameTypeAction,
   deleteGameTypeAction,
   updateGameTypeAction,
-} from "../../actions";
-
-const GAME_ICON_OPTIONS = GAME_TYPE_ICONS.map((icon) => ({
-  name: icon
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" "),
-  src: `${ICON_PATHS.GAME_TYPE_ICONS}/${icon}.svg`,
-}));
+} from "../actions";
 
 type EditGameTypeFormProps = {
   gameType: GameType;
@@ -113,7 +101,7 @@ export function EditGameTypeForm({
         }
       } else if (result.data) {
         toast.success("Game type updated successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameType.id}`);
+        router.refresh();
       }
     });
   };
@@ -153,7 +141,7 @@ export function EditGameTypeForm({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-6 rounded-lg border p-4 md:p-6"
+          className="space-y-6 rounded-lg border bg-card text-card-foreground p-4 md:p-6"
         >
           <FormField
             control={form.control}
@@ -258,24 +246,17 @@ export function EditGameTypeForm({
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => router.back()}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={isPending}>
-              {isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isPending || !form.formState.isValid}
+          >
+            {isPending ? "Saving..." : "Save Changes"}
+          </Button>
         </form>
       </Form>
 
-      <div className="rounded-lg border border-destructive/50 p-4 md:p-6 space-y-4">
+      <div className="rounded-lg border border-destructive/50 bg-card text-card-foreground p-4 md:p-6 space-y-4">
         <div>
           <h3 className="font-medium text-destructive">Danger Zone</h3>
           <p className="text-sm text-muted-foreground mt-1">

@@ -33,7 +33,7 @@ export default async function MyWarningsPage({ params }: MyWarningsPageProps) {
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <LeagueBreadcrumb
         items={[
           { label: "League", href: `/leagues/${id}` },
@@ -41,7 +41,7 @@ export default async function MyWarningsPage({ params }: MyWarningsPageProps) {
         ]}
       />
       <div>
-        <h1 className="text-xl font-bold md:text-2xl">My Warnings</h1>
+        <h1 className="text-2xl font-bold md:text-3xl">My Warnings</h1>
         <p className="text-muted-foreground text-sm">
           View your moderation history in this league
         </p>

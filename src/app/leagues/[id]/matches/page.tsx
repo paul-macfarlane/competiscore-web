@@ -4,6 +4,7 @@ import {
   ParticipantData,
   ParticipantDisplay,
 } from "@/components/participant-display";
+import { RecordMatchDialog } from "@/components/record-match-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,14 +23,16 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { auth } from "@/lib/server/auth";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { cn } from "@/lib/shared/utils";
 import { getLeagueGameTypes } from "@/services/game-types";
+import { getLeagueWithRole } from "@/services/leagues";
 import {
   HighScoreActivityItem,
   getLeagueActivityPaginated,
 } from "@/services/matches";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight, Plus, Trophy } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -59,13 +62,14 @@ export default async function LeagueMatchesPage({
     redirect("/");
   }
 
-  const [activityResult, gameTypesResult] = await Promise.all([
+  const [activityResult, gameTypesResult, leagueResult] = await Promise.all([
     getLeagueActivityPaginated(session.user.id, leagueId, {
       limit: ITEMS_PER_PAGE,
       offset,
       gameTypeId: gameTypeId || undefined,
     }),
     getLeagueGameTypes(session.user.id, leagueId),
+    getLeagueWithRole(leagueId, session.user.id),
   ]);
 
   if (activityResult.error) {
@@ -77,39 +81,77 @@ export default async function LeagueMatchesPage({
   const total = matchCount + highScoreCount;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
+  const activeGameTypes = gameTypes.filter((gt) => !gt.isArchived);
+  const canPlay =
+    leagueResult.data &&
+    canPerformAction(leagueResult.data.role, LeagueAction.PLAY_GAMES);
+  const isSuspended =
+    leagueResult.data?.suspendedUntil &&
+    leagueResult.data.suspendedUntil > new Date();
+  const showRecordButton =
+    canPlay && !isSuspended && activeGameTypes.length > 0;
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <LeagueBreadcrumb
         items={[
           { label: "League", href: `/leagues/${leagueId}` },
           { label: "Matches" },
         ]}
       />
-      <div>
-        <h1 className="text-2xl font-bold md:text-3xl">Activity History</h1>
-        <p className="text-muted-foreground mt-1">
-          All matches and scores recorded in this league
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Activity History</h1>
+          <p className="text-muted-foreground mt-1">
+            All matches and scores recorded in this league
+          </p>
+        </div>
+        {showRecordButton && (
+          <RecordMatchDialog
+            leagueId={leagueId}
+            gameTypes={activeGameTypes}
+            currentUserId={session.user.id}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Record Match
+              </Button>
+            }
+          />
+        )}
       </div>
 
       <MatchFilters
         leagueId={leagueId}
-        gameTypes={gameTypes}
+        gameTypes={activeGameTypes}
         selectedGameTypeId={gameTypeId}
       />
 
       {items.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            <p>No activity found.</p>
-            {gameTypeId ? (
-              <p className="text-sm mt-2">
-                Try clearing the filter or selecting a different game type.
-              </p>
+            {activeGameTypes.length === 0 ? (
+              <>
+                <p>No game types available yet.</p>
+                <p className="text-sm mt-2">
+                  A league manager needs to create a game type before matches
+                  can be recorded.
+                </p>
+              </>
+            ) : gameTypeId ? (
+              <>
+                <p>No activity found.</p>
+                <p className="text-sm mt-2">
+                  Try clearing the filter or selecting a different game type.
+                </p>
+              </>
             ) : (
-              <p className="text-sm mt-2">
-                Go to a game type and record a match or score to get started.
-              </p>
+              <>
+                <p>No activity found.</p>
+                <p className="text-sm mt-2">
+                  Record a match or score to get started.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>
@@ -286,7 +328,7 @@ function HighScoreCard({ highScore, leagueId }: HighScoreCardProps) {
       <CardFooter className="pt-0 pb-4">
         <Button asChild size="sm" className="w-full">
           <Link
-            href={`/leagues/${leagueId}/game-types/${highScore.gameTypeId}/leaderboard`}
+            href={`/leagues/${leagueId}/leaderboards/${highScore.gameTypeId}`}
           >
             View Leaderboard
             <ChevronRight className="ml-1 h-4 w-4" />

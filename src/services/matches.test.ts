@@ -262,6 +262,27 @@ describe("recordH2HWinLossMatch", () => {
     expect(result.error).toBe("Game type not found in this league");
   });
 
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockH2HWinLossGameType,
+      isArchived: true,
+    });
+
+    const result = await recordH2HWinLossMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_WL_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_1 }],
+      side2Participants: [{ userId: USER_ID_2 }],
+      winningSide: "side1",
+    });
+
+    expect(result.error).toBe(
+      "Cannot record matches for an archived game type",
+    );
+  });
+
   it("should fail if game type is wrong category", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
@@ -495,6 +516,28 @@ describe("recordH2HScoreMatch", () => {
     expect(result.error).toBeUndefined();
   });
 
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockH2HScoreGameType,
+      isArchived: true,
+    });
+
+    const result = await recordH2HScoreMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_H2H_SCORE_ID,
+      playedAt: new Date("2024-01-01"),
+      side1Participants: [{ userId: USER_ID_1 }],
+      side2Participants: [{ userId: USER_ID_2 }],
+      side1Score: 21,
+      side2Score: 18,
+    });
+
+    expect(result.error).toBe(
+      "Cannot record matches for an archived game type",
+    );
+  });
+
   it("should fail if score results in draw when not allowed", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
@@ -580,6 +623,28 @@ describe("recordFFARankedMatch", () => {
     expect(result.error).toBeUndefined();
   });
 
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockFFARankedGameType,
+      isArchived: true,
+    });
+
+    const result = await recordFFARankedMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_FFA_RANKED_ID,
+      playedAt: new Date("2024-01-01"),
+      participants: [
+        { userId: USER_ID_1, rank: 1 },
+        { userId: USER_ID_2, rank: 2 },
+      ],
+    });
+
+    expect(result.error).toBe(
+      "Cannot record matches for an archived game type",
+    );
+  });
+
   it("should fail with duplicate ranks", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
@@ -661,6 +726,28 @@ describe("recordFFAScoreMatch", () => {
     expect(result.error).toBeUndefined();
   });
 
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockFFAScoreGameType,
+      isArchived: true,
+    });
+
+    const result = await recordFFAScoreMatch(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_FFA_SCORE_ID,
+      playedAt: new Date("2024-01-01"),
+      participants: [
+        { userId: USER_ID_1, score: 72 },
+        { userId: USER_ID_2, score: 85 },
+      ],
+    });
+
+    expect(result.error).toBe(
+      "Cannot record matches for an archived game type",
+    );
+  });
+
   it("should fail if wrong scoring type", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(
@@ -734,6 +821,24 @@ describe("submitHighScore", () => {
 
     expect(result.data).toEqual(mockEntry);
     expect(result.error).toBeUndefined();
+  });
+
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockHighScoreGameType,
+      isArchived: true,
+    });
+
+    const result = await submitHighScore(USER_ID_1, {
+      leagueId: LEAGUE_ID,
+      gameTypeId: GAME_TYPE_HIGH_SCORE_ID,
+      participant: { userId: USER_ID_1 },
+      score: 999999,
+      achievedAt: new Date("2024-01-01"),
+    });
+
+    expect(result.error).toBe("Cannot submit scores for an archived game type");
   });
 
   it("should fail if game type is wrong category", async () => {

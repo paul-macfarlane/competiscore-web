@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  recordH2HScoreMatchAction,
+  recordH2HWinLossMatchAction,
+} from "@/actions/match-recording";
 import { Button } from "@/components/ui/button";
 import {
   DateTimePicker,
@@ -21,6 +25,7 @@ import {
   ScoringType,
 } from "@/lib/shared/constants";
 import { H2HConfig } from "@/lib/shared/game-templates";
+import { ParticipantOption } from "@/lib/shared/participant-options";
 import {
   recordH2HScoreMatchSchema,
   recordH2HWinLossMatchSchema,
@@ -33,11 +38,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  recordH2HScoreMatchAction,
-  recordH2HWinLossMatchAction,
-} from "./actions";
-import { ParticipantOption } from "./page";
 import { ParticipantSelector } from "./participant-selector";
 
 type RecordH2HMatchFormProps = {
@@ -46,6 +46,8 @@ type RecordH2HMatchFormProps = {
   config: H2HConfig;
   participantOptions: ParticipantOption[];
   currentUserId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
 type WinLossFormValues = z.input<typeof recordH2HWinLossMatchSchema>;
@@ -57,6 +59,8 @@ export function RecordH2HMatchForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordH2HMatchFormProps) {
   if (config.scoringType === ScoringType.WIN_LOSS) {
     return (
@@ -66,6 +70,8 @@ export function RecordH2HMatchForm({
         config={config}
         participantOptions={participantOptions}
         currentUserId={currentUserId}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
       />
     );
   }
@@ -77,6 +83,8 @@ export function RecordH2HMatchForm({
       config={config}
       participantOptions={participantOptions}
       currentUserId={currentUserId}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
     />
   );
 }
@@ -87,6 +95,8 @@ function WinLossForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordH2HMatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -133,7 +143,11 @@ function WinLossForm({
         }
       } else if (result.data) {
         toast.success("Match recorded successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        }
       }
     });
   };
@@ -343,7 +357,7 @@ function WinLossForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel
@@ -363,6 +377,8 @@ function ScoreBasedForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: RecordH2HMatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -413,7 +429,11 @@ function ScoreBasedForm({
         }
       } else if (result.data) {
         toast.success("Match recorded successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        }
       }
     });
   };
@@ -616,7 +636,7 @@ function ScoreBasedForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel

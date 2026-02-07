@@ -17,9 +17,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import {
   GAME_CATEGORY_LABELS,
-  GAME_TYPE_ICONS,
+  GAME_ICON_OPTIONS,
   GameCategory,
-  ICON_PATHS,
   ParticipantType,
   ScoreOrder,
   ScoringType,
@@ -48,14 +47,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { createGameTypeAction } from "../actions";
-
-const GAME_ICON_OPTIONS = GAME_TYPE_ICONS.map((icon) => ({
-  name: icon
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" "),
-  src: `${ICON_PATHS.GAME_TYPE_ICONS}/${icon}.svg`,
-}));
 
 const TEMPLATE_LIST = Object.entries(GAME_TEMPLATES).map(([key, template]) => ({
   key,

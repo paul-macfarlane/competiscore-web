@@ -1,34 +1,72 @@
 "use client";
 
-import { mainNavItems } from "@/lib/shared/navigation";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/shared/utils";
+import { Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function DesktopNav() {
+interface NavLeague {
+  id: string;
+  name: string;
+}
+
+interface DesktopNavProps {
+  leagues: NavLeague[];
+}
+
+export function DesktopNav({ leagues }: DesktopNavProps) {
   const pathname = usePathname();
+  const isOnLeague = pathname.startsWith("/leagues/");
+  const leagueIdMatch = pathname.match(/^\/leagues\/([^/]+)/);
+  const activeLeague = leagueIdMatch
+    ? leagues.find((l) => l.id === leagueIdMatch[1])
+    : null;
 
   return (
-    <nav className="hidden items-center gap-1 md:flex">
-      {mainNavItems.map((item) => {
-        const isActive =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <NavigationMenu className="hidden md:flex">
+      <NavigationMenuList>
+        <NavigationMenuItem>
+          <NavigationMenuTrigger className={cn(isOnLeague && "bg-accent/50")}>
+            <Trophy className="mr-1.5 h-4 w-4" />
+            {activeLeague ? activeLeague.name : "Leagues"}
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <div className="w-64">
+              {leagues.length > 0 ? (
+                <>
+                  {leagues.map((league) => (
+                    <NavigationMenuLink key={league.id} asChild>
+                      <Link
+                        href={`/leagues/${league.id}`}
+                        className="block rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        {league.name}
+                      </Link>
+                    </NavigationMenuLink>
+                  ))}
+                  <div className="border-t my-1" />
+                </>
+              ) : null}
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/leagues"
+                  className="block rounded-sm px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  View all your leagues
+                </Link>
+              </NavigationMenuLink>
+            </div>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
   );
 }

@@ -1,15 +1,22 @@
+import { CreateChallengeDialog } from "@/components/create-challenge-dialog";
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/server/auth";
 import {
   ChallengeType,
+  GameCategory,
   MATCH_STATUS_LABELS,
   MatchStatus,
 } from "@/lib/shared/constants";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getPendingChallenges, getSentChallenges } from "@/services/challenges";
+import { getLeagueGameTypes } from "@/services/game-types";
+import { getLeagueWithRole } from "@/services/leagues";
 import { formatDistanceToNow } from "date-fns";
+import { Swords } from "lucide-react";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -28,10 +35,13 @@ export default async function ChallengesPage({ params }: PageProps) {
     redirect("/");
   }
 
-  const [pendingResult, sentResult] = await Promise.all([
-    getPendingChallenges(session.user.id, leagueId),
-    getSentChallenges(session.user.id, leagueId),
-  ]);
+  const [pendingResult, sentResult, gameTypesResult, leagueResult] =
+    await Promise.all([
+      getPendingChallenges(session.user.id, leagueId),
+      getSentChallenges(session.user.id, leagueId),
+      getLeagueGameTypes(session.user.id, leagueId),
+      getLeagueWithRole(leagueId, session.user.id),
+    ]);
 
   if (pendingResult.error || sentResult.error) {
     notFound();
@@ -40,20 +50,60 @@ export default async function ChallengesPage({ params }: PageProps) {
   const pending = pendingResult.data || [];
   const sent = sentResult.data || [];
 
+  const allGameTypes = gameTypesResult.data ?? [];
+  const h2hGameTypes = allGameTypes.filter(
+    (gt) => !gt.isArchived && gt.category === GameCategory.HEAD_TO_HEAD,
+  );
+  const canPlay =
+    leagueResult.data &&
+    canPerformAction(leagueResult.data.role, LeagueAction.PLAY_GAMES);
+  const isSuspended =
+    leagueResult.data?.suspendedUntil &&
+    leagueResult.data.suspendedUntil > new Date();
+  const showChallengeButton =
+    canPlay && !isSuspended && h2hGameTypes.length > 0;
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <LeagueBreadcrumb
         items={[
           { label: "League", href: `/leagues/${leagueId}` },
           { label: "Challenges" },
         ]}
       />
-      <div>
-        <h1 className="text-2xl font-bold md:text-3xl">Challenges</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your pending and sent challenges
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Challenges</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your pending and sent challenges
+          </p>
+        </div>
+        {showChallengeButton && (
+          <CreateChallengeDialog
+            leagueId={leagueId}
+            h2hGameTypes={h2hGameTypes}
+            currentUserId={session.user.id}
+            trigger={
+              <Button>
+                <Swords className="mr-2 h-4 w-4" />
+                Challenge
+              </Button>
+            }
+          />
+        )}
       </div>
+
+      {h2hGameTypes.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <p>No head-to-head game types available.</p>
+            <p className="text-sm mt-2">
+              Challenges require a head-to-head game type. A league manager
+              needs to create one before challenges can be sent.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="received" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
