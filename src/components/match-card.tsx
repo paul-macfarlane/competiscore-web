@@ -76,8 +76,13 @@ export function MatchCard({
       <CardHeader className="pb-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {variant === "full" && gameTypeName && (
-              <span className="font-semibold text-base truncate">
+            {gameTypeName && (
+              <span
+                className={cn(
+                  "font-semibold truncate",
+                  variant === "full" ? "text-base" : "text-sm",
+                )}
+              >
                 {gameTypeName}
               </span>
             )}

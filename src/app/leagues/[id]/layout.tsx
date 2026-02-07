@@ -1,3 +1,9 @@
+import { LeagueNavigation } from "@/components/league-navigation";
+import { auth } from "@/lib/server/auth";
+import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { getLeagueWithRole } from "@/services/leagues";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { ReactNode } from "react";
 
 interface LeagueLayoutProps {
@@ -5,12 +11,37 @@ interface LeagueLayoutProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function LeagueLayout({ children }: LeagueLayoutProps) {
-  // This layout wraps all league pages and can be extended to include:
-  // - Shared league navigation
-  // - League context/data that's needed across pages
-  // - Common UI elements like league header
-  // - Breadcrumbs are kept in individual pages since they need page-specific data
+export default async function LeagueLayout({
+  children,
+  params,
+}: LeagueLayoutProps) {
+  const { id } = await params;
 
-  return <>{children}</>;
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/");
+  }
+
+  const result = await getLeagueWithRole(id, session.user.id);
+  const canManageGameTypes =
+    result.data != null &&
+    canPerformAction(result.data.role, LeagueAction.CREATE_GAME_TYPES);
+  const canEditSettings =
+    result.data != null &&
+    canPerformAction(result.data.role, LeagueAction.EDIT_SETTINGS);
+
+  return (
+    <>
+      <div className="mx-auto max-w-4xl">
+        <LeagueNavigation
+          leagueId={id}
+          canManageGameTypes={canManageGameTypes}
+          canEditSettings={canEditSettings}
+        />
+      </div>
+      <div className="mx-auto max-w-4xl pt-4">{children}</div>
+    </>
+  );
 }

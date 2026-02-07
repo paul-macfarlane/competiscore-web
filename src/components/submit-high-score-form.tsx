@@ -1,5 +1,6 @@
 "use client";
 
+import { submitHighScoreAction } from "@/actions/match-recording";
 import { Button } from "@/components/ui/button";
 import {
   DateTimePicker,
@@ -16,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MatchParticipantType, ParticipantType } from "@/lib/shared/constants";
 import { HighScoreConfig } from "@/lib/shared/game-templates";
+import { ParticipantOption } from "@/lib/shared/participant-options";
 import { submitHighScoreSchema } from "@/validators/matches";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -24,8 +26,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { submitHighScoreAction } from "./actions";
-import { ParticipantOption } from "./page";
 import { ParticipantSelector } from "./participant-selector";
 
 type SubmitHighScoreFormProps = {
@@ -34,6 +34,8 @@ type SubmitHighScoreFormProps = {
   config: HighScoreConfig;
   participantOptions: ParticipantOption[];
   currentUserId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
 type FormValues = z.input<typeof submitHighScoreSchema>;
@@ -44,6 +46,8 @@ export function SubmitHighScoreForm({
   config,
   participantOptions,
   currentUserId,
+  onSuccess,
+  onCancel,
 }: SubmitHighScoreFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -95,7 +99,11 @@ export function SubmitHighScoreForm({
         }
       } else if (result.data) {
         toast.success("Score submitted successfully!");
-        router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/leagues/${leagueId}/game-types/${gameTypeId}`);
+        }
       }
     });
   };
@@ -215,7 +223,7 @@ export function SubmitHighScoreForm({
             type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => router.back()}
+            onClick={() => (onCancel ? onCancel() : router.back())}
             disabled={isPending}
           >
             Cancel

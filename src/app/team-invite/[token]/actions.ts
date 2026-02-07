@@ -16,7 +16,6 @@ export async function joinTeamViaInviteLinkAction(input: unknown) {
   const result = await joinTeamViaInviteLink(input, session.user.id);
   if (result.data) {
     revalidatePath("/leagues");
-    revalidatePath("/dashboard");
   }
 
   return result;

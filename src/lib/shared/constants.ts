@@ -202,6 +202,11 @@ function formatIconName(icon: string): string {
     .join(" ");
 }
 
+export const GAME_ICON_OPTIONS: IconOption[] = GAME_TYPE_ICONS.map((icon) => ({
+  name: formatIconName(icon),
+  src: `${ICON_PATHS.GAME_TYPE_ICONS}/${icon}.svg`,
+}));
+
 export const TEAM_ICON_OPTIONS: IconOption[] = TEAM_ICONS.map((icon) => ({
   name: formatIconName(icon),
   src: `${ICON_PATHS.TEAM_ICONS}/${icon}.svg`,

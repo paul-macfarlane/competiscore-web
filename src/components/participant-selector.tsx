@@ -16,11 +16,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { MatchParticipantType } from "@/lib/shared/constants";
+import { ParticipantOption } from "@/lib/shared/participant-options";
 import { cn } from "@/lib/shared/utils";
 import { Check, ChevronsUpDown, User, Users } from "lucide-react";
 import { useState } from "react";
-
-import { ParticipantOption } from "./page";
 
 type ParticipantSelectorProps = {
   options: ParticipantOption[];

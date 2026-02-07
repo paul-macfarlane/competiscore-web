@@ -45,15 +45,20 @@ Each league has three member roles with escalating permissions:
 | -------------------------- | ------ | ------- | --------- |
 | Play games & record scores | ✓      | ✓       | ✓         |
 | View all members           | ✓      | ✓       | ✓         |
+| Report members             | ✓      | ✓       | ✓         |
+| Create teams               | ✓      | ✓       | ✓         |
+| Record matches for others  |        | ✓       | ✓         |
 | Create game types          |        | ✓       | ✓         |
 | Create tournaments         |        | ✓       | ✓         |
 | Create seasons             |        | ✓       | ✓         |
 | Invite members             |        | ✓       | ✓         |
 | Create placeholder members |        | ✓       | ✓         |
 | Remove members             |        | ✓       | ✓         |
+| View reports & moderate    |        | ✓       | ✓         |
+| Manage all teams           |        | ✓       | ✓         |
 | Manage member roles        |        |         | ✓         |
 | Edit league settings       |        |         | ✓         |
-| Archive league             |        |         | ✓         |
+| Archive/unarchive league   |        |         | ✓         |
 | Delete league              |        |         | ✓         |
 | Transfer executive role    |        |         | ✓         |
 
@@ -110,7 +115,7 @@ Team invite links can be configured to expire after a set time or number of uses
 
 Note: Placeholder members can be added directly to teams without invitation (since they represent people who haven't signed up yet).
 
-**Ad-hoc Teams:** Ephemeral teams formed at match time for one-off competitions. These appear in match history (e.g., "Player A & Player B vs Player C & Player D") but have no persistent identity, page, or ELO.
+**Ad-hoc Teams:** _Future feature._ Ephemeral teams formed at match time for one-off competitions. These would appear in match history (e.g., "Player A & Player B vs Player C & Player D") but have no persistent identity, page, or ELO.
 
 ---
 
@@ -170,7 +175,13 @@ Asynchronous competition where players submit scores over time against an eterna
 
 ### 3.4 Game Type Templates
 
-App administrators provide pre-built templates for common games (e.g., 8-Ball Pool, Ping Pong, Bowling). League managers can use these templates to quickly create game types with sensible defaults, then customize as needed.
+The app provides 15 pre-built templates for common games. League managers can use these templates to quickly create game types with sensible defaults, then customize as needed.
+
+**Available templates:**
+
+- **H2H:** Ping Pong, 8-Ball Pool, 9-Ball Pool, Foosball, Chess, Beer Pong, Darts
+- **FFA:** Mario Kart, Poker, Bowling, Golf
+- **High Score:** Pac-Man, Arcade Game, Fastest Mile, Push-ups
 
 _Future: Community-shared templates._
 
@@ -178,7 +189,16 @@ _Future: Community-shared templates._
 
 After creation, game types can have their name and logo edited. However, if the fundamental rules need to change (scoring type, score order, etc.), a new game type must be created to preserve historical data integrity.
 
-Game types can be **archived** (hidden from new matches but history preserved).
+Game types can be **archived** (hidden from new matches but history preserved) or **deleted** (permanently removed). Archived game types can be unarchived.
+
+Archiving a game type hides it from:
+
+- Match recording, high score submission, and challenge creation (blocked at the service layer)
+- Activity feeds and match history
+- Leaderboards overview
+- Game type filter dropdowns
+
+Existing historical data for archived game types is preserved but not displayed in feeds or listings.
 
 ---
 
@@ -190,7 +210,7 @@ Members can record match results in two ways:
 
 **Direct Recording:** Any member can record a completed match at any time by selecting the game type, participants, and entering the result.
 
-**Challenge System:** Members can challenge other members (or teams) to a game, creating a pending match visible to both parties. Once played, either party can record the result.
+**Challenge System:** Members can challenge other members to a Head-to-Head game, creating a pending match. The challenged party can accept or decline. The challenger can cancel pending challenges. Once accepted, either party can record the result. Challenges are only available for H2H game types.
 
 ### 4.2 Match Data Captured
 
@@ -247,12 +267,21 @@ For Free-for-All games, ELO is calculated by treating each pairing as a virtual 
 
 Each game type has its own standings page showing:
 
-- ELO rankings (for H2H and FFA games)
-- Overall win/loss/draw record
-- Win percentage
-- Current streak (win/loss)
-- Recent form (last 10 games)
-- Leaderboard position (for High Score games)
+**For H2H and FFA games (ELO standings):**
+
+- ELO rating and rank position
+- Number of matches played
+- Provisional indicator for players with fewer than 10 matches
+- Rank badges (gold, silver, bronze for top 3)
+
+**For High Score games (leaderboards):**
+
+- Arcade-style leaderboard showing all individual score submissions
+- Rank badges (gold, silver, bronze for top 3)
+- Score value with appropriate label
+- Time period filtering (week, month, year, all-time)
+
+_Future: Overall win/loss/draw record, win percentage, current streak, recent form (last 10 games)_
 
 ### 6.2 High Score Leaderboards
 
@@ -270,22 +299,21 @@ Personal statistics show the user's best score and their best rank position.
 
 ### 6.3 Filtering Options
 
-All standings and leaderboards can be filtered by:
+High score leaderboards can be filtered by time period: This week, this month, this year, all-time.
 
-- Time period: This week, this month, this year, all-time
-- Individual vs Team (where applicable)
+_Future: Individual vs Team filtering for all standings._
 
 ### 6.4 Head-to-Head Records
 
-Users can view their personal record against any specific opponent, including win/loss breakdown and recent matches.
+_Future feature._ Users will be able to view their personal record against any specific opponent, including win/loss breakdown and recent matches.
 
 ### 6.5 Personal Stats Page
 
-Each user has a personal stats page showing their performance across all game types in the league, including overall records and rivalries (frequent opponents).
+_Future feature._ Each user will have a personal stats page showing their performance across all game types in the league, including overall records and rivalries (frequent opponents).
 
 ### 6.6 League-Wide Stats
 
-The league dashboard shows aggregate statistics:
+_Future feature._ The league dashboard will show aggregate statistics:
 
 - Total matches played
 - Most active players
@@ -378,10 +406,11 @@ Supported sign-in methods:
 
 ### 9.2 Profile Attributes
 
-- **Username:** Unique identifier (auto-generated if skipped during setup)
-- **Display name:** Human-readable name (first and last name)
-- **Profile picture:** Optional
-- **Bio:** Optional
+- **Username:** Unique identifier (3-30 characters, alphanumeric with underscores/hyphens, auto-lowercased). Auto-generated during sign-up.
+- **Display name:** Human-readable name (1-100 characters)
+- **Profile picture:** Selected from a set of predefined avatar options (not uploaded)
+- **Bio:** Optional (max 500 characters)
+- **isAdmin:** Admin flag for app-level administration
 
 ### 9.3 Profile Visibility
 
@@ -389,11 +418,11 @@ Profiles are only visible to members of the same leagues. Non-league members can
 
 ### 9.4 Account Deletion
 
-Users can delete their account. Upon deletion, all personally identifying information is removed. Match history, rankings, and statistics are preserved with the user displayed as “Deleted User” to maintain league data integrity.
+Users can delete their account via a confirmation flow (must type "DELETE" to confirm). Upon deletion, the account is soft-deleted and anonymized: name becomes "Deleted User", email and username are replaced with deleted placeholders, bio and image are removed. All sessions and OAuth accounts are hard-deleted. Match history, rankings, and statistics are preserved to maintain league data integrity. Deleted users cannot create new sessions.
 
 ### 9.5 Profile Editing
 
-After initial sign-in, users complete profile setup. If skipped, a random username is generated. Profile attributes can be edited at any time.
+On initial sign-in, a username is auto-generated from the user's name and email. Profile attributes (username, display name, avatar, bio) can be edited at any time via the profile page. Username changes include real-time availability checking.
 
 ---
 
@@ -420,10 +449,10 @@ The creator automatically becomes a League Executive.
 
 Users can search for public leagues by:
 
-- League name
+- League name or description (case-insensitive)
 - Game type name
 
-Search results display league name, description, featured game type, and member count.
+Search results display league name, description, game type badge, member count, and whether the user is already a member. Results are limited to 20.
 
 ### 10.4 Inviting Members
 
@@ -444,6 +473,8 @@ Invitations specify the role (Member, Manager, or Executive). When inviting, an 
 - Executives can change member roles and remove members
 - Managers can remove members but not change roles
 - Any member can leave the league
+- Members can be suspended (temporary, up to 30 days) preventing match recording, score submission, challenge acceptance, and reporting
+- Suspensions can be lifted early by moderators
 - Exception: An Executive who is the sole Executive must appoint a replacement before leaving
 
 ### 10.6 League Deletion & Archival
@@ -477,15 +508,18 @@ Report includes:
 **Remediation Options (Managers and Executives):**
 
 - Dismiss report (with documented reason)
-- Warn the member (recorded in their history, visible to league leadership)
-- Suspend member (temporary - cannot record matches or participate in tournaments)
+- Warn the member (recorded in their history, visible to league leadership; member must acknowledge)
+- Suspend member (temporary, max 30 days - cannot record matches, submit scores, accept challenges, or create reports)
+- Lift suspension early (manual override by moderator)
 - Remove member (permanently kicked from league)
+
+Moderators cannot take action against members with equal or higher roles, or moderate their own reports.
 
 **Audit Trail:**
 
 - All reports and remediation actions are logged with timestamps
-- Members can see warnings and actions taken against them
-- Leadership can view a member’s full offense history when reviewing new reports
+- Members can see warnings and actions taken against them (and must acknowledge warnings)
+- Leadership can view a member's full offense history when reviewing new reports
 
 ---
 
@@ -495,10 +529,12 @@ Report includes:
 
 - Challenge received
 - Invited to a league
-- Match result recorded involving you
+- Invited to a team
+- Moderation action taken against you (warning, suspension, removal)
 
 ### 11.2 Future Notifications
 
+- Match result recorded involving you
 - Tournament starting soon / your turn in bracket
 - Someone beat your high score
 - Weekly/monthly activity digest
@@ -521,7 +557,7 @@ Web application (MVP). Mobile apps may follow.
 
 ### 12.3 Image Storage
 
-Profile pictures, league logos, game type logos, and team logos stored in blob storage.
+Profile pictures are selected from predefined avatar SVG options. League logos, game type logos, and team logos reference SVG icon paths stored as text in the database. _Future: Blob storage for user-uploaded images._
 
 ### 12.4 Timezone Handling
 
@@ -539,26 +575,55 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 
 ## 13. MVP Scope & Prioritization
 
-### Phase 1: Foundation
+### Phase 1: Foundation (Complete)
 
-1. Authentication (Google, Discord)
-2. User profiles
-3. League creation and management
-4. Member management (including placeholder members)
-5. Role-based permissions
-6. Moderation system (reporting and remediation)
-7. Usage limits with admin override system
+1. ~~Authentication (Google, Discord)~~
+2. ~~User profiles (with predefined avatars, bio, real-time username availability)~~
+3. ~~League creation and management~~
+4. ~~Member management (including placeholder members)~~
+5. ~~Role-based permissions~~
+6. ~~Moderation system (reporting, warnings, suspensions, removal)~~
+7. ~~Usage limits with admin override system (DB-level overrides, no admin UI yet)~~
 
-### Phase 2: Core Gameplay
+### Phase 2: Core Gameplay (Complete)
 
-1. Game type creation (H2H, FFA, High Score)
-2. Game type templates
-3. Match recording (direct and via challenges)
-4. ELO calculations
-5. Standings and leaderboards
-6. Team management (registered and ad-hoc)
+1. ~~Game type creation (H2H, FFA, High Score)~~
+2. ~~Game type templates (15 pre-built templates)~~
+3. ~~Match recording (direct and via challenges)~~
+4. ~~ELO calculations (H2H and FFA with provisional periods)~~
+5. ~~Standings and leaderboards (ELO standings + arcade-style high score boards)~~
+6. ~~Team management (registered teams with roles, invitations, and invite links)~~
 
-### Phase 3: Tournaments
+### Phase 2.5: UX Simplification (Complete)
+
+1. ~~Remove `/dashboard`, make `/leagues` the default landing page for authenticated users~~
+2. ~~Add league sub-navigation tabs (Home, Matches, Challenges, Leaderboards, Members, Teams, Moderation + Game Types for managers + Settings for executives)~~
+3. ~~League-level Leaderboards page showing all game type standings in one view~~
+4. ~~Quick-action buttons on league home (Record Match, Submit Score, Challenge) with game type dropdown~~
+5. ~~Recent match activity on league home page~~
+6. ~~Responsive navigation: desktop dropdown nav for leagues, mobile drawer nav~~
+7. ~~Dialog-based match recording and challenge creation (inline on league pages)~~
+
+### Future Dashboard Vision
+
+When `/dashboard` returns, it should show cross-league personal data:
+
+- **Your Recent Activity**: Last 10 matches/scores across all leagues
+- **Your Rankings**: Current rank and ELO in each game type you play, across leagues
+- **Pending Challenges**: All pending challenges across all leagues
+- **Performance Summary**: Overall W/L/D record, win rate trends
+- **League Quick Access**: Cards for each league with activity indicators
+
+### Phase 3: Enhanced Stats & Records
+
+1. Per-game-type detailed stats (win/loss/draw record, win percentage, streaks, recent form)
+2. Head-to-head records between opponents
+3. Personal stats page (performance across all game types in a league)
+4. League-wide aggregate stats (most active players, popular game types)
+5. Ad-hoc teams for one-off match groupings
+6. Admin UI for managing usage limit overrides
+
+### Phase 4: Tournaments
 
 1. Single Elimination tournaments
 2. Round Robin tournaments
@@ -566,7 +631,7 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 4. Bracket management and bye handling
 5. Tournament history
 
-### Phase 4: Seasons
+### Phase 5: Seasons
 
 1. Season creation and configuration
 2. Season scoring rules
@@ -578,6 +643,7 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 - Double Elimination tournaments
 - ELO-based tournament seeding
 - Match dispute/confirmation system
+- Match result notifications
 - Push notifications
 - Email notifications
 - Discord integration
@@ -591,6 +657,9 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 - Payment processing and Pro tier billing
 - Advanced analytics for Pro users
 - Custom league branding for Pro users
+- Uploaded profile pictures (replacing predefined avatars)
+- Apple Sign-In
+- Magic Link Email authentication
 
 ---
 

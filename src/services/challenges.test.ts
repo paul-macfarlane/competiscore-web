@@ -210,6 +210,24 @@ describe("createChallenge", () => {
     expect(result.error).toBe("Game type not found in this league");
   });
 
+  it("should fail if game type is archived", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockH2HWinLossGameType,
+      isArchived: true,
+    });
+
+    const result = await createChallenge(USER_ID_1, LEAGUE_ID, {
+      gameTypeId: GAME_TYPE_ID,
+      challengerParticipants: [{ userId: USER_ID_1 }],
+      challengedParticipants: [{ userId: USER_ID_2 }],
+    });
+
+    expect(result.error).toBe(
+      "Cannot create challenges for an archived game type",
+    );
+  });
+
   it("should fail if game type is not H2H", async () => {
     const ffaGameType = {
       ...mockH2HWinLossGameType,
@@ -684,6 +702,30 @@ describe("getPendingChallenges", () => {
     expect(result.error).toBeUndefined();
   });
 
+  it("should skip challenges for archived game types", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbMatches.getPendingChallengesForUser).mockResolvedValue([
+      mockPendingChallenge,
+    ]);
+    vi.mocked(dbMatches.getMatchParticipants).mockResolvedValue(
+      mockParticipants.map((p) => ({
+        ...p,
+        user: null,
+        team: null,
+        placeholderMember: null,
+      })),
+    );
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockH2HWinLossGameType,
+      isArchived: true,
+    });
+
+    const result = await getPendingChallenges(USER_ID_1, LEAGUE_ID);
+
+    expect(result.data).toHaveLength(0);
+    expect(result.error).toBeUndefined();
+  });
+
   it("should fail if user is not a member", async () => {
     vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(undefined);
 
@@ -740,6 +782,30 @@ describe("getSentChallenges", () => {
       })),
     );
     vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue(undefined);
+
+    const result = await getSentChallenges(USER_ID_1, LEAGUE_ID);
+
+    expect(result.data).toHaveLength(0);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should skip challenges for archived game types", async () => {
+    vi.mocked(dbLeagueMembers.getLeagueMember).mockResolvedValue(mockMember);
+    vi.mocked(dbMatches.getSentChallengesByUser).mockResolvedValue([
+      mockPendingChallenge,
+    ]);
+    vi.mocked(dbMatches.getMatchParticipants).mockResolvedValue(
+      mockParticipants.map((p) => ({
+        ...p,
+        user: null,
+        team: null,
+        placeholderMember: null,
+      })),
+    );
+    vi.mocked(dbGameTypes.getGameTypeById).mockResolvedValue({
+      ...mockH2HWinLossGameType,
+      isArchived: true,
+    });
 
     const result = await getSentChallenges(USER_ID_1, LEAGUE_ID);
 

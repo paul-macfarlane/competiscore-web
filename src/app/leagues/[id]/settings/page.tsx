@@ -37,7 +37,7 @@ export default async function LeagueSettingsPage({
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="space-y-6">
       <div>
         <LeagueBreadcrumb
           items={[
@@ -45,7 +45,7 @@ export default async function LeagueSettingsPage({
             { label: "Settings" },
           ]}
         />
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">League Settings</h1>
+        <h1 className="mt-2 text-2xl font-bold md:text-3xl">League Settings</h1>
         <p className="text-muted-foreground text-sm">
           Manage your league settings
         </p>

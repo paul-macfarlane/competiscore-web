@@ -38,7 +38,7 @@ export default async function GameTypesPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <LeagueBreadcrumb
@@ -47,7 +47,7 @@ export default async function GameTypesPage({ params }: PageProps) {
               { label: "Game Types" },
             ]}
           />
-          <h1 className="mt-2 text-xl font-bold md:text-2xl">Game Types</h1>
+          <h1 className="mt-2 text-2xl font-bold md:text-3xl">Game Types</h1>
           <p className="text-muted-foreground text-sm">
             Manage the games you compete in
           </p>

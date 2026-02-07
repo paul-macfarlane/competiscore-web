@@ -164,10 +164,14 @@ export async function getMatchesByLeagueId(
 
 export async function countMatchesByLeagueId(
   leagueId: string,
-  options: { status?: string; gameTypeId?: string } = {},
+  options: {
+    status?: string;
+    gameTypeId?: string;
+    excludeArchivedGameTypes?: boolean;
+  } = {},
   dbOrTx: DBOrTx = db,
 ): Promise<number> {
-  const { status, gameTypeId } = options;
+  const { status, gameTypeId, excludeArchivedGameTypes = false } = options;
 
   const conditions = [eq(match.leagueId, leagueId)];
   if (status) {
@@ -177,11 +181,17 @@ export async function countMatchesByLeagueId(
     conditions.push(eq(match.gameTypeId, gameTypeId));
   }
 
-  const result = await dbOrTx
-    .select({ count: sql<number>`count(*)` })
-    .from(match)
-    .where(and(...conditions));
+  const query = dbOrTx.select({ count: sql<number>`count(*)` }).from(match);
 
+  if (excludeArchivedGameTypes) {
+    conditions.push(eq(gameType.isArchived, false));
+    const result = await query
+      .innerJoin(gameType, eq(match.gameTypeId, gameType.id))
+      .where(and(...conditions));
+    return Number(result[0]?.count ?? 0);
+  }
+
+  const result = await query.where(and(...conditions));
   return Number(result[0]?.count ?? 0);
 }
 
@@ -395,6 +405,7 @@ export async function getMatchesWithGameTypeByLeagueId(
     offset?: number;
     status?: string;
     gameTypeId?: string;
+    excludeArchivedGameTypes?: boolean;
   } = {},
   dbOrTx: DBOrTx = db,
 ): Promise<MatchWithGameType[]> {
@@ -403,6 +414,7 @@ export async function getMatchesWithGameTypeByLeagueId(
     offset = 0,
     status,
     gameTypeId: filterGameTypeId,
+    excludeArchivedGameTypes = false,
   } = options;
 
   const conditions = [eq(match.leagueId, leagueId)];
@@ -411,6 +423,9 @@ export async function getMatchesWithGameTypeByLeagueId(
   }
   if (filterGameTypeId) {
     conditions.push(eq(match.gameTypeId, filterGameTypeId));
+  }
+  if (excludeArchivedGameTypes) {
+    conditions.push(eq(gameType.isArchived, false));
   }
 
   const result = await dbOrTx

@@ -46,7 +46,7 @@ export default async function ModerationPage({ params }: ModerationPageProps) {
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <LeagueBreadcrumb
           items={[
@@ -54,7 +54,7 @@ export default async function ModerationPage({ params }: ModerationPageProps) {
             { label: "Moderation" },
           ]}
         />
-        <h1 className="mt-2 text-xl font-bold md:text-2xl">Moderation</h1>
+        <h1 className="mt-2 text-2xl font-bold md:text-3xl">Moderation</h1>
         <p className="text-muted-foreground text-sm">
           Manage reports, warnings, and moderation actions
         </p>

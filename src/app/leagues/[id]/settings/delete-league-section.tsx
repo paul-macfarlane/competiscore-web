@@ -52,7 +52,7 @@ export function DeleteLeagueSection({
   };
 
   return (
-    <div className="border-destructive/50 rounded-lg border p-4">
+    <div className="border-destructive/50 rounded-lg border bg-card text-card-foreground p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-destructive font-semibold">Delete League</h3>

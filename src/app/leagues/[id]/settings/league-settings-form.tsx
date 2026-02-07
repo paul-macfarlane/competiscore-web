@@ -88,7 +88,7 @@ export function LeagueSettingsForm({ league }: LeagueSettingsFormProps) {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 rounded-lg border p-4 md:p-6"
+        className="space-y-4 rounded-lg border bg-card text-card-foreground p-4 md:p-6"
       >
         <FormField
           control={form.control}

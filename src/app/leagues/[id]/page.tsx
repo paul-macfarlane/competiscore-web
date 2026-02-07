@@ -1,36 +1,26 @@
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
+import { MatchCard } from "@/components/match-card";
+import {
+  ParticipantData,
+  ParticipantDisplay,
+} from "@/components/participant-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UsageIndicator } from "@/components/usage-indicator";
 import { auth } from "@/lib/server/auth";
-import {
-  getLeagueGameTypeLimitInfo,
-  getLeagueMemberLimitInfo,
-} from "@/lib/server/limits";
-import { LeagueMemberRole } from "@/lib/shared/constants";
+import { LeagueMemberRole, LeagueVisibility } from "@/lib/shared/constants";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
-import { ROLE_BADGE_VARIANTS } from "@/lib/shared/roles";
-import { getPendingChallenges } from "@/services/challenges";
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/shared/roles";
+import { getLeagueGameTypes } from "@/services/game-types";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import {
-  getOwnReportCount,
-  getOwnWarningCount,
-  getPendingReportCount,
-} from "@/services/moderation";
-import { getLeagueTeams } from "@/services/teams";
+  HighScoreActivityItem,
+  getLeagueActivityPaginated,
+} from "@/services/matches";
 import { idParamSchema } from "@/validators/shared";
 import { format, formatDistanceToNow } from "date-fns";
-import {
-  Flag,
-  Gamepad2,
-  Settings,
-  Shield,
-  Swords,
-  Users,
-  UsersRound,
-} from "lucide-react";
+import { Shield, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -39,6 +29,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { LeaveLeagueButton } from "./leave-league-button";
+import { QuickActions } from "./quick-actions";
 
 interface LeagueDashboardPageProps {
   params: Promise<{ id: string }>;
@@ -96,7 +87,7 @@ export default async function LeagueDashboardPage({
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <Suspense fallback={<LeagueDashboardSkeleton />}>
         <LeagueDashboardContent leagueId={id} userId={session.user.id} />
       </Suspense>
@@ -120,27 +111,17 @@ async function LeagueDashboardContent({
   const isExecutive = league.role === LeagueMemberRole.EXECUTIVE;
   const executiveCount = await getExecutiveCount(leagueId);
   const isSoleExecutive = isExecutive && executiveCount <= 1;
-  const canViewReports = canPerformAction(
-    league.role,
-    LeagueAction.VIEW_REPORTS,
-  );
-
-  let pendingReportCount = 0;
-  if (canViewReports) {
-    const reportCountResult = await getPendingReportCount(userId, leagueId);
-    pendingReportCount = reportCountResult.data ?? 0;
-  }
-
-  const ownReportCountResult = await getOwnReportCount(userId, leagueId);
-  const ownReportCount = ownReportCountResult.data ?? 0;
-
-  const ownWarningCountResult = await getOwnWarningCount(userId, leagueId);
-  const ownWarningCount = ownWarningCountResult.data ?? 0;
-
-  const memberLimitInfo = await getLeagueMemberLimitInfo(leagueId);
+  const canPlay = canPerformAction(league.role, LeagueAction.PLAY_GAMES);
 
   const isSuspended =
     league.suspendedUntil && league.suspendedUntil > new Date();
+
+  const [gameTypesResult] = await Promise.all([
+    getLeagueGameTypes(userId, leagueId),
+  ]);
+
+  const allGameTypes = gameTypesResult.data ?? [];
+  const activeGameTypes = allGameTypes.filter((gt) => !gt.isArchived);
 
   return (
     <>
@@ -192,21 +173,26 @@ async function LeagueDashboardContent({
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-xl font-bold md:text-2xl">
+              <h1 className="truncate text-2xl font-bold md:text-3xl">
                 {league.name}
               </h1>
               <Badge
                 variant={
-                  league.visibility === "public" ? "secondary" : "outline"
+                  league.visibility === LeagueVisibility.PUBLIC
+                    ? "secondary"
+                    : "outline"
                 }
               >
-                {league.visibility === "public" ? "Public" : "Private"}
+                Visibility:{" "}
+                {league.visibility === LeagueVisibility.PUBLIC
+                  ? "Public"
+                  : "Private"}
               </Badge>
               <Badge
                 variant={ROLE_BADGE_VARIANTS[league.role]}
                 className="capitalize"
               >
-                {league.role}
+                Role: {ROLE_LABELS[league.role]}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1 text-sm md:text-base">
@@ -214,213 +200,138 @@ async function LeagueDashboardContent({
             </p>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
-          {isExecutive && (
-            <Button size="sm" asChild>
-              <Link href={`/leagues/${leagueId}/settings`}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-          )}
-          <LeaveLeagueButton
-            leagueId={leagueId}
-            isSoleExecutive={isSoleExecutive}
-          />
-        </div>
+        <LeaveLeagueButton
+          leagueId={leagueId}
+          isSoleExecutive={isSoleExecutive}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Suspense fallback={<Skeleton className="h-32" />}>
-          <GameTypesCard leagueId={leagueId} />
-        </Suspense>
+      {canPlay && !isSuspended && activeGameTypes.length > 0 && (
+        <QuickActions
+          leagueId={leagueId}
+          gameTypes={activeGameTypes}
+          currentUserId={userId}
+        />
+      )}
 
-        <Suspense fallback={<Skeleton className="h-32" />}>
-          <TeamsCard leagueId={leagueId} userId={userId} />
-        </Suspense>
-
-        <Suspense fallback={<Skeleton className="h-32" />}>
-          <ChallengesCard leagueId={leagueId} userId={userId} />
-        </Suspense>
-
-        <Card className="h-full flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Members</CardTitle>
-            <Users className="text-muted-foreground h-4 w-4" />
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between space-y-2">
-            <div>
-              <div className="text-2xl font-bold">{league.memberCount}</div>
-              <UsageIndicator
-                current={memberLimitInfo.current}
-                max={memberLimitInfo.max}
-                label="capacity"
-                showProgressBar={memberLimitInfo.max !== null}
-              />
-            </div>
-            <Button asChild size="sm">
-              <Link href={`/leagues/${leagueId}/members`}>View Members</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="h-full flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Moderation</CardTitle>
-            <Flag className="text-muted-foreground h-4 w-4" />
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between space-y-2">
-            <div>
-              {canViewReports && pendingReportCount > 0 ? (
-                <>
-                  <div className="text-2xl font-bold flex items-center gap-2">
-                    {pendingReportCount}
-                    <Badge variant="destructive" className="text-xs">
-                      Pending
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    {pendingReportCount === 1 ? "report" : "reports"} to review
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {ownReportCount + ownWarningCount}
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    {ownReportCount}{" "}
-                    {ownReportCount === 1 ? "report" : "reports"},{" "}
-                    {ownWarningCount}{" "}
-                    {ownWarningCount === 1 ? "warning" : "warnings"}
-                  </p>
-                </>
-              )}
-            </div>
-            <Button asChild size="sm">
-              <Link href={`/leagues/${leagueId}/moderation`}>
-                View Moderation
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            No activity yet. Start by creating game types and recording matches!
-          </p>
-        </CardContent>
-      </Card>
+      <Suspense
+        fallback={
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Matches</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-24" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        }
+      >
+        <RecentMatchesSection leagueId={leagueId} userId={userId} />
+      </Suspense>
     </>
   );
 }
 
-async function GameTypesCard({ leagueId }: { leagueId: string }) {
-  const gameTypeLimitInfo = await getLeagueGameTypeLimitInfo(leagueId);
-
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Game Types</CardTitle>
-        <Gamepad2 className="text-muted-foreground h-4 w-4" />
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-between space-y-2">
-        <div>
-          <div className="text-2xl font-bold">{gameTypeLimitInfo.current}</div>
-          <UsageIndicator
-            current={gameTypeLimitInfo.current}
-            max={gameTypeLimitInfo.max}
-            label="game types"
-            showProgressBar={gameTypeLimitInfo.max !== null}
-          />
-        </div>
-        <Button asChild size="sm">
-          <Link href={`/leagues/${leagueId}/game-types`}>View Game Types</Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-async function TeamsCard({
+async function RecentMatchesSection({
   leagueId,
   userId,
 }: {
   leagueId: string;
   userId: string;
 }) {
-  const result = await getLeagueTeams(userId, leagueId);
-  const teams = result.data || [];
-  const activeTeams = teams.filter((t) => !t.isArchived);
+  const activityResult = await getLeagueActivityPaginated(userId, leagueId, {
+    limit: 5,
+  });
 
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Teams</CardTitle>
-        <UsersRound className="text-muted-foreground h-4 w-4" />
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-between space-y-2">
-        <div>
-          <div className="text-2xl font-bold">{activeTeams.length}</div>
-          <p className="text-muted-foreground text-xs">
-            {activeTeams.length === 1 ? "team" : "teams"} created
+  const items = activityResult.data?.items ?? [];
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Matches</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            No activity yet. Start by recording matches or submitting scores!
           </p>
-        </div>
-        <Button asChild size="sm">
-          <Link href={`/leagues/${leagueId}/teams`}>View Teams</Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-async function ChallengesCard({
-  leagueId,
-  userId,
-}: {
-  leagueId: string;
-  userId: string;
-}) {
-  const result = await getPendingChallenges(userId, leagueId);
-  const challenges = result.data || [];
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Challenges</CardTitle>
-        <Swords className="text-muted-foreground h-4 w-4" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle>Recent Matches</CardTitle>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/leagues/${leagueId}/matches`}>View All</Link>
+        </Button>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-between space-y-2">
-        <div>
-          {challenges.length > 0 ? (
-            <>
-              <div className="text-2xl font-bold flex items-center gap-2">
-                {challenges.length}
-                <Badge variant="default" className="text-xs">
-                  Pending
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {challenges.length === 1 ? "challenge" : "challenges"} waiting
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-muted-foreground text-xs">
-                No pending challenges
-              </p>
-            </>
+      <CardContent>
+        <div className="flex flex-col gap-3">
+          {items.map((item) =>
+            item.type === "match" ? (
+              <MatchCard
+                key={item.id}
+                matchId={item.id}
+                leagueId={leagueId}
+                gameTypeName={item.gameType?.name}
+                playedAt={item.playedAt}
+                status={item.status}
+                participants={item.participants}
+                variant="compact"
+              />
+            ) : (
+              <HighScoreActivityCard key={item.id} highScore={item} />
+            ),
           )}
         </div>
-        <Button asChild size="sm">
-          <Link href={`/leagues/${leagueId}/challenges`}>View Challenges</Link>
-        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function HighScoreActivityCard({
+  highScore,
+}: {
+  highScore: HighScoreActivityItem;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2 space-y-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-semibold text-sm truncate">
+            {highScore.gameType?.name || "High Score"}
+          </span>
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            <Trophy className="h-3 w-3 mr-1" />
+            Score
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {formatDistanceToNow(new Date(highScore.achievedAt), {
+            addSuffix: true,
+          })}
+        </p>
+      </CardHeader>
+      <CardContent className="pb-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <ParticipantDisplay
+              participant={highScore.participant as ParticipantData}
+              showAvatar
+              showUsername
+              size="sm"
+            />
+          </div>
+          <span className="text-lg font-bold tabular-nums shrink-0">
+            {highScore.score.toLocaleString()}
+          </span>
+        </div>
       </CardContent>
     </Card>
   );
@@ -437,26 +348,16 @@ function LeagueDashboardSkeleton() {
         <Skeleton className="h-9 w-24" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-20" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-12" />
-              <Skeleton className="mt-1 h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Skeleton className="h-10 w-64" />
 
       <Card>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-4 w-64" />
+        <CardContent className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </CardContent>
       </Card>
     </>

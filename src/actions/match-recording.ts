@@ -45,7 +45,6 @@ export async function recordH2HScoreMatchAction(
   }
 
   const result = await recordH2HScoreMatch(session.user.id, input);
-
   if (result.data) {
     revalidatePath(`/leagues/${result.data.leagueId}/matches`);
     revalidatePath(
@@ -114,7 +113,7 @@ export async function submitHighScoreAction(
       `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}`,
     );
     revalidatePath(
-      `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}/leaderboard`,
+      `/leagues/${result.data.leagueId}/leaderboards/${result.data.gameTypeId}`,
     );
   }
 

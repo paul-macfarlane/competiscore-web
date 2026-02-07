@@ -30,7 +30,7 @@ export default async function TeamsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <LeagueBreadcrumb
@@ -39,7 +39,7 @@ export default async function TeamsPage({ params }: PageProps) {
               { label: "Teams" },
             ]}
           />
-          <h1 className="mt-2 text-xl font-bold md:text-2xl">Teams</h1>
+          <h1 className="mt-2 text-2xl font-bold md:text-3xl">Teams</h1>
           <p className="text-muted-foreground text-sm">
             Create and manage teams for competitions
           </p>

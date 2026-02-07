@@ -184,16 +184,29 @@ export type HighScoreEntryWithGameType = HighScoreEntryWithDetails & {
 
 export async function getHighScoreEntriesWithDetailsByLeagueId(
   leagueId: string,
-  options: { limit?: number; offset?: number; gameTypeId?: string } = {},
+  options: {
+    limit?: number;
+    offset?: number;
+    gameTypeId?: string;
+    excludeArchivedGameTypes?: boolean;
+  } = {},
   dbOrTx: DBOrTx = db,
 ): Promise<HighScoreEntryWithGameType[]> {
-  const { limit = 50, offset = 0, gameTypeId } = options;
+  const {
+    limit = 50,
+    offset = 0,
+    gameTypeId,
+    excludeArchivedGameTypes = false,
+  } = options;
 
   const { gameType } = await import("./schema");
 
   const conditions = [eq(highScoreEntry.leagueId, leagueId)];
   if (gameTypeId) {
     conditions.push(eq(highScoreEntry.gameTypeId, gameTypeId));
+  }
+  if (excludeArchivedGameTypes) {
+    conditions.push(eq(gameType.isArchived, false));
   }
 
   const result = await dbOrTx
@@ -238,21 +251,33 @@ export async function getHighScoreEntriesWithDetailsByLeagueId(
 
 export async function countHighScoreEntriesByLeagueId(
   leagueId: string,
-  options: { gameTypeId?: string } = {},
+  options: {
+    gameTypeId?: string;
+    excludeArchivedGameTypes?: boolean;
+  } = {},
   dbOrTx: DBOrTx = db,
 ): Promise<number> {
-  const { gameTypeId } = options;
+  const { gameTypeId, excludeArchivedGameTypes = false } = options;
 
   const conditions = [eq(highScoreEntry.leagueId, leagueId)];
   if (gameTypeId) {
     conditions.push(eq(highScoreEntry.gameTypeId, gameTypeId));
   }
 
-  const result = await dbOrTx
+  const query = dbOrTx
     .select({ count: sql<number>`count(*)` })
-    .from(highScoreEntry)
-    .where(and(...conditions));
+    .from(highScoreEntry);
 
+  if (excludeArchivedGameTypes) {
+    const { gameType } = await import("./schema");
+    conditions.push(eq(gameType.isArchived, false));
+    const result = await query
+      .innerJoin(gameType, eq(highScoreEntry.gameTypeId, gameType.id))
+      .where(and(...conditions));
+    return Number(result[0]?.count ?? 0);
+  }
+
+  const result = await query.where(and(...conditions));
   return Number(result[0]?.count ?? 0);
 }
 

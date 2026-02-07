@@ -58,7 +58,6 @@ export async function handleNotificationAction(input: unknown) {
         if (result.data) {
           revalidatePath("/invitations");
           revalidatePath("/leagues");
-          revalidatePath("/dashboard");
         }
         return result;
       } else if (action === NotificationAction.DECLINE) {
@@ -84,7 +83,6 @@ export async function handleNotificationAction(input: unknown) {
         if (result.data) {
           revalidatePath("/invitations");
           revalidatePath("/leagues");
-          revalidatePath("/dashboard");
         }
         return result;
       } else if (action === NotificationAction.DECLINE) {

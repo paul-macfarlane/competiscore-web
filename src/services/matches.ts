@@ -148,6 +148,10 @@ export async function recordH2HWinLossMatch(
     return { error: "Game type not found in this league" };
   }
 
+  if (gameType.isArchived) {
+    return { error: "Cannot record matches for an archived game type" };
+  }
+
   if (gameType.category !== GameCategory.HEAD_TO_HEAD) {
     return {
       error: "This game type is not configured for head-to-head matches",
@@ -284,6 +288,10 @@ export async function recordH2HScoreMatch(
   const gameType = await dbGetGameTypeById(data.gameTypeId);
   if (!gameType || gameType.leagueId !== leagueId) {
     return { error: "Game type not found in this league" };
+  }
+
+  if (gameType.isArchived) {
+    return { error: "Cannot record matches for an archived game type" };
   }
 
   if (gameType.category !== GameCategory.HEAD_TO_HEAD) {
@@ -429,6 +437,10 @@ export async function recordFFARankedMatch(
     return { error: "Game type not found in this league" };
   }
 
+  if (gameType.isArchived) {
+    return { error: "Cannot record matches for an archived game type" };
+  }
+
   if (gameType.category !== GameCategory.FREE_FOR_ALL) {
     return {
       error: "This game type is not configured for free-for-all matches",
@@ -531,6 +543,10 @@ export async function recordFFAScoreMatch(
     return { error: "Game type not found in this league" };
   }
 
+  if (gameType.isArchived) {
+    return { error: "Cannot record matches for an archived game type" };
+  }
+
   if (gameType.category !== GameCategory.FREE_FOR_ALL) {
     return {
       error: "This game type is not configured for free-for-all matches",
@@ -628,6 +644,10 @@ export async function submitHighScore(
   const gameType = await dbGetGameTypeById(data.gameTypeId);
   if (!gameType || gameType.leagueId !== leagueId) {
     return { error: "Game type not found in this league" };
+  }
+
+  if (gameType.isArchived) {
+    return { error: "Cannot submit scores for an archived game type" };
   }
 
   if (gameType.category !== GameCategory.HIGH_SCORE) {
@@ -809,8 +829,13 @@ export async function getLeagueMatchesPaginated(
       offset,
       status,
       gameTypeId,
+      excludeArchivedGameTypes: true,
     }),
-    dbCountMatchesByLeagueId(leagueId, { status, gameTypeId }),
+    dbCountMatchesByLeagueId(leagueId, {
+      status,
+      gameTypeId,
+      excludeArchivedGameTypes: true,
+    }),
   ]);
 
   const matchesWithParticipants: MatchWithGameTypeAndParticipants[] = [];
@@ -889,14 +914,22 @@ export async function getLeagueActivityPaginated(
       limit: limit * 2,
       offset: 0,
       gameTypeId,
+      excludeArchivedGameTypes: true,
     }),
-    dbCountMatchesByLeagueId(leagueId, { gameTypeId }),
+    dbCountMatchesByLeagueId(leagueId, {
+      gameTypeId,
+      excludeArchivedGameTypes: true,
+    }),
     getHighScoreEntriesWithDetailsByLeagueId(leagueId, {
       limit: limit * 2,
       offset: 0,
       gameTypeId,
+      excludeArchivedGameTypes: true,
     }),
-    countHighScoreEntriesByLeagueId(leagueId, { gameTypeId }),
+    countHighScoreEntriesByLeagueId(leagueId, {
+      gameTypeId,
+      excludeArchivedGameTypes: true,
+    }),
   ]);
 
   const matchesWithParticipants: ({

@@ -124,6 +124,7 @@ const PAGE_PERMISSIONS: Record<LeaguePage, Set<LeagueMemberRole>> = {
   ]),
   [LeaguePage.SETTINGS]: new Set([LeagueMemberRole.EXECUTIVE]),
   [LeaguePage.MODERATION]: new Set([
+    LeagueMemberRole.MEMBER,
     LeagueMemberRole.MANAGER,
     LeagueMemberRole.EXECUTIVE,
   ]),

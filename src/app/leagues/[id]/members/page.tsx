@@ -46,7 +46,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <LeagueBreadcrumb
@@ -55,7 +55,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
               { label: "Members" },
             ]}
           />
-          <h1 className="mt-2 text-xl font-bold md:text-2xl">Members</h1>
+          <h1 className="mt-2 text-2xl font-bold md:text-3xl">Members</h1>
           <p className="text-muted-foreground text-sm">
             View and manage league members
           </p>
