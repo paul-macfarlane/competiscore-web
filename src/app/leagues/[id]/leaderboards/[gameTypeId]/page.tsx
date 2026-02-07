@@ -233,7 +233,7 @@ async function HighScoreLeaderboardView({
                     {entry.rank <= 3 ? (
                       <div
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-full font-bold",
+                          "flex h-9 w-9 items-center justify-center rounded-full font-bold",
                           entry.rank === 1 &&
                             "bg-rank-gold-bg text-rank-gold-text",
                           entry.rank === 2 &&
@@ -278,7 +278,7 @@ async function HighScoreLeaderboardView({
                   </div>
 
                   <div className="text-right">
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold tabular-nums">
                       {entry.bestScore.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -531,7 +531,7 @@ async function EloStandingsView({
                       {standing.rank <= 3 ? (
                         <div
                           className={cn(
-                            "flex h-8 w-8 items-center justify-center rounded-full font-bold",
+                            "flex h-9 w-9 items-center justify-center rounded-full font-bold",
                             standing.rank === 1 &&
                               "bg-rank-gold-bg text-rank-gold-text",
                             standing.rank === 2 &&
@@ -560,7 +560,7 @@ async function EloStandingsView({
 
                     <div className="text-right">
                       <div className="flex items-center gap-2 justify-end">
-                        <p className="text-lg font-bold">
+                        <p className="text-lg font-bold tabular-nums">
                           {Math.round(standing.rating)}
                         </p>
                         {isProvisional && (

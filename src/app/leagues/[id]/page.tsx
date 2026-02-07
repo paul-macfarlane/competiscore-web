@@ -328,7 +328,7 @@ function HighScoreActivityCard({
               size="sm"
             />
           </div>
-          <span className="text-lg font-bold tabular-nums shrink-0">
+          <span className="text-xl font-extrabold tabular-nums shrink-0">
             {highScore.score.toLocaleString()}
           </span>
         </div>

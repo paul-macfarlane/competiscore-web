@@ -16,6 +16,7 @@ import {
   MatchResult,
   MatchStatus,
 } from "@/lib/shared/constants";
+import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronRight } from "lucide-react";
@@ -72,7 +73,7 @@ export function MatchCard({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
       <CardHeader className="pb-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -115,14 +116,11 @@ export function MatchCard({
               </div>
               {side1[0]?.result && (
                 <Badge
-                  variant={
-                    side1[0].result === MatchResult.WIN
-                      ? "default"
-                      : side1[0].result === MatchResult.LOSS
-                        ? "destructive"
-                        : "secondary"
-                  }
-                  className="shrink-0"
+                  variant="outline"
+                  className={cn(
+                    "shrink-0",
+                    getResultBadgeClasses(side1[0].result),
+                  )}
                 >
                   {MATCH_RESULT_LABELS[side1[0].result as MatchResult]}
                 </Badge>
@@ -133,7 +131,7 @@ export function MatchCard({
               {status === MatchStatus.COMPLETED &&
               side1[0]?.score !== null &&
               side2[0]?.score !== null ? (
-                <span className="text-2xl font-bold tabular-nums">
+                <span className="text-3xl font-extrabold tabular-nums">
                   {side1[0]?.score} - {side2[0]?.score}
                 </span>
               ) : (
@@ -157,14 +155,11 @@ export function MatchCard({
               </div>
               {side2[0]?.result && (
                 <Badge
-                  variant={
-                    side2[0].result === MatchResult.WIN
-                      ? "default"
-                      : side2[0].result === MatchResult.LOSS
-                        ? "destructive"
-                        : "secondary"
-                  }
-                  className="shrink-0"
+                  variant="outline"
+                  className={cn(
+                    "shrink-0",
+                    getResultBadgeClasses(side2[0].result),
+                  )}
                 >
                   {MATCH_RESULT_LABELS[side2[0].result as MatchResult]}
                 </Badge>
@@ -219,7 +214,7 @@ export function MatchCard({
       </CardContent>
 
       <CardFooter className="pt-0 pb-4">
-        <Button asChild size="sm" className="w-full">
+        <Button asChild size="sm" variant="outline" className="w-full">
           <Link href={`/leagues/${leagueId}/matches/${matchId}`}>
             View Details
             <ChevronRight className="ml-1 h-4 w-4" />

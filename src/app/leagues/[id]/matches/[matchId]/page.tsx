@@ -13,6 +13,7 @@ import {
   MatchResult,
   MatchStatus,
 } from "@/lib/shared/constants";
+import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { getMatch } from "@/services/matches";
 import { headers } from "next/headers";
@@ -106,7 +107,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 {match.status === MatchStatus.COMPLETED &&
                 side1[0]?.score !== null &&
                 side2[0]?.score !== null ? (
-                  <div className="text-2xl sm:text-3xl font-bold tabular-nums">
+                  <div className="text-2xl sm:text-3xl font-extrabold tabular-nums tracking-tight">
                     {side1[0].score} - {side2[0].score}
                   </div>
                 ) : (
@@ -147,7 +148,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                   >
                     <div
                       className={cn(
-                        "w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold",
+                        "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold",
                         index === 0 && "bg-rank-gold-bg text-rank-gold-text",
                         index === 1 &&
                           "bg-rank-silver-bg text-rank-silver-text",
@@ -265,14 +266,8 @@ function ParticipantRow({
       </div>
       {participant.result && showResult && (
         <Badge
-          variant={
-            participant.result === MatchResult.WIN
-              ? "default"
-              : participant.result === MatchResult.LOSS
-                ? "destructive"
-                : "secondary"
-          }
-          className="shrink-0"
+          variant="outline"
+          className={cn("shrink-0", getResultBadgeClasses(participant.result))}
         >
           {MATCH_RESULT_LABELS[participant.result as MatchResult]}
         </Badge>

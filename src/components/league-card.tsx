@@ -32,7 +32,7 @@ export function LeagueCard({
   showRole = true,
 }: LeagueCardProps) {
   return (
-    <Card>
+    <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/20">
       <CardHeader className="p-4 md:p-6">
         <div className="flex items-start gap-4">
           {logo && (
@@ -61,7 +61,7 @@ export function LeagueCard({
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </span>
               </div>
-              <Button asChild size="sm">
+              <Button asChild size="sm" variant="ghost">
                 <Link href={`/leagues/${id}`}>
                   View
                   <ChevronRight className="ml-1 h-4 w-4" />

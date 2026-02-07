@@ -213,7 +213,7 @@ async function EloStandingsCard({
                     {standing.rank <= 3 ? (
                       <div
                         className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold",
+                          "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
                           standing.rank === 1 &&
                             "bg-rank-gold-bg text-rank-gold-text",
                           standing.rank === 2 &&
@@ -240,7 +240,7 @@ async function EloStandingsCard({
                   </div>
                   <div className="text-right shrink-0">
                     <div className="flex items-center gap-1.5 justify-end">
-                      <span className="font-bold">
+                      <span className="font-bold tabular-nums">
                         {Math.round(standing.rating)}
                       </span>
                       {isProvisional && (
@@ -337,7 +337,7 @@ async function HighScoreLeaderboardCard({
                 >
                   <span
                     className={cn(
-                      "w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold shrink-0",
+                      "w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold shrink-0",
                       entry.rank === 1 && "bg-rank-gold-bg text-rank-gold-text",
                       entry.rank === 2 &&
                         "bg-rank-silver-bg text-rank-silver-text",
