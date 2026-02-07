@@ -16,6 +16,7 @@ import {
 import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { getMatch } from "@/services/matches";
+import { Trophy } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -227,6 +228,24 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 </div>
               )}
             </>
+          )}
+          {match.tournament && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tournament</span>
+              <Link
+                href={`/leagues/${leagueId}/tournaments/${match.tournament.tournamentId}`}
+                className="font-medium hover:underline flex items-center gap-1"
+              >
+                <Trophy className="h-3 w-3" />
+                {match.tournament.tournamentName}
+                {match.tournament.totalRounds && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Round {match.tournament.round} of{" "}
+                    {match.tournament.totalRounds})
+                  </span>
+                )}
+              </Link>
+            </div>
           )}
         </CardContent>
       </Card>

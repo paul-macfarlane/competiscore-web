@@ -358,7 +358,7 @@ _Future: ELO-based seeding_
 - Matches can be scheduled within the tournament
 - No-shows are recorded as losses (forfeit)
 - Tournaments can span any period of time (no time limits per round)
-- Tournament history is preserved and browsable
+- Only draft tournaments can be deleted; started and completed tournaments are preserved for history
 
 ### 7.6 ELO Impact
 
@@ -634,7 +634,14 @@ When `/dashboard` returns, it should show cross-league personal data:
 - **Performance Summary**: Overall W/L/D record, win rate trends
 - **League Quick Access**: Cards for each league with activity indicators
 
-### Phase 3: Enhanced Stats & Records
+### Phase 3: Tournaments
+
+1. Single Elimination tournaments (MVP tournament type)
+2. Bracket management and bye handling
+3. Tournament history
+4. _Future: Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination_
+
+### Phase 4: Enhanced Stats & Records
 
 1. Per-game-type detailed stats (win/loss/draw record, win percentage, streaks, recent form)
 2. Head-to-head records between opponents
@@ -642,13 +649,6 @@ When `/dashboard` returns, it should show cross-league personal data:
 4. League-wide aggregate stats (most active players, popular game types)
 5. Ad-hoc teams for one-off match groupings
 6. Admin UI for managing usage limit overrides
-
-### Phase 4: Tournaments
-
-1. Single Elimination tournaments (MVP tournament type)
-2. Bracket management and bye handling
-3. Tournament history
-4. _Future: Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination_
 
 ### Phase 5: Events
 

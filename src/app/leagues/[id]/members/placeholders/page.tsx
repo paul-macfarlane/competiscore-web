@@ -43,7 +43,7 @@ export default async function PlaceholdersPage({
   const { id } = parsed.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <LeagueBreadcrumb
           items={[

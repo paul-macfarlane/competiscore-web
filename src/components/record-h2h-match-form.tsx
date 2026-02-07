@@ -38,7 +38,19 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { ParticipantData, ParticipantDisplay } from "./participant-display";
 import { ParticipantSelector } from "./participant-selector";
+
+export type TournamentMatchProps = {
+  tournamentMatchId: string;
+  side1Name: string;
+  side2Name: string;
+  side1Participant?: ParticipantData;
+  side2Participant?: ParticipantData;
+  onSubmitAction: (
+    input: unknown,
+  ) => Promise<{ error?: string; data?: unknown }>;
+};
 
 type RecordH2HMatchFormProps = {
   leagueId: string;
@@ -48,6 +60,7 @@ type RecordH2HMatchFormProps = {
   currentUserId: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  tournamentMatch?: TournamentMatchProps;
 };
 
 type WinLossFormValues = z.input<typeof recordH2HWinLossMatchSchema>;
@@ -61,7 +74,29 @@ export function RecordH2HMatchForm({
   currentUserId,
   onSuccess,
   onCancel,
+  tournamentMatch,
 }: RecordH2HMatchFormProps) {
+  if (tournamentMatch) {
+    if (config.scoringType === ScoringType.WIN_LOSS) {
+      return (
+        <TournamentWinLossForm
+          tournamentMatch={tournamentMatch}
+          config={config}
+          onSuccess={onSuccess}
+          onCancel={onCancel}
+        />
+      );
+    }
+    return (
+      <TournamentScoreForm
+        tournamentMatch={tournamentMatch}
+        config={config}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
+      />
+    );
+  }
+
   if (config.scoringType === ScoringType.WIN_LOSS) {
     return (
       <WinLossForm
@@ -154,10 +189,7 @@ function WinLossForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="playedAt"
@@ -442,10 +474,7 @@ function ScoreBasedForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="playedAt"
@@ -643,6 +672,340 @@ function ScoreBasedForm({
           </Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
             {isPending ? "Recording..." : "Record Match"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// --- Tournament sub-forms ---
+
+type TournamentFormProps = {
+  tournamentMatch: TournamentMatchProps;
+  config: H2HConfig;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+};
+
+const tournamentWinLossSchema = z.object({
+  playedAt: z
+    .union([z.string(), z.date()])
+    .pipe(z.coerce.date())
+    .refine((date) => date <= new Date(), {
+      message: "Match date cannot be in the future",
+    }),
+  winningSide: z.enum(["side1", "side2"]),
+});
+
+type TournamentWinLossValues = z.input<typeof tournamentWinLossSchema>;
+
+function TournamentWinLossForm({
+  tournamentMatch,
+  onSuccess,
+  onCancel,
+}: TournamentFormProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<TournamentWinLossValues>({
+    resolver: zodResolver(tournamentWinLossSchema),
+    defaultValues: {
+      playedAt: formatLocalDateTime(new Date()),
+      winningSide: H2HWinningSide.SIDE1,
+    },
+  });
+
+  const onSubmit = (values: TournamentWinLossValues) => {
+    startTransition(async () => {
+      const result = await tournamentMatch.onSubmitAction({
+        tournamentMatchId: tournamentMatch.tournamentMatchId,
+        winningSide: values.winningSide,
+        playedAt: values.playedAt,
+      });
+      if (result.error) {
+        toast.error(result.error as string);
+      } else {
+        toast.success("Match result recorded!");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.refresh();
+        }
+      }
+    });
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="playedAt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time Played</FormLabel>
+              <FormControl>
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) =>
+                    field.onChange(date ? formatLocalDateTime(date) : undefined)
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="winningSide"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Result</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="grid gap-2"
+                >
+                  <div className="flex items-center space-x-2 rounded-lg border p-3">
+                    <RadioGroupItem
+                      value={H2HWinningSide.SIDE1}
+                      id="t_side1_wins"
+                    />
+                    <label
+                      htmlFor="t_side1_wins"
+                      className="flex-1 cursor-pointer flex items-center gap-2"
+                    >
+                      {tournamentMatch.side1Participant ? (
+                        <ParticipantDisplay
+                          participant={tournamentMatch.side1Participant}
+                          showAvatar
+                          showUsername
+                          size="sm"
+                        />
+                      ) : (
+                        <span>{tournamentMatch.side1Name}</span>
+                      )}
+                      <span className="ml-auto shrink-0">Wins</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2 rounded-lg border p-3">
+                    <RadioGroupItem
+                      value={H2HWinningSide.SIDE2}
+                      id="t_side2_wins"
+                    />
+                    <label
+                      htmlFor="t_side2_wins"
+                      className="flex-1 cursor-pointer flex items-center gap-2"
+                    >
+                      {tournamentMatch.side2Participant ? (
+                        <ParticipantDisplay
+                          participant={tournamentMatch.side2Participant}
+                          showAvatar
+                          showUsername
+                          size="sm"
+                        />
+                      ) : (
+                        <span>{tournamentMatch.side2Name}</span>
+                      )}
+                      <span className="ml-auto shrink-0">Wins</span>
+                    </label>
+                  </div>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => (onCancel ? onCancel() : router.back())}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" className="flex-1" disabled={isPending}>
+            {isPending ? "Recording..." : "Record Result"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+const tournamentScoreSchema = z.object({
+  playedAt: z
+    .union([z.string(), z.date()])
+    .pipe(z.coerce.date())
+    .refine((date) => date <= new Date(), {
+      message: "Match date cannot be in the future",
+    }),
+  side1Score: z.number("A number is required"),
+  side2Score: z.number("A number is required"),
+});
+
+type TournamentScoreValues = z.input<typeof tournamentScoreSchema>;
+
+function TournamentScoreForm({
+  tournamentMatch,
+  config,
+  onSuccess,
+  onCancel,
+}: TournamentFormProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<TournamentScoreValues>({
+    resolver: zodResolver(tournamentScoreSchema),
+    defaultValues: {
+      playedAt: formatLocalDateTime(new Date()),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      side1Score: "" as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      side2Score: "" as any,
+    },
+  });
+
+  const onSubmit = (values: TournamentScoreValues) => {
+    startTransition(async () => {
+      const result = await tournamentMatch.onSubmitAction({
+        tournamentMatchId: tournamentMatch.tournamentMatchId,
+        side1Score: values.side1Score,
+        side2Score: values.side2Score,
+        playedAt: values.playedAt,
+      });
+      if (result.error) {
+        toast.error(result.error as string);
+      } else {
+        toast.success("Match result recorded!");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.refresh();
+        }
+      }
+    });
+  };
+
+  const scoreLabel = config.scoreDescription || "Score";
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="playedAt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time Played</FormLabel>
+              <FormControl>
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) =>
+                    field.onChange(date ? formatLocalDateTime(date) : undefined)
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            {tournamentMatch.side1Participant ? (
+              <ParticipantDisplay
+                participant={tournamentMatch.side1Participant}
+                showAvatar
+                showUsername
+                size="sm"
+              />
+            ) : (
+              <FormLabel className="text-base">
+                {tournamentMatch.side1Name}
+              </FormLabel>
+            )}
+          </div>
+          <FormField
+            control={form.control}
+            name="side1Score"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{scoreLabel}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : parseFloat(value));
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            {tournamentMatch.side2Participant ? (
+              <ParticipantDisplay
+                participant={tournamentMatch.side2Participant}
+                showAvatar
+                showUsername
+                size="sm"
+              />
+            ) : (
+              <FormLabel className="text-base">
+                {tournamentMatch.side2Name}
+              </FormLabel>
+            )}
+          </div>
+          <FormField
+            control={form.control}
+            name="side2Score"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{scoreLabel}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : parseFloat(value));
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => (onCancel ? onCancel() : router.back())}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" className="flex-1" disabled={isPending}>
+            {isPending ? "Recording..." : "Record Result"}
           </Button>
         </div>
       </form>

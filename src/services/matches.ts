@@ -26,6 +26,10 @@ import {
 } from "@/db/schema";
 import { isUserMemberOfTeam } from "@/db/teams";
 import {
+  TournamentMatchInfo,
+  getTournamentInfoByMatchIds,
+} from "@/db/tournaments";
+import {
   GameCategory,
   H2HWinningSide,
   MatchResult,
@@ -688,6 +692,7 @@ export async function submitHighScore(
 
 export type MatchWithParticipantsAndGameType = MatchWithParticipants & {
   gameType: { id: string; name: string; category: string } | null;
+  tournament?: TournamentMatchInfo | null;
 };
 
 export async function getMatch(
@@ -704,9 +709,10 @@ export async function getMatch(
     return { error: "You are not a member of this league" };
   }
 
-  const [matchWithParticipants, gameType] = await Promise.all([
+  const [matchWithParticipants, gameType, tournamentInfos] = await Promise.all([
     dbGetMatchWithParticipants(matchId),
     dbGetGameTypeById(match.gameTypeId),
+    getTournamentInfoByMatchIds([matchId]),
   ]);
 
   if (!matchWithParticipants) {
@@ -719,6 +725,7 @@ export async function getMatch(
       gameType: gameType
         ? { id: gameType.id, name: gameType.name, category: gameType.category }
         : null,
+      tournament: tournamentInfos[0] ?? null,
     },
   };
 }
@@ -797,6 +804,7 @@ export async function getUserMatchHistory(
 
 export type MatchWithGameTypeAndParticipants = MatchWithGameType & {
   participants: MatchParticipantWithDetails[];
+  tournament?: TournamentMatchInfo | null;
 };
 
 export type PaginatedMatchesResult = {
@@ -932,13 +940,22 @@ export async function getLeagueActivityPaginated(
     }),
   ]);
 
+  const matchIds = matches.filter((m) => m.id).map((m) => m.id);
+  const tournamentInfos = await getTournamentInfoByMatchIds(matchIds);
+  const tournamentMap = new Map(tournamentInfos.map((t) => [t.matchId, t]));
+
   const matchesWithParticipants: ({
     type: "match";
   } & MatchWithGameTypeAndParticipants)[] = [];
 
   for (const match of matches) {
     const participants = await dbGetMatchParticipants(match.id);
-    matchesWithParticipants.push({ type: "match", ...match, participants });
+    matchesWithParticipants.push({
+      type: "match",
+      ...match,
+      participants,
+      tournament: tournamentMap.get(match.id) ?? null,
+    });
   }
 
   const highScoreItems: HighScoreActivityItem[] = highScores.map((hs) => ({

@@ -27,6 +27,7 @@ const getTabs = (
     { label: "Matches", href: `/leagues/${leagueId}/matches` },
     { label: "Challenges", href: `/leagues/${leagueId}/challenges` },
     { label: "Leaderboards", href: `/leagues/${leagueId}/leaderboards` },
+    { label: "Tournaments", href: `/leagues/${leagueId}/tournaments` },
     { label: "Members", href: `/leagues/${leagueId}/members` },
     { label: "Teams", href: `/leagues/${leagueId}/teams` },
     { label: "Moderation", href: `/leagues/${leagueId}/moderation` },
