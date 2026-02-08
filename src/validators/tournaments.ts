@@ -1,3 +1,4 @@
+import { ICON_PATHS, TOURNAMENT_ICONS } from "@/lib/shared/constants";
 import {
   MAX_TOURNAMENT_PARTICIPANTS,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
@@ -6,6 +7,17 @@ import {
 import { z } from "zod";
 
 import { uuidSchema } from "./common";
+
+const VALID_TOURNAMENT_ICON_PATHS = TOURNAMENT_ICONS.map(
+  (icon) => `${ICON_PATHS.TOURNAMENT_ICONS}/${icon}.svg`,
+);
+
+export const tournamentLogoSchema = z
+  .string()
+  .refine((val) => val === "" || VALID_TOURNAMENT_ICON_PATHS.includes(val), {
+    message: "Invalid icon selection",
+  })
+  .optional();
 
 export const tournamentIdSchema = z.object({
   tournamentId: uuidSchema,
@@ -30,7 +42,7 @@ export const createTournamentSchema = z.object({
       `Description must be ${TOURNAMENT_DESCRIPTION_MAX_LENGTH} characters or less`,
     )
     .optional(),
-  logo: z.string().optional(),
+  logo: tournamentLogoSchema,
   participantType: z.enum(["individual", "team"]),
   seedingType: z.enum(["manual", "random"]),
   startDate: z.union([z.string(), z.date()]).pipe(z.coerce.date()).optional(),
@@ -54,7 +66,7 @@ export const updateTournamentSchema = z.object({
       `Description must be ${TOURNAMENT_DESCRIPTION_MAX_LENGTH} characters or less`,
     )
     .optional(),
-  logo: z.string().optional(),
+  logo: tournamentLogoSchema,
   seedingType: z.enum(["manual", "random"]).optional(),
   startDate: z
     .union([z.string(), z.date()])

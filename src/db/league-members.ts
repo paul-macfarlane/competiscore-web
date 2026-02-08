@@ -280,10 +280,11 @@ export async function isMemberSuspended(
 
 export async function getSuspendedMembers(
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<LeagueMemberWithUser[]> {
   const now = new Date();
-  const results = await dbOrTx
+  let query = dbOrTx
     .select({
       ...leagueMemberColumns,
       user: {
@@ -301,7 +302,32 @@ export async function getSuspendedMembers(
         gt(leagueMember.suspendedUntil, now),
       ),
     )
-    .orderBy(leagueMember.suspendedUntil);
+    .orderBy(leagueMember.suspendedUntil)
+    .$dynamic();
 
-  return results;
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  return await query;
+}
+
+export async function countSuspendedMembers(
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const now = new Date();
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(leagueMember)
+    .where(
+      and(
+        eq(leagueMember.leagueId, leagueId),
+        gt(leagueMember.suspendedUntil, now),
+      ),
+    );
+  return result[0].count;
 }

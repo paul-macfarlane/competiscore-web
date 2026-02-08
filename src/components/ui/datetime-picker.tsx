@@ -76,13 +76,13 @@ export function DateTimePicker({
   }, [date]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col sm:flex-row gap-2">
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              "flex-1 justify-start text-left font-normal",
+              "sm:flex-1 justify-start text-left font-normal",
               !date && "text-muted-foreground",
             )}
             disabled={disabled}
@@ -100,7 +100,7 @@ export function DateTimePicker({
         value={timeValue}
         onChange={handleTimeChange}
         disabled={disabled}
-        className="w-32"
+        className="sm:w-32"
       />
     </div>
   );

@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect x="15" y="10" width="40" height="60" rx="4" fill="#fff" stroke="#333" stroke-width="2" transform="rotate(-15 35 40)"/>
-  <rect x="30" y="15" width="40" height="60" rx="4" fill="#fff" stroke="#333" stroke-width="2"/>
-  <rect x="45" y="10" width="40" height="60" rx="4" fill="#fff" stroke="#333" stroke-width="2" transform="rotate(15 65 40)"/>
-  <text x="40" y="55" font-family="Arial" font-size="28" fill="#e74c3c">♥</text>
-  <text x="62" y="50" font-family="Arial" font-size="24" fill="#1a1a1a">♠</text>
-</svg>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="18" y="20" width="40" height="56" rx="4" fill="#D94040" stroke="#A33030" stroke-width="2" transform="rotate(-10 38 48)"/><rect x="42" y="20" width="40" height="56" rx="4" fill="#3B82D6" stroke="#2A6AB8" stroke-width="2" transform="rotate(10 62 48)"/><path d="M32 38 L36 30 L40 38 L36 36 Z" fill="#E8E8E8"/><path d="M66 38 L70 30 L74 38 L70 36 Z" fill="#E8E8E8"/></svg>

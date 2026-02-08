@@ -58,7 +58,7 @@ const mockTeam = {
   leagueId: LEAGUE_ID,
   name: "The Champions",
   description: "Best team ever",
-  logo: `${ICON_PATHS.TEAM_ICONS}/trophy.svg`,
+  logo: `${ICON_PATHS.TEAM_ICONS}/phoenix.svg`,
   isArchived: false,
   createdById: USER_ID,
   createdAt: new Date(),
@@ -125,7 +125,7 @@ describe("createTeam", () => {
       leagueId: LEAGUE_ID,
       name: "The Champions",
       description: "Best team ever",
-      logo: `${ICON_PATHS.TEAM_ICONS}/trophy.svg`,
+      logo: `${ICON_PATHS.TEAM_ICONS}/phoenix.svg`,
     });
 
     expect(result.data).toEqual(mockTeam);

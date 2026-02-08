@@ -14,7 +14,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { leaveLeagueAction } from "./settings/actions";
+import { leaveLeagueAction } from "./(manage)/settings/actions";
 
 interface LeaveLeagueButtonProps {
   leagueId: string;

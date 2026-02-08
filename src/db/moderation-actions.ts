@@ -1,5 +1,5 @@
 import { ModerationActionType } from "@/lib/shared/constants";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
 import {
@@ -96,9 +96,10 @@ export async function getModerationHistoryByUser(
 export async function getWarningsByUser(
   targetUserId: string,
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<ModerationHistoryItem[]> {
-  const results = await dbOrTx
+  let query = dbOrTx
     .select({
       ...moderationActionColumns,
       moderator: {
@@ -117,9 +118,35 @@ export async function getWarningsByUser(
         eq(moderationAction.action, ModerationActionType.WARNED),
       ),
     )
-    .orderBy(moderationAction.createdAt);
+    .orderBy(moderationAction.createdAt)
+    .$dynamic();
 
-  return results;
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  return await query;
+}
+
+export async function countWarningsByUser(
+  targetUserId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(moderationAction)
+    .where(
+      and(
+        eq(moderationAction.targetUserId, targetUserId),
+        eq(moderationAction.leagueId, leagueId),
+        eq(moderationAction.action, ModerationActionType.WARNED),
+      ),
+    );
+  return result[0].count;
 }
 
 export type UnacknowledgedModerationAction = ModerationAction & {

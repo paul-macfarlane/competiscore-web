@@ -917,9 +917,11 @@ export async function getLeagueActivityPaginated(
     countHighScoreEntriesByLeagueId,
   } = await import("@/db/high-scores");
 
+  const fetchLimit = offset + limit;
+
   const [matches, matchCount, highScores, highScoreCount] = await Promise.all([
     dbGetMatchesWithGameTypeByLeagueId(leagueId, {
-      limit: limit * 2,
+      limit: fetchLimit,
       offset: 0,
       gameTypeId,
       excludeArchivedGameTypes: true,
@@ -929,7 +931,7 @@ export async function getLeagueActivityPaginated(
       excludeArchivedGameTypes: true,
     }),
     getHighScoreEntriesWithDetailsByLeagueId(leagueId, {
-      limit: limit * 2,
+      limit: fetchLimit,
       offset: 0,
       gameTypeId,
       excludeArchivedGameTypes: true,

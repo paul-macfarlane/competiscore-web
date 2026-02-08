@@ -3,6 +3,8 @@ import { withTransaction } from "@/db/index";
 import { getLeagueMember } from "@/db/league-members";
 import {
   MatchWithParticipants,
+  countPendingChallengesForUser as dbCountPendingChallenges,
+  countSentChallengesByUser as dbCountSentChallenges,
   createMatch as dbCreateMatch,
   createMatchParticipants as dbCreateMatchParticipants,
   getMatchById as dbGetMatchById,
@@ -31,7 +33,13 @@ import {
   recordChallengeH2HWinLossResultSchema,
 } from "@/validators/matches";
 
-import { ServiceResult, formatZodErrors, isSuspended } from "./shared";
+import { DEFAULT_ITEMS_PER_PAGE } from "./constants";
+import {
+  PaginatedResult,
+  ServiceResult,
+  formatZodErrors,
+  isSuspended,
+} from "./shared";
 
 export async function createChallenge(
   userId: string,
@@ -557,6 +565,76 @@ export async function getSentChallenges(
   }
 
   return { data: challengesWithParticipants };
+}
+
+export type ChallengeWithDetails = MatchWithParticipants & {
+  gameType: { id: string; name: string; category: string };
+};
+
+async function hydrateChallenges(
+  challenges: Match[],
+): Promise<ChallengeWithDetails[]> {
+  const result: ChallengeWithDetails[] = [];
+  for (const challenge of challenges) {
+    const participants = await dbGetMatchParticipants(challenge.id);
+    const gameType = await dbGetGameTypeById(challenge.gameTypeId);
+    if (gameType && !gameType.isArchived) {
+      result.push({
+        ...challenge,
+        participants,
+        gameType: {
+          id: gameType.id,
+          name: gameType.name,
+          category: gameType.category,
+        },
+      });
+    }
+  }
+  return result;
+}
+
+export async function getPendingChallengesPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<ChallengeWithDetails>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [challenges, total] = await Promise.all([
+    dbGetPendingChallengesForUser(userId, leagueId, { limit, offset }),
+    dbCountPendingChallenges(userId, leagueId),
+  ]);
+
+  const items = await hydrateChallenges(challenges);
+  return { data: { items, total, limit, offset } };
+}
+
+export async function getSentChallengesPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<ChallengeWithDetails>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [challenges, total] = await Promise.all([
+    dbGetSentChallengesByUser(userId, leagueId, { limit, offset }),
+    dbCountSentChallenges(userId, leagueId),
+  ]);
+
+  const items = await hydrateChallenges(challenges);
+  return { data: { items, total, limit, offset } };
 }
 
 export async function getChallenge(

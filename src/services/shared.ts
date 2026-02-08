@@ -8,6 +8,13 @@ export type ServiceResult<T> = {
   fieldErrors?: FieldErrors;
 };
 
+export type PaginatedResult<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export function formatZodErrors(zodError: ZodError): FieldErrors {
   const fieldErrors: FieldErrors = {};
   for (const issue of zodError.issues) {

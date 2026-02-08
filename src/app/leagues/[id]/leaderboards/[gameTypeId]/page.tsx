@@ -1,4 +1,5 @@
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
+import { PaginationNav } from "@/components/pagination-nav";
 import {
   ParticipantData,
   ParticipantDisplay,
@@ -6,15 +7,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/server/auth";
 import { ELO_CONSTANTS, GameCategory, TimeRange } from "@/lib/shared/constants";
@@ -292,102 +284,14 @@ async function HighScoreLeaderboardView({
         </CardContent>
       </Card>
 
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-muted-foreground">
-          Showing {Math.min((page - 1) * HIGH_SCORE_PER_PAGE + 1, total)}-
-          {Math.min(page * HIGH_SCORE_PER_PAGE, total)} of {total} entries
-        </p>
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href={
-                  page > 1
-                    ? `${basePath}?timeRange=${timeRange}&page=${page - 1}`
-                    : "#"
-                }
-                aria-disabled={page <= 1}
-                className={cn(page <= 1 && "pointer-events-none opacity-50")}
-              />
-            </PaginationItem>
-
-            {page > 2 && (
-              <PaginationItem>
-                <PaginationLink
-                  href={`${basePath}?timeRange=${timeRange}&page=1`}
-                >
-                  1
-                </PaginationLink>
-              </PaginationItem>
-            )}
-
-            {page > 3 && (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            )}
-
-            {page > 1 && (
-              <PaginationItem>
-                <PaginationLink
-                  href={`${basePath}?timeRange=${timeRange}&page=${page - 1}`}
-                >
-                  {page - 1}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-
-            <PaginationItem>
-              <PaginationLink
-                href={`${basePath}?timeRange=${timeRange}&page=${page}`}
-                isActive
-              >
-                {page}
-              </PaginationLink>
-            </PaginationItem>
-
-            {page < totalPages && (
-              <PaginationItem>
-                <PaginationLink
-                  href={`${basePath}?timeRange=${timeRange}&page=${page + 1}`}
-                >
-                  {page + 1}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-
-            {page < totalPages - 2 && (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            )}
-
-            {page < totalPages - 1 && (
-              <PaginationItem>
-                <PaginationLink
-                  href={`${basePath}?timeRange=${timeRange}&page=${totalPages}`}
-                >
-                  {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-
-            <PaginationItem>
-              <PaginationNext
-                href={
-                  page < totalPages
-                    ? `${basePath}?timeRange=${timeRange}&page=${page + 1}`
-                    : "#"
-                }
-                aria-disabled={page >= totalPages}
-                className={cn(
-                  page >= totalPages && "pointer-events-none opacity-50",
-                )}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
+      <PaginationNav
+        currentPage={page}
+        totalPages={totalPages}
+        total={total}
+        offset={offset}
+        limit={HIGH_SCORE_PER_PAGE}
+        buildHref={(p) => `${basePath}?timeRange=${timeRange}&page=${p}`}
+      />
     </div>
   );
 }
@@ -581,61 +485,15 @@ async function EloStandingsView({
         </CardContent>
       </Card>
 
-      {standings.length > 0 && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-muted-foreground">Page {page}</p>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={page > 1 ? `${basePath}?page=${page - 1}` : "#"}
-                  aria-disabled={page <= 1}
-                  className={cn(page <= 1 && "pointer-events-none opacity-50")}
-                />
-              </PaginationItem>
-
-              {page > 2 && (
-                <PaginationItem>
-                  <PaginationLink href={`${basePath}?page=1`}>1</PaginationLink>
-                </PaginationItem>
-              )}
-
-              {page > 3 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {page > 1 && (
-                <PaginationItem>
-                  <PaginationLink href={`${basePath}?page=${page - 1}`}>
-                    {page - 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationLink href={`${basePath}?page=${page}`} isActive>
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-
-              {standings.length === ELO_PER_PAGE && (
-                <>
-                  <PaginationItem>
-                    <PaginationLink href={`${basePath}?page=${page + 1}`}>
-                      {page + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-
-                  <PaginationItem>
-                    <PaginationNext href={`${basePath}?page=${page + 1}`} />
-                  </PaginationItem>
-                </>
-              )}
-            </PaginationContent>
-          </Pagination>
-        </div>
+      {(standings.length === ELO_PER_PAGE || page > 1) && (
+        <PaginationNav
+          currentPage={page}
+          totalPages={standings.length === ELO_PER_PAGE ? page + 1 : page}
+          total={offset + standings.length}
+          offset={offset}
+          limit={ELO_PER_PAGE}
+          buildHref={(p) => `${basePath}?page=${p}`}
+        />
       )}
     </div>
   );

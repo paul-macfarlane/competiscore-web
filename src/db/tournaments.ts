@@ -1,4 +1,5 @@
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { TournamentStatus } from "@/lib/shared/constants";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
 import {
@@ -97,6 +98,11 @@ export async function getTournamentWithDetails(
 
 export async function getTournamentsByLeagueId(
   leagueId: string,
+  options?: {
+    statuses?: TournamentStatus[];
+    limit?: number;
+    offset?: number;
+  },
   dbOrTx: DBOrTx = db,
 ): Promise<TournamentWithDetails[]> {
   const participantCountSq = dbOrTx
@@ -108,7 +114,12 @@ export async function getTournamentsByLeagueId(
     .groupBy(tournamentParticipant.tournamentId)
     .as("participant_count");
 
-  const result = await dbOrTx
+  const conditions = [eq(tournament.leagueId, leagueId)];
+  if (options?.statuses && options.statuses.length > 0) {
+    conditions.push(inArray(tournament.status, options.statuses));
+  }
+
+  let query = dbOrTx
     .select({
       ...tournamentColumns,
       gameType: {
@@ -132,10 +143,35 @@ export async function getTournamentsByLeagueId(
       participantCountSq,
       eq(tournament.id, participantCountSq.tournamentId),
     )
-    .where(eq(tournament.leagueId, leagueId))
-    .orderBy(tournament.createdAt);
+    .where(and(...conditions))
+    .orderBy(desc(tournament.createdAt))
+    .$dynamic();
 
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  const result = await query;
   return result as TournamentWithDetails[];
+}
+
+export async function countTournamentsByLeagueIdAndStatus(
+  leagueId: string,
+  statuses: TournamentStatus[],
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const conditions = [eq(tournament.leagueId, leagueId)];
+  if (statuses.length > 0) {
+    conditions.push(inArray(tournament.status, statuses));
+  }
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(tournament)
+    .where(and(...conditions));
+  return result[0].count;
 }
 
 export async function updateTournament(
@@ -488,6 +524,7 @@ export type TournamentMatchInfo = {
   matchId: string;
   tournamentId: string;
   tournamentName: string;
+  tournamentLogo: string | null;
   leagueId: string;
   round: number;
   totalRounds: number | null;
@@ -504,6 +541,7 @@ export async function getTournamentInfoByMatchIds(
       matchId: tournamentRoundMatch.matchId,
       tournamentId: tournament.id,
       tournamentName: tournament.name,
+      tournamentLogo: tournament.logo,
       leagueId: tournament.leagueId,
       round: tournamentRoundMatch.round,
       totalRounds: tournament.totalRounds,

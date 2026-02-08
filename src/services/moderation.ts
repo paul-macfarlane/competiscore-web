@@ -1,6 +1,7 @@
 import { withTransaction } from "@/db";
 import {
   LeagueMemberWithUser,
+  countSuspendedMembers as dbCountSuspendedMembers,
   getSuspendedMembers as dbGetSuspendedMembers,
   deleteLeagueMember,
   getLeagueMember,
@@ -13,12 +14,15 @@ import {
   createModerationAction,
   createStandaloneModerationAction,
   acknowledgeModerationAction as dbAcknowledgeModerationAction,
+  countWarningsByUser as dbCountWarningsByUser,
   getModerationHistoryByUser,
   getWarningsByUser,
 } from "@/db/moderation-actions";
 import {
   ReportWithOutcome,
   ReportWithUsers,
+  countPendingReportsByLeague as dbCountPendingReports,
+  countReportsByReporter as dbCountReportsByReporter,
   createReport as dbCreateReport,
   deleteReport as dbDeleteReport,
   getPendingReportCount as dbGetPendingReportCount,
@@ -42,7 +46,8 @@ import {
   updateReportSchema,
 } from "@/validators/moderation";
 
-import { ServiceResult, formatZodErrors } from "./shared";
+import { DEFAULT_ITEMS_PER_PAGE } from "./constants";
+import { PaginatedResult, ServiceResult, formatZodErrors } from "./shared";
 
 export async function createReport(
   reporterId: string,
@@ -122,6 +127,31 @@ export async function getPendingReports(
 
   const reports = await getPendingReportsByLeague(leagueId);
   return { data: reports };
+}
+
+export async function getPendingReportsPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<ReportWithUsers>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  if (!canPerformAction(membership.role, LeagueAction.VIEW_REPORTS)) {
+    return { error: "You don't have permission to view reports" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    getPendingReportsByLeague(leagueId, { limit, offset }),
+    dbCountPendingReports(leagueId),
+  ]);
+
+  return { data: { items, total, limit, offset } };
 }
 
 export async function getPendingReportCount(
@@ -343,6 +373,27 @@ export async function getOwnSubmittedReports(
   return { data: reports };
 }
 
+export async function getOwnSubmittedReportsPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<SubmittedReport>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    getReportsByReporter(userId, leagueId, { limit, offset }),
+    dbCountReportsByReporter(userId, leagueId),
+  ]);
+
+  return { data: { items, total, limit, offset } };
+}
+
 export async function getOwnReportCount(
   userId: string,
   leagueId: string,
@@ -357,6 +408,42 @@ export async function getOwnWarningCount(
 ): Promise<ServiceResult<number>> {
   const warnings = await getWarningsByUser(userId, leagueId);
   return { data: warnings.length };
+}
+
+export async function getOwnWarningsPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<
+  ServiceResult<
+    PaginatedResult<ModerationHistoryItem> & { suspendedUntil: Date | null }
+  >
+> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    getWarningsByUser(userId, leagueId, { limit, offset }),
+    dbCountWarningsByUser(userId, leagueId),
+  ]);
+
+  const suspendedUntil = membership.suspendedUntil;
+
+  return {
+    data: {
+      items,
+      total,
+      limit,
+      offset,
+      suspendedUntil:
+        suspendedUntil && suspendedUntil > new Date() ? suspendedUntil : null,
+    },
+  };
 }
 
 export async function acknowledgeModerationAction(
@@ -395,6 +482,31 @@ export async function getSuspendedMembers(
 
   const suspendedMembers = await dbGetSuspendedMembers(leagueId);
   return { data: suspendedMembers };
+}
+
+export async function getSuspendedMembersPaginated(
+  userId: string,
+  leagueId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<LeagueMemberWithUser>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  if (!canPerformAction(membership.role, LeagueAction.MODERATE_MEMBERS)) {
+    return { error: "You don't have permission to view suspended members" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    dbGetSuspendedMembers(leagueId, { limit, offset }),
+    dbCountSuspendedMembers(leagueId),
+  ]);
+
+  return { data: { items, total, limit, offset } };
 }
 
 export async function liftSuspension(

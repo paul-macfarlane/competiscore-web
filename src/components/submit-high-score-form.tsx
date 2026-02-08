@@ -133,10 +133,7 @@ export function SubmitHighScoreForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="achievedAt"
@@ -218,7 +215,7 @@ export function SubmitHighScoreForm({
           )}
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"

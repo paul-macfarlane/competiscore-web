@@ -13,37 +13,25 @@ import { usePathname, useRouter } from "next/navigation";
 
 interface LeagueNavigationProps {
   leagueId: string;
-  canManageGameTypes: boolean;
-  canEditSettings: boolean;
+  canManage: boolean;
 }
 
-const getTabs = (
-  leagueId: string,
-  canManageGameTypes: boolean,
-  canEditSettings: boolean,
-) => {
+const ACTIVITY_PREFIXES = ["/matches", "/challenges", "/tournaments"];
+const PEOPLE_PREFIXES = ["/members", "/teams", "/my-reports", "/my-warnings"];
+const MANAGE_PREFIXES = ["/game-types", "/moderation", "/settings"];
+
+const getTabs = (leagueId: string, canManage: boolean) => {
   const tabs = [
     { label: "Home", href: `/leagues/${leagueId}` },
-    { label: "Matches", href: `/leagues/${leagueId}/matches` },
-    { label: "Challenges", href: `/leagues/${leagueId}/challenges` },
+    { label: "Activity", href: `/leagues/${leagueId}/matches` },
     { label: "Leaderboards", href: `/leagues/${leagueId}/leaderboards` },
-    { label: "Tournaments", href: `/leagues/${leagueId}/tournaments` },
-    { label: "Members", href: `/leagues/${leagueId}/members` },
-    { label: "Teams", href: `/leagues/${leagueId}/teams` },
-    { label: "Moderation", href: `/leagues/${leagueId}/moderation` },
+    { label: "People", href: `/leagues/${leagueId}/members` },
   ];
 
-  if (canManageGameTypes) {
+  if (canManage) {
     tabs.push({
-      label: "Game Types",
+      label: "Manage",
       href: `/leagues/${leagueId}/game-types`,
-    });
-  }
-
-  if (canEditSettings) {
-    tabs.push({
-      label: "Settings",
-      href: `/leagues/${leagueId}/settings`,
     });
   }
 
@@ -52,18 +40,32 @@ const getTabs = (
 
 export function LeagueNavigation({
   leagueId,
-  canManageGameTypes,
-  canEditSettings,
+  canManage,
 }: LeagueNavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const tabs = getTabs(leagueId, canManageGameTypes, canEditSettings);
+  const tabs = getTabs(leagueId, canManage);
+
+  const basePath = `/leagues/${leagueId}`;
+  const suffix = pathname.slice(basePath.length);
 
   const isActive = (href: string) => {
-    if (href === `/leagues/${leagueId}`) {
-      return pathname === href;
+    if (href === basePath) {
+      return pathname === basePath;
     }
-    return pathname.startsWith(href);
+    if (href === `${basePath}/matches`) {
+      return ACTIVITY_PREFIXES.some((p) => suffix.startsWith(p));
+    }
+    if (href === `${basePath}/leaderboards`) {
+      return suffix.startsWith("/leaderboards");
+    }
+    if (href === `${basePath}/members`) {
+      return PEOPLE_PREFIXES.some((p) => suffix.startsWith(p));
+    }
+    if (href === `${basePath}/game-types`) {
+      return MANAGE_PREFIXES.some((p) => suffix.startsWith(p));
+    }
+    return false;
   };
 
   const activeTab = tabs.find((tab) => isActive(tab.href));

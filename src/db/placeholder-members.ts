@@ -46,9 +46,10 @@ export async function getPlaceholderMemberById(
 
 export async function getActivePlaceholderMembersByLeague(
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<PlaceholderMember[]> {
-  const results = await dbOrTx
+  let query = dbOrTx
     .select()
     .from(placeholderMember)
     .where(
@@ -57,9 +58,33 @@ export async function getActivePlaceholderMembersByLeague(
         isNull(placeholderMember.retiredAt),
       ),
     )
-    .orderBy(placeholderMember.createdAt);
+    .orderBy(placeholderMember.createdAt)
+    .$dynamic();
 
-  return results;
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  return await query;
+}
+
+export async function countActivePlaceholderMembersByLeague(
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(placeholderMember)
+    .where(
+      and(
+        eq(placeholderMember.leagueId, leagueId),
+        isNull(placeholderMember.retiredAt),
+      ),
+    );
+  return result[0].count;
 }
 
 export async function getUnlinkedPlaceholderMembersByLeague(

@@ -1,6 +1,6 @@
 "use client";
 
-import { createChallengeAction } from "@/app/leagues/[id]/challenges/actions";
+import { createChallengeAction } from "@/app/leagues/[id]/(activity)/challenges/actions";
 import { Button } from "@/components/ui/button";
 import { Form, FormLabel } from "@/components/ui/form";
 import { MatchParticipantType } from "@/lib/shared/constants";
@@ -90,10 +90,7 @@ export function CreateChallengeForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <FormLabel className="text-base">Challenger (You)</FormLabel>
@@ -111,7 +108,7 @@ export function CreateChallengeForm({
           </div>
           {challengerArray.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -158,7 +155,7 @@ export function CreateChallengeForm({
           </div>
           {challengedArray.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -192,7 +189,7 @@ export function CreateChallengeForm({
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"

@@ -84,9 +84,10 @@ export async function getReportWithUsersById(
 
 export async function getPendingReportsByLeague(
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<ReportWithUsers[]> {
-  const results = await dbOrTx
+  let query = dbOrTx
     .select({
       ...reportColumns,
       reporter: {
@@ -99,7 +100,17 @@ export async function getPendingReportsByLeague(
     .from(report)
     .innerJoin(user, eq(report.reporterId, user.id))
     .where(and(eq(report.leagueId, leagueId), eq(report.status, "pending")))
-    .orderBy(report.createdAt);
+    .orderBy(report.createdAt)
+    .$dynamic();
+
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  const results = await query;
 
   const reportsWithReportedUsers = await Promise.all(
     results.map(async (r) => {
@@ -122,6 +133,17 @@ export async function getPendingReportsByLeague(
   );
 
   return reportsWithReportedUsers;
+}
+
+export async function countPendingReportsByLeague(
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(report)
+    .where(and(eq(report.leagueId, leagueId), eq(report.status, "pending")));
+  return result[0].count;
 }
 
 export async function getReportsByReportedUser(
@@ -144,9 +166,10 @@ export async function getReportsByReportedUser(
 export async function getReportsByReporter(
   reporterId: string,
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<ReportWithOutcome[]> {
-  const results = await dbOrTx
+  let query = dbOrTx
     .select({
       ...reportColumns,
       reporter: {
@@ -163,7 +186,17 @@ export async function getReportsByReporter(
     .where(
       and(eq(report.reporterId, reporterId), eq(report.leagueId, leagueId)),
     )
-    .orderBy(report.createdAt);
+    .orderBy(report.createdAt)
+    .$dynamic();
+
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  const results = await query;
 
   const reportsWithReportedUsers = await Promise.all(
     results.map(async (r) => {
@@ -186,6 +219,20 @@ export async function getReportsByReporter(
   );
 
   return reportsWithReportedUsers;
+}
+
+export async function countReportsByReporter(
+  reporterId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(report)
+    .where(
+      and(eq(report.reporterId, reporterId), eq(report.leagueId, leagueId)),
+    );
+  return result[0].count;
 }
 
 export async function updateReportStatus(

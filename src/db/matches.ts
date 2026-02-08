@@ -1,5 +1,5 @@
 import { MatchStatus } from "@/lib/shared/constants";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { DBOrTx, db } from "./index";
 import {
@@ -278,6 +278,7 @@ export async function updateMatchParticipantResults(
 export async function getPendingChallengesForUser(
   userId: string,
   leagueId: string | null,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<Match[]> {
   const challengedMatchIds = dbOrTx
@@ -299,11 +300,49 @@ export async function getPendingChallengesForUser(
     conditions.push(eq(match.leagueId, leagueId));
   }
 
-  return await dbOrTx
+  let query = dbOrTx
     .select()
     .from(match)
     .where(and(...conditions))
-    .orderBy(desc(match.challengedAt));
+    .orderBy(desc(match.challengedAt))
+    .$dynamic();
+
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  return await query;
+}
+
+export async function countPendingChallengesForUser(
+  userId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const challengedMatchIds = dbOrTx
+    .select({ matchId: matchParticipant.matchId })
+    .from(matchParticipant)
+    .where(
+      and(
+        eq(matchParticipant.userId, userId),
+        eq(matchParticipant.isChallenged, true),
+      ),
+    );
+
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(match)
+    .where(
+      and(
+        eq(match.status, MatchStatus.PENDING),
+        eq(match.leagueId, leagueId),
+        inArray(match.id, challengedMatchIds),
+      ),
+    );
+  return result[0].count;
 }
 
 export type PendingChallengeWithDetails = Match & {
@@ -366,9 +405,10 @@ export async function getPendingChallengesWithDetailsForUser(
 export async function getSentChallengesByUser(
   userId: string,
   leagueId: string,
+  options?: { limit?: number; offset?: number },
   dbOrTx: DBOrTx = db,
 ): Promise<Match[]> {
-  return await dbOrTx
+  let query = dbOrTx
     .select()
     .from(match)
     .where(
@@ -378,7 +418,35 @@ export async function getSentChallengesByUser(
         inArray(match.status, ["pending", "accepted"]),
       ),
     )
-    .orderBy(desc(match.challengedAt));
+    .orderBy(desc(match.challengedAt))
+    .$dynamic();
+
+  if (options?.limit !== undefined) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset !== undefined) {
+    query = query.offset(options.offset);
+  }
+
+  return await query;
+}
+
+export async function countSentChallengesByUser(
+  userId: string,
+  leagueId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(match)
+    .where(
+      and(
+        eq(match.leagueId, leagueId),
+        eq(match.challengerId, userId),
+        inArray(match.status, ["pending", "accepted"]),
+      ),
+    );
+  return result[0].count;
 }
 
 export async function getMatchCountByGameTypeId(

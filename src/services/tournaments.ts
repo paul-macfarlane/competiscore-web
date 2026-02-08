@@ -23,6 +23,7 @@ import {
   checkTournamentNameExists as dbCheckTournamentNameExists,
   countTournamentParticipants as dbCountParticipants,
   countTournamentsByLeagueId as dbCountTournaments,
+  countTournamentsByLeagueIdAndStatus as dbCountTournamentsByStatus,
   createTournamentRoundMatches as dbCreateRoundMatches,
   createTournament as dbCreateTournament,
   deleteTournament as dbDeleteTournament,
@@ -64,12 +65,18 @@ import {
 } from "@/validators/tournaments";
 
 import {
+  DEFAULT_ITEMS_PER_PAGE,
   MAX_TOURNAMENTS_PER_LEAGUE,
   MAX_TOURNAMENT_PARTICIPANTS,
   MIN_TOURNAMENT_PARTICIPANTS,
 } from "./constants";
 import { updateEloRatingsForMatch } from "./elo-ratings";
-import { ServiceResult, formatZodErrors, isSuspended } from "./shared";
+import {
+  PaginatedResult,
+  ServiceResult,
+  formatZodErrors,
+  isSuspended,
+} from "./shared";
 
 export async function createTournament(
   userId: string,
@@ -193,14 +200,12 @@ export async function updateTournament(
 
   const isDraft = tournamentData.status === TournamentStatus.DRAFT;
   const hasDraftOnlyFields =
-    data.seedingType !== undefined ||
-    data.logo !== undefined ||
-    data.startDate !== undefined;
+    data.seedingType !== undefined || data.startDate !== undefined;
 
   if (!isDraft && hasDraftOnlyFields) {
     return {
       error:
-        "Only name and description can be edited after the tournament has started",
+        "Only name, description, and icon can be edited after the tournament has started",
     };
   }
 
@@ -221,8 +226,8 @@ export async function updateTournament(
   const updated = await dbUpdateTournament(tournamentId, {
     name: data.name,
     description: data.description,
+    logo: data.logo,
     ...(isDraft && {
-      logo: data.logo,
       seedingType: data.seedingType as Tournament["seedingType"],
       startDate: data.startDate,
     }),
@@ -1069,6 +1074,35 @@ export async function getLeagueTournaments(
 
   const tournaments = await dbGetTournamentsByLeagueId(leagueId);
   return { data: tournaments };
+}
+
+export async function getLeagueTournamentsPaginated(
+  userId: string,
+  leagueId: string,
+  options: {
+    statuses: TournamentStatus[];
+    limit?: number;
+    offset?: number;
+  },
+): Promise<ServiceResult<PaginatedResult<TournamentWithDetails>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const limit = options.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    dbGetTournamentsByLeagueId(leagueId, {
+      statuses: options.statuses,
+      limit,
+      offset,
+    }),
+    dbCountTournamentsByStatus(leagueId, options.statuses),
+  ]);
+
+  return { data: { items, total, limit, offset } };
 }
 
 export async function deleteTournament(

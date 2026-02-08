@@ -9,6 +9,7 @@ import { type DBOrTx, db, withTransaction } from "@/db/index";
 import { cancelPendingInvitationsForPlaceholder } from "@/db/invitations";
 import { getLeagueMember } from "@/db/league-members";
 import {
+  countActivePlaceholderMembersByLeague,
   createPlaceholderMember as dbCreatePlaceholderMember,
   deletePlaceholderMember as dbDeletePlaceholderMember,
   restorePlaceholderMember as dbRestorePlaceholderMember,
@@ -31,7 +32,8 @@ import {
 import { placeholderIdSchema } from "@/validators/placeholders";
 import { z } from "zod";
 
-import { ServiceResult, formatZodErrors } from "./shared";
+import { DEFAULT_ITEMS_PER_PAGE } from "./constants";
+import { PaginatedResult, ServiceResult, formatZodErrors } from "./shared";
 
 const createPlaceholderInputSchema = createPlaceholderSchema.extend({
   leagueId: z.string(),
@@ -83,6 +85,31 @@ export async function getPlaceholders(
 
   const placeholders = await getActivePlaceholderMembersByLeague(leagueId);
   return { data: placeholders };
+}
+
+export async function getPlaceholdersPaginated(
+  leagueId: string,
+  userId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<ServiceResult<PaginatedResult<PlaceholderMember>>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  if (!canPerformAction(membership.role, LeagueAction.VIEW_MEMBERS)) {
+    return { error: "You don't have permission to view members" };
+  }
+
+  const limit = options?.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const offset = options?.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    getActivePlaceholderMembersByLeague(leagueId, { limit, offset }),
+    countActivePlaceholderMembersByLeague(leagueId),
+  ]);
+
+  return { data: { items, total, limit, offset } };
 }
 
 const updatePlaceholderInputSchema = z.object({

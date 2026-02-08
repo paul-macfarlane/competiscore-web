@@ -207,11 +207,7 @@ async function LeagueDashboardContent({
       </div>
 
       {canPlay && !isSuspended && activeGameTypes.length > 0 && (
-        <QuickActions
-          leagueId={leagueId}
-          gameTypes={activeGameTypes}
-          currentUserId={userId}
-        />
+        <QuickActions leagueId={leagueId} gameTypes={activeGameTypes} />
       )}
 
       <Suspense

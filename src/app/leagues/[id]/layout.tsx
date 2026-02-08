@@ -25,21 +25,14 @@ export default async function LeagueLayout({
   }
 
   const result = await getLeagueWithRole(id, session.user.id);
-  const canManageGameTypes =
+  const canManage =
     result.data != null &&
     canPerformAction(result.data.role, LeagueAction.CREATE_GAME_TYPES);
-  const canEditSettings =
-    result.data != null &&
-    canPerformAction(result.data.role, LeagueAction.EDIT_SETTINGS);
 
   return (
     <>
       <div className="mx-auto max-w-4xl">
-        <LeagueNavigation
-          leagueId={id}
-          canManageGameTypes={canManageGameTypes}
-          canEditSettings={canEditSettings}
-        />
+        <LeagueNavigation leagueId={id} canManage={canManage} />
       </div>
       <div className="mx-auto max-w-4xl pt-4">{children}</div>
     </>

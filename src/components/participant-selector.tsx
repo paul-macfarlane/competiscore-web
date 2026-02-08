@@ -58,14 +58,18 @@ export function ParticipantSelector({
           className="w-full justify-between"
         >
           {selectedOption ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <ParticipantAvatar option={selectedOption} size="sm" />
-              <span className="truncate">{selectedOption.name}</span>
-              {selectedOption.username && (
-                <span className="text-muted-foreground text-xs">
-                  @{selectedOption.username}
+              <div className="flex flex-col items-start min-w-0">
+                <span className="truncate max-w-full text-sm leading-tight">
+                  {selectedOption.name}
                 </span>
-              )}
+                {selectedOption.username && (
+                  <span className="text-muted-foreground text-xs truncate max-w-full leading-tight">
+                    @{selectedOption.username}
+                  </span>
+                )}
+              </div>
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -73,10 +77,13 @@ export function ParticipantSelector({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent
+        className="w-[min(300px,calc(100vw-3rem))] max-h-[min(300px,var(--radix-popover-content-available-height,300px))] overflow-y-auto p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Search..." />
-          <CommandList>
+          <CommandList className="max-h-none">
             <CommandEmpty>No participant found.</CommandEmpty>
             {users.length > 0 && (
               <CommandGroup heading="Members">

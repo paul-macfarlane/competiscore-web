@@ -20,6 +20,7 @@ import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronRight, Trophy } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 type MatchParticipant = {
@@ -36,6 +37,7 @@ type MatchParticipant = {
 type MatchCardTournament = {
   tournamentId: string;
   tournamentName: string;
+  tournamentLogo?: string | null;
   leagueId: string;
   round: number;
   totalRounds: number | null;
@@ -107,7 +109,18 @@ export function MatchCard({
               className="shrink-0"
             >
               <Badge variant="outline" className="gap-1 hover:bg-accent">
-                <Trophy className="h-3 w-3" />
+                {tournament.tournamentLogo ? (
+                  <div className="relative h-3 w-3 shrink-0">
+                    <Image
+                      src={tournament.tournamentLogo}
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <Trophy className="h-3 w-3" />
+                )}
                 {tournament.tournamentName}
               </Badge>
             </Link>

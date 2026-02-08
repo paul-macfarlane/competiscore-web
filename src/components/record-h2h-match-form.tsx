@@ -226,7 +226,7 @@ function WinLossForm({
           </div>
           {side1Array.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -286,7 +286,7 @@ function WinLossForm({
           </div>
           {side2Array.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -384,7 +384,7 @@ function WinLossForm({
           )}
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"
@@ -511,7 +511,7 @@ function ScoreBasedForm({
           </div>
           {side1Array.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -592,7 +592,7 @@ function ScoreBasedForm({
           </div>
           {side2Array.fields.map((field, index) => (
             <div key={field.id} className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -660,7 +660,7 @@ function ScoreBasedForm({
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"
@@ -821,7 +821,7 @@ function TournamentWinLossForm({
           )}
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"
@@ -994,7 +994,7 @@ function TournamentScoreForm({
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"

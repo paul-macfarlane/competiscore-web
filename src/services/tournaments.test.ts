@@ -961,7 +961,7 @@ describe("updateTournament", () => {
       { seedingType: "manual" },
     );
     expect(result.error).toBe(
-      "Only name and description can be edited after the tournament has started",
+      "Only name, description, and icon can be edited after the tournament has started",
     );
   });
 

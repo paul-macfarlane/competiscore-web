@@ -61,7 +61,7 @@ export function LeagueCard({
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </span>
               </div>
-              <Button asChild size="sm" variant="ghost">
+              <Button asChild size="sm">
                 <Link href={`/leagues/${id}`}>
                   View
                   <ChevronRight className="ml-1 h-4 w-4" />

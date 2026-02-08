@@ -173,10 +173,7 @@ function RankedForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="playedAt"
@@ -222,8 +219,8 @@ function RankedForm({
             Order from 1st place at the top to last place at the bottom
           </p>
           {participantsArray.fields.map((field, index) => (
-            <div key={field.id} className="flex items-center gap-2">
-              <div className="flex flex-col">
+            <div key={field.id} className="flex flex-wrap items-center gap-2">
+              <div className="flex shrink-0">
                 <Button
                   type="button"
                   variant="ghost"
@@ -245,10 +242,27 @@ function RankedForm({
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium shrink-0">
                 {index + 1}
               </div>
-              <div className="flex-1">
+              {participantsArray.fields.length > config.minPlayers && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 ml-auto sm:ml-0 sm:order-last"
+                  onClick={() => {
+                    participantsArray.remove(index);
+                    const participants = form.getValues("participants");
+                    participants.forEach((p, i) => {
+                      form.setValue(`participants.${i}.rank`, i + 1);
+                    });
+                  }}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              )}
+              <div className="min-w-0 w-full sm:w-auto sm:flex-1">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -278,22 +292,6 @@ function RankedForm({
                   }}
                 />
               </div>
-              {participantsArray.fields.length > config.minPlayers && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    participantsArray.remove(index);
-                    const participants = form.getValues("participants");
-                    participants.forEach((p, i) => {
-                      form.setValue(`participants.${i}.rank`, i + 1);
-                    });
-                  }}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              )}
             </div>
           ))}
           {form.formState.errors.participants?.message && (
@@ -303,7 +301,7 @@ function RankedForm({
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"
@@ -391,10 +389,7 @@ function ScoreBasedForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 rounded-lg border p-4 md:p-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="playedAt"
@@ -436,8 +431,8 @@ function ScoreBasedForm({
             )}
           </div>
           {participantsArray.fields.map((field, index) => (
-            <div key={field.id} className="flex items-center gap-2">
-              <div className="flex-1">
+            <div key={field.id} className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 w-full sm:w-auto sm:flex-1">
                 <ParticipantSelector
                   options={participantOptions}
                   value={getParticipantValue(
@@ -473,7 +468,7 @@ function ScoreBasedForm({
                 control={form.control}
                 name={`participants.${index}.score`}
                 render={({ field: scoreField }) => (
-                  <FormItem className="w-24">
+                  <FormItem className="w-24 shrink-0">
                     <FormControl>
                       <Input
                         type="number"
@@ -496,6 +491,7 @@ function ScoreBasedForm({
                   type="button"
                   variant="ghost"
                   size="icon"
+                  className="shrink-0"
                   onClick={() => participantsArray.remove(index)}
                 >
                   <Minus className="h-4 w-4" />
@@ -510,7 +506,7 @@ function ScoreBasedForm({
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"

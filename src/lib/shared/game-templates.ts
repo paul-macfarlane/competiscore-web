@@ -107,7 +107,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Beer Pong",
     description: "Party game classic",
     category: GameCategory.HEAD_TO_HEAD,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/trophy.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/ping-pong.svg`,
     config: {
       scoringType: "win_loss",
       drawsAllowed: false,
@@ -119,7 +119,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Darts",
     description: "Traditional dart games",
     category: GameCategory.HEAD_TO_HEAD,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/target.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/darts.svg`,
     config: {
       scoringType: "score_based",
       scoreDescription: "Points",
@@ -132,7 +132,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Mario Kart",
     description: "Racing game competition",
     category: GameCategory.FREE_FOR_ALL,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/controller.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/racing.svg`,
     config: {
       scoringType: ScoringType.RANKED_FINISH,
       scoreOrder: ScoreOrder.HIGHEST_WINS,
@@ -156,7 +156,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Bowling",
     description: "Ten-pin bowling",
     category: GameCategory.FREE_FOR_ALL,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/trophy.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/bowling.svg`,
     config: {
       scoringType: ScoringType.SCORE_BASED,
       scoreOrder: ScoreOrder.HIGHEST_WINS,
@@ -168,7 +168,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Golf",
     description: "18-hole golf rounds",
     category: GameCategory.FREE_FOR_ALL,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/trophy.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/golf.svg`,
     config: {
       scoringType: ScoringType.SCORE_BASED,
       scoreOrder: ScoreOrder.LOWEST_WINS,
@@ -180,7 +180,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Pac-Man",
     description: "Classic arcade high score",
     category: GameCategory.HIGH_SCORE,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/pacman.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/video-game.svg`,
     config: {
       scoreOrder: ScoreOrder.HIGHEST_WINS,
       scoreDescription: "Points",
@@ -191,7 +191,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Arcade Game",
     description: "Generic arcade game high scores",
     category: GameCategory.HIGH_SCORE,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/joystick.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/video-game.svg`,
     config: {
       scoreOrder: ScoreOrder.HIGHEST_WINS,
       scoreDescription: "Points",
@@ -202,7 +202,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Fastest Mile",
     description: "Best mile run time",
     category: GameCategory.HIGH_SCORE,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/trophy.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/racing.svg`,
     config: {
       scoreOrder: ScoreOrder.LOWEST_WINS,
       scoreDescription: "Minutes",
@@ -213,7 +213,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     name: "Push-ups",
     description: "Most push-ups in 1 minute",
     category: GameCategory.HIGH_SCORE,
-    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/medal.svg`,
+    logo: `${ICON_PATHS.GAME_TYPE_ICONS}/boxing.svg`,
     config: {
       scoreOrder: "highest_wins",
       scoreDescription: "Reps",
