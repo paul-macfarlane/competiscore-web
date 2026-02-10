@@ -13,6 +13,11 @@ import { ServiceResult } from "@/services/shared";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
+function revalidateMatchPaths(match: Match) {
+  revalidatePath(`/leagues/${match.leagueId}/matches`);
+  revalidatePath(`/leagues/${match.leagueId}/game-types/${match.gameTypeId}`);
+}
+
 export async function recordH2HWinLossMatchAction(
   input: unknown,
 ): Promise<ServiceResult<Match>> {
@@ -25,10 +30,7 @@ export async function recordH2HWinLossMatchAction(
 
   const result = await recordH2HWinLossMatch(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${result.data.leagueId}/matches`);
-    revalidatePath(
-      `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}`,
-    );
+    revalidateMatchPaths(result.data);
   }
 
   return result;
@@ -46,10 +48,7 @@ export async function recordH2HScoreMatchAction(
 
   const result = await recordH2HScoreMatch(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${result.data.leagueId}/matches`);
-    revalidatePath(
-      `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}`,
-    );
+    revalidateMatchPaths(result.data);
   }
 
   return result;
@@ -67,10 +66,7 @@ export async function recordFFARankedMatchAction(
 
   const result = await recordFFARankedMatch(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${result.data.leagueId}/matches`);
-    revalidatePath(
-      `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}`,
-    );
+    revalidateMatchPaths(result.data);
   }
 
   return result;
@@ -88,10 +84,7 @@ export async function recordFFAScoreMatchAction(
 
   const result = await recordFFAScoreMatch(session.user.id, input);
   if (result.data) {
-    revalidatePath(`/leagues/${result.data.leagueId}/matches`);
-    revalidatePath(
-      `/leagues/${result.data.leagueId}/game-types/${result.data.gameTypeId}`,
-    );
+    revalidateMatchPaths(result.data);
   }
 
   return result;

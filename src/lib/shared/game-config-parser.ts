@@ -25,6 +25,7 @@ export function parseH2HConfig(configString: string): H2HConfig {
     return {
       scoringType: "win_loss" as const,
       drawsAllowed: false,
+      participantType: "individual" as const,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     };
@@ -33,6 +34,7 @@ export function parseH2HConfig(configString: string): H2HConfig {
     return {
       scoringType: "win_loss" as const,
       drawsAllowed: false,
+      participantType: "individual" as const,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     };
@@ -54,6 +56,7 @@ export function parseFFAConfig(configString: string): FFAConfig {
     return {
       scoringType: "ranked_finish" as const,
       scoreOrder: "highest_wins" as const,
+      participantType: "individual" as const,
       minPlayers: 2,
       maxPlayers: 10,
     };
@@ -62,6 +65,7 @@ export function parseFFAConfig(configString: string): FFAConfig {
     return {
       scoringType: "ranked_finish" as const,
       scoreOrder: "highest_wins" as const,
+      participantType: "individual" as const,
       minPlayers: 2,
       maxPlayers: 10,
     };
@@ -93,6 +97,17 @@ export function parseHighScoreConfig(configString: string): HighScoreConfig {
       participantType: "individual" as const,
     };
   }
+}
+
+export function getScoreDescription(
+  configString: string,
+  category: string,
+): string | undefined {
+  const config = parseGameConfig(configString, category as GameCategory);
+  if ("scoreDescription" in config) {
+    return config.scoreDescription;
+  }
+  return undefined;
 }
 
 export function parseGameConfig(

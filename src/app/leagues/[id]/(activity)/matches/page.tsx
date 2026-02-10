@@ -1,28 +1,16 @@
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { MatchCard } from "@/components/match-card";
 import { PaginationNav } from "@/components/pagination-nav";
-import {
-  ParticipantData,
-  ParticipantDisplay,
-} from "@/components/participant-display";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/server/auth";
+import { GameCategory } from "@/lib/shared/constants";
+import { getScoreDescription } from "@/lib/shared/game-config-parser";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueGameTypes } from "@/services/game-types";
 import { getLeagueWithRole } from "@/services/leagues";
-import {
-  HighScoreActivityItem,
-  getLeagueActivityPaginated,
-} from "@/services/matches";
-import { formatDistanceToNow } from "date-fns";
-import { ChevronRight, Plus, Trophy } from "lucide-react";
+import { getLeagueActivityPaginated } from "@/services/matches";
+import { Plus } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -57,6 +45,7 @@ export default async function LeagueMatchesPage({
       limit: ITEMS_PER_PAGE,
       offset,
       gameTypeId: gameTypeId || undefined,
+      activityType: "matches",
     }),
     getLeagueGameTypes(session.user.id, leagueId),
     getLeagueWithRole(leagueId, session.user.id),
@@ -66,12 +55,14 @@ export default async function LeagueMatchesPage({
     notFound();
   }
 
-  const { items, matchCount, highScoreCount } = activityResult.data!;
+  const { items, matchCount } = activityResult.data!;
   const gameTypes = gameTypesResult.data || [];
-  const total = matchCount + highScoreCount;
+  const total = matchCount;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  const activeGameTypes = gameTypes.filter((gt) => !gt.isArchived);
+  const activeGameTypes = gameTypes.filter(
+    (gt) => !gt.isArchived && gt.category !== GameCategory.HIGH_SCORE,
+  );
   const canPlay =
     leagueResult.data &&
     canPerformAction(leagueResult.data.role, LeagueAction.PLAY_GAMES);
@@ -91,9 +82,9 @@ export default async function LeagueMatchesPage({
       />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Activity History</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Match History</h1>
           <p className="text-muted-foreground mt-1">
-            All matches and scores recorded in this league
+            All matches recorded in this league
           </p>
         </div>
         {showRecordButton && (
@@ -125,17 +116,15 @@ export default async function LeagueMatchesPage({
               </>
             ) : gameTypeId ? (
               <>
-                <p>No activity found.</p>
+                <p>No matches found.</p>
                 <p className="text-sm mt-2">
                   Try clearing the filter or selecting a different game type.
                 </p>
               </>
             ) : (
               <>
-                <p>No activity found.</p>
-                <p className="text-sm mt-2">
-                  Record a match or score to get started.
-                </p>
+                <p>No matches found.</p>
+                <p className="text-sm mt-2">Record a match to get started.</p>
               </>
             )}
           </CardContent>
@@ -150,19 +139,21 @@ export default async function LeagueMatchesPage({
                   matchId={item.id}
                   leagueId={leagueId}
                   gameTypeName={item.gameType?.name}
+                  scoreLabel={
+                    item.gameType?.config
+                      ? getScoreDescription(
+                          item.gameType.config,
+                          item.gameType.category,
+                        )
+                      : undefined
+                  }
                   playedAt={item.playedAt}
                   status={item.status}
                   participants={item.participants}
                   tournament={item.tournament}
                   variant="full"
                 />
-              ) : (
-                <HighScoreCard
-                  key={item.id}
-                  highScore={item}
-                  leagueId={leagueId}
-                />
-              ),
+              ) : null,
             )}
           </div>
 
@@ -179,60 +170,5 @@ export default async function LeagueMatchesPage({
         </>
       )}
     </div>
-  );
-}
-
-type HighScoreCardProps = {
-  highScore: HighScoreActivityItem;
-  leagueId: string;
-};
-
-function HighScoreCard({ highScore, leagueId }: HighScoreCardProps) {
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3 space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="font-semibold text-base truncate">
-              {highScore.gameType?.name || "High Score"}
-            </span>
-            <Badge variant="secondary" className="shrink-0">
-              <Trophy className="h-3 w-3 mr-1" />
-              Score
-            </Badge>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(highScore.achievedAt), {
-            addSuffix: true,
-          })}
-        </p>
-      </CardHeader>
-      <CardContent className="pb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <ParticipantDisplay
-              participant={highScore.participant as ParticipantData}
-              showAvatar
-              showUsername
-              size="md"
-            />
-          </div>
-          <span className="text-2xl font-bold tabular-nums shrink-0">
-            {highScore.score.toLocaleString()}
-          </span>
-        </div>
-      </CardContent>
-      <CardFooter className="pt-0 pb-4">
-        <Button asChild size="sm" className="w-full">
-          <Link
-            href={`/leagues/${leagueId}/leaderboards/${highScore.gameTypeId}`}
-          >
-            View Leaderboard
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
   );
 }

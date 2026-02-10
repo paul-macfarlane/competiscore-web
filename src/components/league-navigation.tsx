@@ -16,7 +16,12 @@ interface LeagueNavigationProps {
   canManage: boolean;
 }
 
-const ACTIVITY_PREFIXES = ["/matches", "/challenges", "/tournaments"];
+const ACTIVITY_PREFIXES = [
+  "/matches",
+  "/best-scores",
+  "/challenges",
+  "/tournaments",
+];
 const PEOPLE_PREFIXES = ["/members", "/teams", "/my-reports", "/my-warnings"];
 const MANAGE_PREFIXES = ["/game-types", "/moderation", "/settings"];
 

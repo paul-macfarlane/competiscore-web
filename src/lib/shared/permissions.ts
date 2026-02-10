@@ -1,4 +1,8 @@
-import { LeagueMemberRole, TeamMemberRole } from "./constants";
+import {
+  EventParticipantRole,
+  LeagueMemberRole,
+  TeamMemberRole,
+} from "./constants";
 
 export const LeagueAction = {
   VIEW_MEMBERS: "view_members",
@@ -6,7 +10,6 @@ export const LeagueAction = {
   RECORD_MATCHES_FOR_OTHERS: "record_matches_for_others",
   CREATE_GAME_TYPES: "create_game_types",
   CREATE_TOURNAMENTS: "create_tournaments",
-  CREATE_SEASONS: "create_seasons",
   INVITE_MEMBERS: "invite_members",
   CREATE_PLACEHOLDERS: "create_placeholders",
   REMOVE_MEMBERS: "remove_members",
@@ -38,7 +41,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.RECORD_MATCHES_FOR_OTHERS,
     LeagueAction.CREATE_GAME_TYPES,
     LeagueAction.CREATE_TOURNAMENTS,
-    LeagueAction.CREATE_SEASONS,
+
     LeagueAction.INVITE_MEMBERS,
     LeagueAction.CREATE_PLACEHOLDERS,
     LeagueAction.REMOVE_MEMBERS,
@@ -54,7 +57,7 @@ const LEAGUE_PERMISSIONS: Record<LeagueMemberRole, Set<LeagueAction>> = {
     LeagueAction.RECORD_MATCHES_FOR_OTHERS,
     LeagueAction.CREATE_GAME_TYPES,
     LeagueAction.CREATE_TOURNAMENTS,
-    LeagueAction.CREATE_SEASONS,
+
     LeagueAction.INVITE_MEMBERS,
     LeagueAction.CREATE_PLACEHOLDERS,
     LeagueAction.REMOVE_MEMBERS,
@@ -89,7 +92,6 @@ export const LeaguePage = {
   MEMBERS: "members",
   GAMES: "games",
   TOURNAMENTS: "tournaments",
-  SEASONS: "seasons",
   MODERATION: "moderation",
   TEAMS: "teams",
 } as const;
@@ -113,11 +115,6 @@ const PAGE_PERMISSIONS: Record<LeaguePage, Set<LeagueMemberRole>> = {
     LeagueMemberRole.EXECUTIVE,
   ]),
   [LeaguePage.TOURNAMENTS]: new Set([
-    LeagueMemberRole.MEMBER,
-    LeagueMemberRole.MANAGER,
-    LeagueMemberRole.EXECUTIVE,
-  ]),
-  [LeaguePage.SEASONS]: new Set([
     LeagueMemberRole.MEMBER,
     LeagueMemberRole.MANAGER,
     LeagueMemberRole.EXECUTIVE,
@@ -180,4 +177,53 @@ export function canPerformTeamAction(
   action: TeamAction,
 ): boolean {
   return TEAM_PERMISSIONS[role]?.has(action) ?? false;
+}
+
+// Event-level permissions
+export const EventAction = {
+  VIEW_EVENT: "view_event",
+  MANAGE_EVENT: "manage_event",
+  MANAGE_TEAMS: "manage_teams",
+  MANAGE_GAME_TYPES: "manage_game_types",
+  RECORD_MATCHES: "record_matches",
+  RECORD_MATCHES_FOR_OTHERS: "record_matches_for_others",
+  SUBMIT_SCORES: "submit_scores",
+  MANAGE_SESSIONS: "manage_sessions",
+  INVITE_PARTICIPANTS: "invite_participants",
+  MANAGE_PARTICIPANTS: "manage_participants",
+  CREATE_TOURNAMENTS: "create_tournaments",
+  PROMOTE_TO_ORGANIZER: "promote_to_organizer",
+  MANAGE_PLACEHOLDERS: "manage_placeholders",
+} as const;
+
+export type EventAction = (typeof EventAction)[keyof typeof EventAction];
+
+const EVENT_PERMISSIONS: Record<EventParticipantRole, Set<EventAction>> = {
+  [EventParticipantRole.PARTICIPANT]: new Set([
+    EventAction.VIEW_EVENT,
+    EventAction.RECORD_MATCHES,
+    EventAction.SUBMIT_SCORES,
+  ]),
+  [EventParticipantRole.ORGANIZER]: new Set([
+    EventAction.VIEW_EVENT,
+    EventAction.MANAGE_EVENT,
+    EventAction.MANAGE_TEAMS,
+    EventAction.MANAGE_GAME_TYPES,
+    EventAction.RECORD_MATCHES,
+    EventAction.RECORD_MATCHES_FOR_OTHERS,
+    EventAction.SUBMIT_SCORES,
+    EventAction.MANAGE_SESSIONS,
+    EventAction.INVITE_PARTICIPANTS,
+    EventAction.MANAGE_PARTICIPANTS,
+    EventAction.CREATE_TOURNAMENTS,
+    EventAction.PROMOTE_TO_ORGANIZER,
+    EventAction.MANAGE_PLACEHOLDERS,
+  ]),
+};
+
+export function canPerformEventAction(
+  role: EventParticipantRole,
+  action: EventAction,
+): boolean {
+  return EVENT_PERMISSIONS[role]?.has(action) ?? false;
 }

@@ -177,6 +177,7 @@ export function CreateTournamentForm({
                   options={TOURNAMENT_ICON_OPTIONS}
                   value={field.value}
                   onChange={field.onChange}
+                  onClear={() => field.onChange("")}
                   trigger={
                     <Button variant="outline" type="button" size="sm">
                       {field.value ? "Change Icon" : "Select Icon"}

@@ -463,7 +463,12 @@ export async function getMatchCountByGameTypeId(
 }
 
 export type MatchWithGameType = Match & {
-  gameType: { id: string; name: string; category: string } | null;
+  gameType: {
+    id: string;
+    name: string;
+    category: string;
+    config: string;
+  } | null;
 };
 
 export async function getMatchesWithGameTypeByLeagueId(
@@ -503,6 +508,7 @@ export async function getMatchesWithGameTypeByLeagueId(
         id: gameType.id,
         name: gameType.name,
         category: gameType.category,
+        config: gameType.config,
       },
     })
     .from(match)

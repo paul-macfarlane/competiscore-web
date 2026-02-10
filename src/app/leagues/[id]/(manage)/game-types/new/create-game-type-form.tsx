@@ -72,6 +72,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
       config: {
         scoringType: ScoringType.WIN_LOSS,
         drawsAllowed: false,
+        participantType: ParticipantType.INDIVIDUAL,
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
@@ -97,7 +98,14 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
           | typeof ScoringType.WIN_LOSS
           | typeof ScoringType.SCORE_BASED,
         scoreDescription: config.scoreDescription,
+        scoreOrder: config.scoreOrder as
+          | typeof ScoreOrder.HIGHEST_WINS
+          | typeof ScoreOrder.LOWEST_WINS
+          | undefined,
         drawsAllowed: config.drawsAllowed,
+        participantType: config.participantType as
+          | typeof ParticipantType.INDIVIDUAL
+          | typeof ParticipantType.TEAM,
         minPlayersPerSide: config.minPlayersPerSide,
         maxPlayersPerSide: config.maxPlayersPerSide,
         rules: config.rules,
@@ -111,6 +119,10 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
         scoreOrder: config.scoreOrder as
           | typeof ScoreOrder.HIGHEST_WINS
           | typeof ScoreOrder.LOWEST_WINS,
+        scoreDescription: config.scoreDescription,
+        participantType: config.participantType as
+          | typeof ParticipantType.INDIVIDUAL
+          | typeof ParticipantType.TEAM,
         minPlayers: config.minPlayers,
         maxPlayers: config.maxPlayers,
         rules: config.rules,
@@ -282,6 +294,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                   options={GAME_ICON_OPTIONS}
                   value={field.value}
                   onChange={field.onChange}
+                  onClear={() => field.onChange("")}
                   trigger={
                     <Button variant="outline" type="button" size="sm">
                       {field.value ? "Change Icon" : "Select Icon"}
@@ -309,6 +322,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                       form.setValue("config", {
                         scoringType: ScoringType.WIN_LOSS,
                         drawsAllowed: false,
+                        participantType: ParticipantType.INDIVIDUAL,
                         minPlayersPerSide: 1,
                         maxPlayersPerSide: 1,
                       });
@@ -316,6 +330,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                       form.setValue("config", {
                         scoringType: ScoringType.RANKED_FINISH,
                         scoreOrder: ScoreOrder.HIGHEST_WINS,
+                        participantType: ParticipantType.INDIVIDUAL,
                         minPlayers: 2,
                         maxPlayers: 10,
                       });
@@ -365,7 +380,15 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                   <FormLabel>Scoring Type</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        if (value === ScoringType.SCORE_BASED) {
+                          form.setValue(
+                            "config.scoreOrder",
+                            ScoreOrder.HIGHEST_WINS,
+                          );
+                        }
+                      }}
                       value={field.value}
                       className="grid gap-2"
                     >
@@ -395,23 +418,69 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
             />
 
             {form.watch("config.scoringType") === ScoringType.SCORE_BASED && (
-              <FormField
-                control={form.control}
-                name="config.scoreDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Score Label</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Points, Goals, Games, etc."
-                        maxLength={50}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <>
+                <FormField
+                  control={form.control}
+                  name="config.scoreDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Score Label</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Points, Goals, Games, etc."
+                          maxLength={50}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.scoreOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Score Order</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="grid gap-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value={ScoreOrder.HIGHEST_WINS}
+                              id="highest_wins_h2h"
+                            />
+                            <Label
+                              htmlFor="highest_wins_h2h"
+                              className="cursor-pointer"
+                            >
+                              Highest Score Wins
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value={ScoreOrder.LOWEST_WINS}
+                              id="lowest_wins_h2h"
+                            />
+                            <Label
+                              htmlFor="lowest_wins_h2h"
+                              className="cursor-pointer"
+                            >
+                              Lowest Score Wins
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
 
             <FormField
@@ -433,6 +502,46 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="config.participantType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Participant Type</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="grid gap-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value={ParticipantType.INDIVIDUAL}
+                          id="individual_h2h"
+                        />
+                        <Label
+                          htmlFor="individual_h2h"
+                          className="cursor-pointer"
+                        >
+                          Individual
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value={ParticipantType.TEAM}
+                          id="team_h2h"
+                        />
+                        <Label htmlFor="team_h2h" className="cursor-pointer">
+                          Team
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -446,9 +555,10 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                         min={1}
                         max={10}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 1)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -468,9 +578,10 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                         min={1}
                         max={10}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 1)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -547,12 +658,78 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
               )}
             />
 
+            {form.watch("config.scoringType") === ScoringType.SCORE_BASED && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="config.scoreDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Score Label</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Points, Goals, Time, etc."
+                          maxLength={50}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.scoreOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Score Order</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="grid gap-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value={ScoreOrder.HIGHEST_WINS}
+                              id="highest_wins"
+                            />
+                            <Label
+                              htmlFor="highest_wins"
+                              className="cursor-pointer"
+                            >
+                              Highest Score Wins
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value={ScoreOrder.LOWEST_WINS}
+                              id="lowest_wins"
+                            />
+                            <Label
+                              htmlFor="lowest_wins"
+                              className="cursor-pointer"
+                            >
+                              Lowest Score Wins
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
             <FormField
               control={form.control}
-              name="config.scoreOrder"
+              name="config.participantType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Score Order</FormLabel>
+                  <FormLabel>Participant Type</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -561,23 +738,23 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem
-                          value={ScoreOrder.HIGHEST_WINS}
-                          id="highest_wins"
+                          value={ParticipantType.INDIVIDUAL}
+                          id="individual_ffa"
                         />
                         <Label
-                          htmlFor="highest_wins"
+                          htmlFor="individual_ffa"
                           className="cursor-pointer"
                         >
-                          Highest Score Wins
+                          Individual
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem
-                          value={ScoreOrder.LOWEST_WINS}
-                          id="lowest_wins"
+                          value={ParticipantType.TEAM}
+                          id="team_ffa"
                         />
-                        <Label htmlFor="lowest_wins" className="cursor-pointer">
-                          Lowest Score Wins
+                        <Label htmlFor="team_ffa" className="cursor-pointer">
+                          Team
                         </Label>
                       </div>
                     </RadioGroup>
@@ -600,9 +777,10 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                         min={2}
                         max={50}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 2)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -622,9 +800,10 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
                         min={2}
                         max={50}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 2)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -656,7 +835,7 @@ export function CreateGameTypeForm({ leagueId }: CreateGameTypeFormProps) {
 
         {category === GameCategory.HIGH_SCORE && (
           <div className="space-y-4 rounded-lg border p-4 bg-muted/50">
-            <h3 className="font-medium">High Score Configuration</h3>
+            <h3 className="font-medium">Best Score Configuration</h3>
 
             <FormField
               control={form.control}

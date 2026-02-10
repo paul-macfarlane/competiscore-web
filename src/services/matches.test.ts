@@ -42,6 +42,7 @@ vi.mock("@/db/matches", () => ({
 
 vi.mock("@/db/high-scores", () => ({
   createHighScoreEntry: vi.fn(),
+  getHighScoreEntriesByEventAndGameType: vi.fn(),
 }));
 
 vi.mock("@/db/teams", () => ({
@@ -113,6 +114,7 @@ const mockH2HWinLossGameType = {
   config: JSON.stringify({
     scoringType: ScoringType.WIN_LOSS,
     drawsAllowed: true,
+    participantType: "individual",
     minPlayersPerSide: 1,
     maxPlayersPerSide: 1,
   }),
@@ -129,6 +131,7 @@ const mockH2HScoreGameType = {
     scoringType: ScoringType.SCORE_BASED,
     scoreDescription: "Points",
     drawsAllowed: false,
+    participantType: "individual",
     minPlayersPerSide: 1,
     maxPlayersPerSide: 2,
   }),
@@ -142,6 +145,7 @@ const mockFFARankedGameType = {
   config: JSON.stringify({
     scoringType: ScoringType.RANKED_FINISH,
     scoreOrder: ScoreOrder.HIGHEST_WINS,
+    participantType: "individual",
     minPlayers: 2,
     maxPlayers: 8,
   }),
@@ -155,6 +159,7 @@ const mockFFAScoreGameType = {
   config: JSON.stringify({
     scoringType: ScoringType.SCORE_BASED,
     scoreOrder: ScoreOrder.LOWEST_WINS,
+    participantType: "individual",
     minPlayers: 2,
     maxPlayers: 4,
   }),
@@ -313,6 +318,7 @@ describe("recordH2HWinLossMatch", () => {
       config: JSON.stringify({
         scoringType: ScoringType.WIN_LOSS,
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       }),
@@ -924,6 +930,7 @@ describe("getMatch", () => {
         id: mockHighScoreGameType.id,
         name: mockHighScoreGameType.name,
         category: mockHighScoreGameType.category,
+        config: mockHighScoreGameType.config,
       },
       tournament: null,
     });

@@ -1,3 +1,4 @@
+import { countEventsByUser } from "@/db/events";
 import { getGameTypeCountByLeagueId } from "@/db/game-types";
 import { getMemberCount, getUserLeagueCount } from "@/db/league-members";
 import {
@@ -7,6 +8,7 @@ import {
 } from "@/db/limit-overrides";
 import {
   LimitType,
+  MAX_EVENTS_PER_USER,
   MAX_GAME_TYPES_PER_LEAGUE,
   MAX_LEAGUES_PER_USER,
   MAX_MEMBERS_PER_LEAGUE,
@@ -138,6 +140,13 @@ export async function getLeagueGameTypeLimitInfo(
     getEffectiveLeagueGameTypeLimit(leagueId),
   ]);
   return createLimitInfo(current, max);
+}
+
+export async function getUserEventLimitInfo(
+  userId: string,
+): Promise<LimitInfo> {
+  const current = await countEventsByUser(userId);
+  return createLimitInfo(current, MAX_EVENTS_PER_USER);
 }
 
 export async function canLeagueAddGameType(

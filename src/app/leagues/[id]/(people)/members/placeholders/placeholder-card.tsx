@@ -266,9 +266,9 @@ export function PlaceholderCard({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={handleDelete}
               disabled={isSubmitting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isSubmitting ? "Deleting..." : "Delete"}
             </AlertDialogAction>

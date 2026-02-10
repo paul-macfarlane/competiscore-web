@@ -1,0 +1,1 @@
+ALTER TABLE "event_team" ADD COLUMN "color" text;

@@ -126,7 +126,7 @@ export function TeamDangerZone({
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={isPending}>
+                  <Button variant="destructive" disabled={isPending}>
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Leave
                   </Button>
@@ -141,7 +141,10 @@ export function TeamDangerZone({
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLeave}>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={handleLeave}
+                    >
                       Leave Team
                     </AlertDialogAction>
                   </AlertDialogFooter>

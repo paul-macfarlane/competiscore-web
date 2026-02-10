@@ -150,6 +150,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 options={USER_AVATAR_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
+                onClear={() => field.onChange("")}
                 trigger={
                   <Button variant="outline" type="button" size="sm">
                     Change Avatar

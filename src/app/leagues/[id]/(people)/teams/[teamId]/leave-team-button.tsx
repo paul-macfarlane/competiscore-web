@@ -57,7 +57,11 @@ export function LeaveTeamButton({ teamId }: LeaveTeamButtonProps) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleLeave} disabled={isPending}>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={handleLeave}
+            disabled={isPending}
+          >
             {isPending ? "Leaving..." : "Leave Team"}
           </AlertDialogAction>
         </AlertDialogFooter>

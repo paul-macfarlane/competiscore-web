@@ -3,6 +3,7 @@ import { getLeagueMembers } from "@/db/league-members";
 import { getActivePlaceholderMembersByLeague } from "@/db/placeholder-members";
 import { getTeamsByLeagueId } from "@/db/teams";
 import { auth } from "@/lib/server/auth";
+import { GameCategory } from "@/lib/shared/constants";
 import { buildParticipantOptions } from "@/lib/shared/participant-options";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueGameTypes } from "@/services/game-types";
@@ -15,21 +16,26 @@ import { RecordMatchPageContent } from "./record-match-page-content";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ gameTypeId?: string }>;
+  searchParams: Promise<{ gameTypeId?: string; category?: string }>;
 };
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   const { id: leagueId } = await params;
+  const { category } = await searchParams;
+  const isHighScore = category === "high_score";
+  const pageTitle = isHighScore ? "Submit Score" : "Record Match";
+
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { title: "Record Match" };
+  if (!session) return { title: pageTitle };
 
   const leagueResult = await getLeagueWithRole(leagueId, session.user.id);
-  if (!leagueResult.data) return { title: "Record Match" };
+  if (!leagueResult.data) return { title: pageTitle };
 
   return {
-    title: `Record Match | ${leagueResult.data.name}`,
+    title: `${pageTitle} | ${leagueResult.data.name}`,
   };
 }
 
@@ -38,7 +44,9 @@ export default async function RecordMatchPage({
   searchParams,
 }: PageProps) {
   const { id: leagueId } = await params;
-  const { gameTypeId } = await searchParams;
+  const { gameTypeId, category } = await searchParams;
+  const isHighScore = category === "high_score";
+  const pageTitle = isHighScore ? "Submit Score" : "Record Match";
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/");
@@ -59,7 +67,10 @@ export default async function RecordMatchPage({
 
   const allGameTypes = gameTypesResult.data ?? [];
   const activeGameTypes = allGameTypes.filter((gt) => !gt.isArchived);
-  if (activeGameTypes.length === 0) notFound();
+  const filteredGameTypes = isHighScore
+    ? activeGameTypes.filter((gt) => gt.category === GameCategory.HIGH_SCORE)
+    : activeGameTypes.filter((gt) => gt.category !== GameCategory.HIGH_SCORE);
+  if (filteredGameTypes.length === 0) notFound();
 
   const [members, teams, placeholders] = await Promise.all([
     getLeagueMembers(leagueId),
@@ -79,13 +90,13 @@ export default async function RecordMatchPage({
         items={[
           { label: league.name, href: `/leagues/${leagueId}` },
           { label: "Matches", href: `/leagues/${leagueId}/matches` },
-          { label: "Record Match" },
+          { label: pageTitle },
         ]}
       />
       <div className="max-w-2xl">
         <RecordMatchPageContent
           leagueId={leagueId}
-          gameTypes={activeGameTypes}
+          gameTypes={filteredGameTypes}
           participantOptions={participantOptions}
           currentUserId={session.user.id}
           preselectedGameTypeId={gameTypeId}

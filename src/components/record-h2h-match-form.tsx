@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import {
@@ -41,12 +42,42 @@ import { z } from "zod";
 import { ParticipantData, ParticipantDisplay } from "./participant-display";
 import { ParticipantSelector } from "./participant-selector";
 
+function getSelectedParticipantIds(
+  side1: Array<{
+    userId?: string;
+    teamId?: string;
+    placeholderMemberId?: string;
+  }>,
+  side2: Array<{
+    userId?: string;
+    teamId?: string;
+    placeholderMemberId?: string;
+  }>,
+  excludeSide: "side1" | "side2",
+  excludeIndex: number,
+): Set<string> {
+  const ids = new Set<string>();
+  side1.forEach((p, i) => {
+    if (excludeSide === "side1" && i === excludeIndex) return;
+    const id = p.userId || p.teamId || p.placeholderMemberId;
+    if (id) ids.add(id);
+  });
+  side2.forEach((p, i) => {
+    if (excludeSide === "side2" && i === excludeIndex) return;
+    const id = p.userId || p.teamId || p.placeholderMemberId;
+    if (id) ids.add(id);
+  });
+  return ids;
+}
+
 export type TournamentMatchProps = {
   tournamentMatchId: string;
   side1Name: string;
   side2Name: string;
   side1Participant?: ParticipantData;
   side2Participant?: ParticipantData;
+  side1TeamName?: string;
+  side2TeamName?: string;
   onSubmitAction: (
     input: unknown,
   ) => Promise<{ error?: string; data?: unknown }>;
@@ -228,9 +259,16 @@ function WinLossForm({
             <div key={field.id} className="flex gap-2">
               <div className="flex-1 min-w-0">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedParticipantIds(
+                      form.watch("side1Participants"),
+                      form.watch("side2Participants"),
+                      "side1",
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
-                    // eslint-disable-next-line react-hooks/incompatible-library
                     form.watch(`side1Participants.${index}`),
                   )}
                   onChange={(participant) => {
@@ -288,7 +326,15 @@ function WinLossForm({
             <div key={field.id} className="flex gap-2">
               <div className="flex-1 min-w-0">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedParticipantIds(
+                      form.watch("side1Participants"),
+                      form.watch("side2Participants"),
+                      "side2",
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
                     form.watch(`side2Participants.${index}`),
                   )}
@@ -513,9 +559,16 @@ function ScoreBasedForm({
             <div key={field.id} className="flex gap-2">
               <div className="flex-1 min-w-0">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedParticipantIds(
+                      form.watch("side1Participants"),
+                      form.watch("side2Participants"),
+                      "side1",
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
-                    // eslint-disable-next-line react-hooks/incompatible-library
                     form.watch(`side1Participants.${index}`),
                   )}
                   onChange={(participant) => {
@@ -594,7 +647,15 @@ function ScoreBasedForm({
             <div key={field.id} className="flex gap-2">
               <div className="flex-1 min-w-0">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedParticipantIds(
+                      form.watch("side1Participants"),
+                      form.watch("side2Participants"),
+                      "side2",
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
                     form.watch(`side2Participants.${index}`),
                   )}
@@ -782,6 +843,7 @@ function TournamentWinLossForm({
                       {tournamentMatch.side1Participant ? (
                         <ParticipantDisplay
                           participant={tournamentMatch.side1Participant}
+                          teamName={tournamentMatch.side1TeamName}
                           showAvatar
                           showUsername
                           size="sm"
@@ -804,6 +866,7 @@ function TournamentWinLossForm({
                       {tournamentMatch.side2Participant ? (
                         <ParticipantDisplay
                           participant={tournamentMatch.side2Participant}
+                          teamName={tournamentMatch.side2TeamName}
                           showAvatar
                           showUsername
                           size="sm"
@@ -923,6 +986,7 @@ function TournamentScoreForm({
             {tournamentMatch.side1Participant ? (
               <ParticipantDisplay
                 participant={tournamentMatch.side1Participant}
+                teamName={tournamentMatch.side1TeamName}
                 showAvatar
                 showUsername
                 size="sm"
@@ -961,6 +1025,7 @@ function TournamentScoreForm({
             {tournamentMatch.side2Participant ? (
               <ParticipantDisplay
                 participant={tournamentMatch.side2Participant}
+                teamName={tournamentMatch.side2TeamName}
                 showAvatar
                 showUsername
                 size="sm"

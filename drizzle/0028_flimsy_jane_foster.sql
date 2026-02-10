@@ -1,0 +1,4 @@
+ALTER TABLE "event_tournament_participant" ADD COLUMN "user_id" text;--> statement-breakpoint
+ALTER TABLE "event_tournament_participant" ADD COLUMN "event_placeholder_member_id" text;--> statement-breakpoint
+ALTER TABLE "event_tournament_participant" ADD CONSTRAINT "event_tournament_participant_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event_tournament_participant" ADD CONSTRAINT "event_tournament_participant_event_placeholder_member_id_event_placeholder_member_id_fk" FOREIGN KEY ("event_placeholder_member_id") REFERENCES "public"."event_placeholder_member"("id") ON DELETE cascade ON UPDATE no action;

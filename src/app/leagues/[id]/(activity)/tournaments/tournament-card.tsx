@@ -28,6 +28,8 @@ function getStatusVariant(status: string): "default" | "secondary" | "outline" {
 }
 
 export function TournamentCard({ tournament, leagueId }: TournamentCardProps) {
+  const tournamentHref = `/leagues/${leagueId}/tournaments/${tournament.id}`;
+
   return (
     <Card>
       <CardHeader>
@@ -58,9 +60,7 @@ export function TournamentCard({ tournament, leagueId }: TournamentCardProps) {
                 }
               </Badge>
               <Button asChild size="sm" className="shrink-0 ml-auto">
-                <Link
-                  href={`/leagues/${leagueId}/tournaments/${tournament.id}`}
-                >
+                <Link href={tournamentHref}>
                   View
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>

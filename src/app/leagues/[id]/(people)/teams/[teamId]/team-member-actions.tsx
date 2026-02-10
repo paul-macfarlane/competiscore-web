@@ -57,9 +57,9 @@ export function TeamMemberActions({ memberId }: TeamMemberActionsProps) {
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
+            variant="destructive"
             onClick={handleRemove}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isPending ? "Removing..." : "Remove"}
           </AlertDialogAction>

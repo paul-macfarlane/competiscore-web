@@ -122,6 +122,18 @@ This allows users to:
 - **Reuse components**: Use existing shared components (`ParticipantDisplay`, `LeagueBreadcrumb`, card components, etc.) rather than building one-off variants. If a new pattern is needed in multiple places, extract it as a shared component.
 - **Layouts**: Use Next.js layouts to enforce consistent page structure (navigation, containers, spacing) across related pages.
 
+### Button Variant Rules
+
+- **Primary actions** (create, submit, save, join): `variant="default"` (filled primary color)
+- **Secondary actions** (view, edit, settings, find, cancel): `variant="outline"`
+- **Destructive actions** (delete, leave, remove, archive permanently): `variant="destructive"` for both trigger buttons AND dialog confirm buttons
+- **Reversible caution actions** (archive, close, retire): `variant="outline"` trigger, `variant="default"` dialog confirm
+- **Minimal actions** (menu triggers, sign out, dismiss): `variant="ghost"`
+- **Navigation links styled as buttons**: `variant="outline"` with `asChild` wrapping `Link`
+- **Dialog/AlertDialog footers**: Cancel = `variant="outline"`, Confirm = variant matching action severity
+- **Sizing**: `size="sm"` for inline/card actions, `size="default"` for standalone/form buttons
+- **Icons**: Always include icon before text for action buttons. Use `size="icon"` for icon-only buttons.
+
 ## Database Standards
 
 We use Drizzle ORM for database operations and integration with Postgres and Neon.

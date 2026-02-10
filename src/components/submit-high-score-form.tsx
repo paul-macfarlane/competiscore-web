@@ -31,6 +31,7 @@ import { ParticipantSelector } from "./participant-selector";
 type SubmitHighScoreFormProps = {
   leagueId: string;
   gameTypeId: string;
+  gameTypeName: string;
   config: HighScoreConfig;
   participantOptions: ParticipantOption[];
   currentUserId: string;
@@ -43,6 +44,7 @@ type FormValues = z.input<typeof submitHighScoreSchema>;
 export function SubmitHighScoreForm({
   leagueId,
   gameTypeId,
+  gameTypeName,
   config,
   participantOptions,
   currentUserId,
@@ -134,6 +136,9 @@ export function SubmitHighScoreForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Game Type: {gameTypeName}
+        </p>
         <FormField
           control={form.control}
           name="achievedAt"

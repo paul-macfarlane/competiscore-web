@@ -9,7 +9,9 @@ import {
 export type H2HConfig = {
   scoringType: ScoringType;
   scoreDescription?: string;
+  scoreOrder?: ScoreOrder;
   drawsAllowed: boolean;
+  participantType: ParticipantType;
   minPlayersPerSide: number;
   maxPlayersPerSide: number;
   rules?: string;
@@ -18,6 +20,8 @@ export type H2HConfig = {
 export type FFAConfig = {
   scoringType: ScoringType;
   scoreOrder: ScoreOrder;
+  scoreDescription?: string;
+  participantType: ParticipantType;
   minPlayers: number;
   maxPlayers: number;
   rules?: string;
@@ -49,7 +53,9 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.SCORE_BASED,
       scoreDescription: "Points",
+      scoreOrder: ScoreOrder.HIGHEST_WINS,
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 2,
     } as H2HConfig,
@@ -62,6 +68,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.WIN_LOSS,
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     } as H2HConfig,
@@ -74,6 +81,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.WIN_LOSS,
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     } as H2HConfig,
@@ -86,7 +94,9 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: "score_based",
       scoreDescription: "Goals",
+      scoreOrder: ScoreOrder.HIGHEST_WINS,
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 2,
     } as H2HConfig,
@@ -99,6 +109,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: "win_loss",
       drawsAllowed: true,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     } as H2HConfig,
@@ -111,6 +122,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: "win_loss",
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 2,
     } as H2HConfig,
@@ -123,7 +135,9 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: "score_based",
       scoreDescription: "Points",
+      scoreOrder: ScoreOrder.HIGHEST_WINS,
       drawsAllowed: false,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayersPerSide: 1,
       maxPlayersPerSide: 1,
     } as H2HConfig,
@@ -136,6 +150,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.RANKED_FINISH,
       scoreOrder: ScoreOrder.HIGHEST_WINS,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayers: 2,
       maxPlayers: 8,
     } as FFAConfig,
@@ -148,6 +163,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.RANKED_FINISH,
       scoreOrder: ScoreOrder.HIGHEST_WINS,
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayers: 2,
       maxPlayers: 10,
     } as FFAConfig,
@@ -160,6 +176,8 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.SCORE_BASED,
       scoreOrder: ScoreOrder.HIGHEST_WINS,
+      scoreDescription: "Points",
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayers: 2,
       maxPlayers: 8,
     } as FFAConfig,
@@ -172,13 +190,15 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
     config: {
       scoringType: ScoringType.SCORE_BASED,
       scoreOrder: ScoreOrder.LOWEST_WINS,
+      scoreDescription: "Strokes",
+      participantType: ParticipantType.INDIVIDUAL,
       minPlayers: 2,
       maxPlayers: 4,
     } as FFAConfig,
   },
   pacman: {
     name: "Pac-Man",
-    description: "Classic arcade high score",
+    description: "Classic arcade best score",
     category: GameCategory.HIGH_SCORE,
     logo: `${ICON_PATHS.GAME_TYPE_ICONS}/video-game.svg`,
     config: {
@@ -189,7 +209,7 @@ export const GAME_TEMPLATES: Record<string, GameTemplate> = {
   },
   "arcade-game": {
     name: "Arcade Game",
-    description: "Generic arcade game high scores",
+    description: "Generic arcade game best scores",
     category: GameCategory.HIGH_SCORE,
     logo: `${ICON_PATHS.GAME_TYPE_ICONS}/video-game.svg`,
     config: {

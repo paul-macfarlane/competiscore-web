@@ -31,6 +31,7 @@ export const ICON_PATHS = {
   GAME_TYPE_ICONS: "/game-type-icons",
   TEAM_ICONS: "/team-avatars",
   TOURNAMENT_ICONS: "/tournament-icons",
+  EVENT_ICONS: "/event-icons",
 } as const;
 
 export const LEAGUE_LOGOS = [
@@ -111,7 +112,7 @@ export type GameCategory = (typeof GameCategory)[keyof typeof GameCategory];
 export const GAME_CATEGORY_LABELS: Record<GameCategory, string> = {
   [GameCategory.HEAD_TO_HEAD]: "Head-to-Head",
   [GameCategory.FREE_FOR_ALL]: "Free-for-All",
-  [GameCategory.HIGH_SCORE]: "High Score Challenge",
+  [GameCategory.HIGH_SCORE]: "Best Score Challenge",
 };
 
 export const GAME_TYPE_ICONS = [
@@ -233,6 +234,88 @@ export const TOURNAMENT_ICON_OPTIONS: IconOption[] = TOURNAMENT_ICONS.map(
     src: `${ICON_PATHS.TOURNAMENT_ICONS}/${icon}.svg`,
   }),
 );
+
+export const EVENT_ICONS = [
+  "medal",
+  "banner",
+  "laurel",
+  "torch",
+  "ribbon",
+  "colosseum",
+  "trophy-cup",
+  "calendar-star",
+] as const;
+
+export const EVENT_ICON_OPTIONS: IconOption[] = EVENT_ICONS.map((icon) => ({
+  name: formatIconName(icon),
+  src: `${ICON_PATHS.EVENT_ICONS}/${icon}.svg`,
+}));
+
+export const EventParticipantRole = {
+  ORGANIZER: "organizer",
+  PARTICIPANT: "participant",
+} as const;
+
+export type EventParticipantRole =
+  (typeof EventParticipantRole)[keyof typeof EventParticipantRole];
+
+export const EventVisibility = {
+  PUBLIC: "public",
+  PRIVATE: "private",
+} as const;
+
+export type EventVisibility =
+  (typeof EventVisibility)[keyof typeof EventVisibility];
+
+export const EventScoringType = {
+  TEAM: "team",
+} as const;
+
+export type EventScoringType =
+  (typeof EventScoringType)[keyof typeof EventScoringType];
+
+export const EventStatus = {
+  DRAFT: "draft",
+  ACTIVE: "active",
+  COMPLETED: "completed",
+} as const;
+
+export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus];
+
+export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  [EventStatus.DRAFT]: "Draft",
+  [EventStatus.ACTIVE]: "Active",
+  [EventStatus.COMPLETED]: "Completed",
+};
+
+export const HighScoreSessionStatus = {
+  OPEN: "open",
+  CLOSED: "closed",
+} as const;
+
+export type HighScoreSessionStatus =
+  (typeof HighScoreSessionStatus)[keyof typeof HighScoreSessionStatus];
+
+export const EventPointCategory = {
+  H2H_MATCH: "h2h_match",
+  FFA_MATCH: "ffa_match",
+  HIGH_SCORE: "high_score",
+  TOURNAMENT: "tournament",
+} as const;
+
+export type EventPointCategory =
+  (typeof EventPointCategory)[keyof typeof EventPointCategory];
+
+export const EventPointOutcome = {
+  WIN: "win",
+  LOSS: "loss",
+  DRAW: "draw",
+  PLACEMENT: "placement",
+  SUBMISSION: "submission",
+} as const;
+
+export type EventPointOutcome =
+  (typeof EventPointOutcome)[keyof typeof EventPointOutcome];
 
 export const ScoringType = {
   WIN_LOSS: "win_loss",
