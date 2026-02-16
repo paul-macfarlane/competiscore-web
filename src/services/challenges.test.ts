@@ -79,6 +79,7 @@ const mockH2HWinLossGameType = {
   config: JSON.stringify({
     scoringType: ScoringType.WIN_LOSS,
     drawsAllowed: true,
+    participantType: "individual",
     minPlayersPerSide: 1,
     maxPlayersPerSide: 1,
   }),
@@ -92,6 +93,7 @@ const mockH2HScoreGameType = {
   config: JSON.stringify({
     scoringType: ScoringType.SCORE_BASED,
     drawsAllowed: false,
+    participantType: "individual",
     minPlayersPerSide: 1,
     maxPlayersPerSide: 1,
   }),
@@ -578,6 +580,7 @@ describe("recordChallengeH2HWinLossResult", () => {
       config: JSON.stringify({
         scoringType: ScoringType.WIN_LOSS,
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       }),

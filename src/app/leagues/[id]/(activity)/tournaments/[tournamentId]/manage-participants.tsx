@@ -5,21 +5,33 @@ import {
   ParticipantDisplay,
 } from "@/components/participant-display";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { TournamentParticipantWithDetails } from "@/db/tournaments";
 import { ParticipantType, SeedingType } from "@/lib/shared/constants";
-import { Loader2, Save, Trash2, UserPlus } from "lucide-react";
+import { cn } from "@/lib/shared/utils";
+import {
+  Check,
+  ChevronsUpDown,
+  Loader2,
+  Save,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -160,6 +172,27 @@ export function ManageParticipants({
     });
   };
 
+  const [open, setOpen] = useState(false);
+
+  const selectedLabel = useMemo(() => {
+    if (!selectedId) return null;
+    if (isTeamTournament) {
+      return availableTeams.find((t) => t.id === selectedId)?.name;
+    }
+    if (selectedId.startsWith("placeholder:")) {
+      const pid = selectedId.replace("placeholder:", "");
+      return availablePlaceholders.find((p) => p.id === pid)?.displayName;
+    }
+    const member = availableMembers.find((m) => m.id === selectedId);
+    return member ? `${member.name} (@${member.username})` : null;
+  }, [
+    selectedId,
+    isTeamTournament,
+    availableTeams,
+    availableMembers,
+    availablePlaceholders,
+  ]);
+
   const hasAvailable = isTeamTournament
     ? availableTeams.length > 0
     : availableMembers.length > 0 || availablePlaceholders.length > 0;
@@ -179,45 +212,115 @@ export function ManageParticipants({
           <label className="text-sm font-medium mb-1 block">
             Add {isTeamTournament ? "Team" : "Participant"}
           </label>
-          <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger>
-              <SelectValue
-                placeholder={`Select a ${isTeamTournament ? "team" : "participant"}`}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {isTeamTournament ? (
-                availableTeams.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <>
-                  {availableMembers.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Members</SelectLabel>
-                      {availableMembers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name} (@{m.username})
-                        </SelectItem>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-full justify-between"
+              >
+                {selectedLabel ? (
+                  <span className="truncate">{selectedLabel}</span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Select a {isTeamTournament ? "team" : "participant"}
+                  </span>
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[min(300px,calc(100vw-3rem))] max-h-[min(300px,var(--radix-popover-content-available-height,300px))] overflow-y-auto p-0"
+              align="start"
+            >
+              <Command>
+                <CommandInput placeholder="Search..." />
+                <CommandList className="max-h-none">
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  {isTeamTournament ? (
+                    <CommandGroup>
+                      {availableTeams.map((t) => (
+                        <CommandItem
+                          key={t.id}
+                          value={t.name}
+                          onSelect={() => {
+                            setSelectedId(selectedId === t.id ? "" : t.id);
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedId === t.id ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          {t.name}
+                        </CommandItem>
                       ))}
-                    </SelectGroup>
+                    </CommandGroup>
+                  ) : (
+                    <>
+                      {availableMembers.length > 0 && (
+                        <CommandGroup heading="Members">
+                          {availableMembers.map((m) => (
+                            <CommandItem
+                              key={m.id}
+                              value={`${m.name} ${m.username}`}
+                              onSelect={() => {
+                                setSelectedId(selectedId === m.id ? "" : m.id);
+                                setOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedId === m.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {m.name}{" "}
+                              <span className="text-muted-foreground">
+                                @{m.username}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                      {availablePlaceholders.length > 0 && (
+                        <CommandGroup heading="Placeholder Members">
+                          {availablePlaceholders.map((p) => {
+                            const val = `placeholder:${p.id}`;
+                            return (
+                              <CommandItem
+                                key={p.id}
+                                value={p.displayName}
+                                onSelect={() => {
+                                  setSelectedId(selectedId === val ? "" : val);
+                                  setOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedId === val
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {p.displayName}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      )}
+                    </>
                   )}
-                  {availablePlaceholders.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Placeholder Members</SelectLabel>
-                      {availablePlaceholders.map((p) => (
-                        <SelectItem key={p.id} value={`placeholder:${p.id}`}>
-                          {p.displayName} (Placeholder)
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                </>
-              )}
-            </SelectContent>
-          </Select>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <Button
           onClick={handleAdd}

@@ -1,3 +1,4 @@
+import { TeamColorBadge } from "@/components/team-color-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/shared/utils";
 import { User, Users } from "lucide-react";
@@ -24,6 +25,8 @@ type ParticipantDisplayProps = {
   participant: ParticipantData;
   showAvatar?: boolean;
   showUsername?: boolean;
+  teamName?: string;
+  teamColor?: string | null;
   size?: "sm" | "md" | "lg";
   align?: "left" | "right";
   className?: string;
@@ -54,22 +57,46 @@ export function ParticipantDisplay({
   participant,
   showAvatar = true,
   showUsername = false,
+  teamName,
+  teamColor,
   size = "md",
   align = "left",
   className,
 }: ParticipantDisplayProps) {
   const name = getParticipantName(participant);
-  const image = participant.user?.image || participant.team?.logo;
-  const isTeam = !!participant.team;
-  const username = participant.user?.username;
+  const isTeam =
+    !!participant.team?.id &&
+    !participant.user?.id &&
+    !participant.placeholderMember?.id;
+  const image = participant.user?.id
+    ? participant.user.image
+    : isTeam
+      ? participant.team?.logo
+      : null;
+  const username = participant.user?.id ? participant.user.username : undefined;
   const sizes = sizeClasses[size];
+
+  const teamBadge = teamName ? (
+    teamColor ? (
+      <TeamColorBadge name={teamName} color={teamColor} className="ml-1" />
+    ) : (
+      <span
+        className={cn("text-muted-foreground ml-1 font-normal", sizes.username)}
+      >
+        ({teamName})
+      </span>
+    )
+  ) : null;
 
   if (!showAvatar) {
     return (
       <div
         className={cn("truncate", align === "right" && "text-right", className)}
       >
-        <span className={cn("font-medium", sizes.name)}>{name}</span>
+        <span className={cn("font-medium", sizes.name)}>
+          {name}
+          {teamBadge}
+        </span>
         {showUsername && username && (
           <span className={cn("text-muted-foreground ml-1", sizes.username)}>
             @{username}
@@ -98,7 +125,10 @@ export function ParticipantDisplay({
         </AvatarFallback>
       </Avatar>
       <div className={cn("min-w-0", align === "right" && "text-right")}>
-        <p className={cn("font-medium truncate", sizes.name)}>{name}</p>
+        <p className={cn("font-medium truncate", sizes.name)}>
+          {name}
+          {teamBadge}
+        </p>
         {showUsername && username && (
           <p className={cn("text-muted-foreground truncate", sizes.username)}>
             @{username}
@@ -110,10 +140,10 @@ export function ParticipantDisplay({
 }
 
 export function getParticipantName(participant: ParticipantData): string {
-  if (participant.user) return participant.user.name;
-  if (participant.team) return participant.team.name;
-  if (participant.placeholderMember)
+  if (participant.user?.id) return participant.user.name;
+  if (participant.placeholderMember?.id)
     return participant.placeholderMember.displayName;
+  if (participant.team?.id) return participant.team.name;
   return "Unknown";
 }
 

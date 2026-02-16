@@ -353,10 +353,18 @@ export async function recordH2HScoreMatch(
       | typeof MatchResult.LOSS
       | typeof MatchResult.DRAW;
 
-    if (data.side1Score > data.side2Score) {
+    const lowestWins = config.scoreOrder === ScoreOrder.LOWEST_WINS;
+    const side1Better = lowestWins
+      ? data.side1Score < data.side2Score
+      : data.side1Score > data.side2Score;
+    const side2Better = lowestWins
+      ? data.side2Score < data.side1Score
+      : data.side2Score > data.side1Score;
+
+    if (side1Better) {
       side1Result = MatchResult.WIN;
       side2Result = MatchResult.LOSS;
-    } else if (data.side2Score > data.side1Score) {
+    } else if (side2Better) {
       side1Result = MatchResult.LOSS;
       side2Result = MatchResult.WIN;
     } else {
@@ -691,7 +699,12 @@ export async function submitHighScore(
 }
 
 export type MatchWithParticipantsAndGameType = MatchWithParticipants & {
-  gameType: { id: string; name: string; category: string } | null;
+  gameType: {
+    id: string;
+    name: string;
+    category: string;
+    config: string;
+  } | null;
   tournament?: TournamentMatchInfo | null;
 };
 
@@ -723,7 +736,12 @@ export async function getMatch(
     data: {
       ...matchWithParticipants,
       gameType: gameType
-        ? { id: gameType.id, name: gameType.name, category: gameType.category }
+        ? {
+            id: gameType.id,
+            name: gameType.name,
+            category: gameType.category,
+            config: gameType.config,
+          }
         : null,
       tournament: tournamentInfos[0] ?? null,
     },
@@ -903,6 +921,7 @@ export async function getLeagueActivityPaginated(
     limit?: number;
     offset?: number;
     gameTypeId?: string;
+    activityType?: "all" | "matches" | "high_scores";
   } = {},
 ): Promise<ServiceResult<PaginatedActivityResult>> {
   const membership = await getLeagueMember(userId, leagueId);
@@ -910,7 +929,7 @@ export async function getLeagueActivityPaginated(
     return { error: "You are not a member of this league" };
   }
 
-  const { limit = 20, offset = 0, gameTypeId } = options;
+  const { limit = 20, offset = 0, gameTypeId, activityType = "all" } = options;
 
   const {
     getHighScoreEntriesWithDetailsByLeagueId,
@@ -918,28 +937,39 @@ export async function getLeagueActivityPaginated(
   } = await import("@/db/high-scores");
 
   const fetchLimit = offset + limit;
+  const includeMatches = activityType === "all" || activityType === "matches";
+  const includeHighScores =
+    activityType === "all" || activityType === "high_scores";
 
   const [matches, matchCount, highScores, highScoreCount] = await Promise.all([
-    dbGetMatchesWithGameTypeByLeagueId(leagueId, {
-      limit: fetchLimit,
-      offset: 0,
-      gameTypeId,
-      excludeArchivedGameTypes: true,
-    }),
-    dbCountMatchesByLeagueId(leagueId, {
-      gameTypeId,
-      excludeArchivedGameTypes: true,
-    }),
-    getHighScoreEntriesWithDetailsByLeagueId(leagueId, {
-      limit: fetchLimit,
-      offset: 0,
-      gameTypeId,
-      excludeArchivedGameTypes: true,
-    }),
-    countHighScoreEntriesByLeagueId(leagueId, {
-      gameTypeId,
-      excludeArchivedGameTypes: true,
-    }),
+    includeMatches
+      ? dbGetMatchesWithGameTypeByLeagueId(leagueId, {
+          limit: fetchLimit,
+          offset: 0,
+          gameTypeId,
+          excludeArchivedGameTypes: true,
+        })
+      : Promise.resolve([]),
+    includeMatches
+      ? dbCountMatchesByLeagueId(leagueId, {
+          gameTypeId,
+          excludeArchivedGameTypes: true,
+        })
+      : Promise.resolve(0),
+    includeHighScores
+      ? getHighScoreEntriesWithDetailsByLeagueId(leagueId, {
+          limit: fetchLimit,
+          offset: 0,
+          gameTypeId,
+          excludeArchivedGameTypes: true,
+        })
+      : Promise.resolve([]),
+    includeHighScores
+      ? countHighScoreEntriesByLeagueId(leagueId, {
+          gameTypeId,
+          excludeArchivedGameTypes: true,
+        })
+      : Promise.resolve(0),
   ]);
 
   const matchIds = matches.filter((m) => m.id).map((m) => m.id);

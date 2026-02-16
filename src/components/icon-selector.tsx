@@ -20,6 +20,7 @@ interface IconSelectorProps {
   options: readonly IconOption[];
   value: string | undefined;
   onChange: (value: string) => void;
+  onClear?: () => void;
   trigger: ReactNode;
   title: string;
   renderIcon: (option: IconOption, isSelected: boolean) => ReactNode;
@@ -29,6 +30,7 @@ export function IconSelector({
   options,
   value,
   onChange,
+  onClear,
   trigger,
   title,
   renderIcon,
@@ -42,6 +44,18 @@ export function IconSelector({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        {onClear && value && (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-sm underline self-start"
+            onClick={() => {
+              onClear();
+              setIsOpen(false);
+            }}
+          >
+            Remove icon
+          </button>
+        )}
         <div className="grid grid-cols-4 gap-2 py-2 sm:gap-3 sm:py-4 md:grid-cols-5">
           {options.map((option) => {
             const isSelected = value === option.src;
@@ -74,6 +88,7 @@ interface SimpleIconSelectorProps {
   options: readonly IconOption[];
   value: string | undefined;
   onChange: (value: string) => void;
+  onClear?: () => void;
   trigger: ReactNode;
   title: string;
   iconClassName?: string;
@@ -83,6 +98,7 @@ export function SimpleIconSelector({
   options,
   value,
   onChange,
+  onClear,
   trigger,
   title,
   iconClassName = "h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14",
@@ -92,6 +108,7 @@ export function SimpleIconSelector({
       options={options}
       value={value}
       onChange={onChange}
+      onClear={onClear}
       trigger={trigger}
       title={title}
       renderIcon={(option) => (

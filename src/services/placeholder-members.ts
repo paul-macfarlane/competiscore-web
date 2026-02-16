@@ -254,6 +254,20 @@ export async function restorePlaceholder(
   return { data: { restored: true, leagueId } };
 }
 
+export async function checkPlaceholderActivity(
+  userId: string,
+  placeholderId: string,
+  leagueId: string,
+): Promise<ServiceResult<{ hasActivity: boolean }>> {
+  const membership = await getLeagueMember(userId, leagueId);
+  if (!membership) {
+    return { error: "You are not a member of this league" };
+  }
+
+  const result = await hasPlaceholderActivity(placeholderId);
+  return { data: { hasActivity: result } };
+}
+
 export async function deletePlaceholder(
   userId: string,
   input: unknown,

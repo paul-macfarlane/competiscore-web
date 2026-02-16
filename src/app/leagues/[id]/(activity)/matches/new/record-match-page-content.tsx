@@ -62,10 +62,15 @@ export function RecordMatchPageContent({
     }
   };
 
+  const isHighScoreMode = gameTypes.every(
+    (gt) => gt.category === GameCategory.HIGH_SCORE,
+  );
+  const selectorTitle = isHighScoreMode ? "Submit Score" : "Record Match";
+
   if (!selectedGameType) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Record Match</h1>
+        <h1 className="text-2xl font-bold">{selectorTitle}</h1>
         <p className="text-sm text-muted-foreground">Select a game type:</p>
         <div className="space-y-3">
           {gameTypes.map((gt) => (
@@ -139,6 +144,7 @@ export function RecordMatchPageContent({
         <SubmitHighScoreForm
           leagueId={leagueId}
           gameTypeId={selectedGameType.id}
+          gameTypeName={selectedGameType.name}
           config={
             parseGameConfig(
               selectedGameType.config,

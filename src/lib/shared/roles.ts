@@ -1,4 +1,8 @@
-import { LeagueMemberRole, TeamMemberRole } from "./constants";
+import {
+  EventParticipantRole,
+  LeagueMemberRole,
+  TeamMemberRole,
+} from "./constants";
 
 export const ROLE_HIERARCHY: Record<LeagueMemberRole, number> = {
   [LeagueMemberRole.MEMBER]: 1,
@@ -45,4 +49,21 @@ export function getAssignableRoles(
   return ALL_ROLES.filter(
     (role) => ROLE_HIERARCHY[role] <= ROLE_HIERARCHY[actorRole],
   );
+}
+
+export const EVENT_ROLE_LABELS: Record<EventParticipantRole, string> = {
+  [EventParticipantRole.ORGANIZER]: "Organizer",
+  [EventParticipantRole.PARTICIPANT]: "Participant",
+};
+
+export const EVENT_ROLE_HIERARCHY: Record<EventParticipantRole, number> = {
+  [EventParticipantRole.PARTICIPANT]: 1,
+  [EventParticipantRole.ORGANIZER]: 2,
+};
+
+export function canActOnEventRole(
+  actorRole: EventParticipantRole,
+  targetRole: EventParticipantRole,
+): boolean {
+  return EVENT_ROLE_HIERARCHY[actorRole] > EVENT_ROLE_HIERARCHY[targetRole];
 }

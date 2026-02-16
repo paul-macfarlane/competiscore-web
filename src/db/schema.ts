@@ -1,5 +1,12 @@
 import {
+  EventParticipantRole,
+  EventPointCategory,
+  EventPointOutcome,
+  EventScoringType,
+  EventStatus,
+  EventVisibility,
   GameCategory,
+  HighScoreSessionStatus,
   InvitationStatus,
   LeagueMemberRole,
   LeagueVisibility,
@@ -1256,3 +1263,932 @@ export const tournamentParticipantColumns = getTableColumns(
 );
 export const tournamentRoundMatchColumns =
   getTableColumns(tournamentRoundMatch);
+
+// ============================================================
+// Event tables (independent top-level entity)
+// ============================================================
+
+export const eventVisibility = pgEnum("event_visibility", [
+  EventVisibility.PUBLIC,
+  EventVisibility.PRIVATE,
+]);
+
+export const eventScoringType = pgEnum("event_scoring_type", [
+  EventScoringType.TEAM,
+]);
+
+export const eventStatusEnum = pgEnum("event_status", [
+  EventStatus.DRAFT,
+  EventStatus.ACTIVE,
+  EventStatus.COMPLETED,
+]);
+
+export const event = pgTable(
+  "event",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    description: text("description"),
+    logo: text("logo"),
+    visibility: eventVisibility("visibility").notNull().default("private"),
+    scoringType: eventScoringType("scoring_type").notNull().default("team"),
+    status: eventStatusEnum("status").notNull().default(EventStatus.DRAFT),
+    startDate: timestamp("start_date"),
+    completedAt: timestamp("completed_at"),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("event_name_idx").on(table.name),
+    index("event_created_by_idx").on(table.createdById),
+    index("event_status_idx").on(table.status),
+  ],
+);
+
+export type Event = InferSelectModel<typeof event>;
+export type NewEvent = InferInsertModel<typeof event>;
+
+export const eventParticipantRoleEnum = pgEnum("event_participant_role", [
+  EventParticipantRole.ORGANIZER,
+  EventParticipantRole.PARTICIPANT,
+]);
+
+export const eventParticipant = pgTable(
+  "event_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: eventParticipantRoleEnum("role").notNull().default("participant"),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("event_participant_unique").on(table.eventId, table.userId),
+    index("event_participant_event_idx").on(table.eventId),
+    index("event_participant_user_idx").on(table.userId),
+  ],
+);
+
+export type EventParticipant = InferSelectModel<typeof eventParticipant>;
+export type NewEventParticipant = InferInsertModel<typeof eventParticipant>;
+
+export const eventPlaceholderParticipant = pgTable(
+  "event_placeholder_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    linkedUserId: text("linked_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    retiredAt: timestamp("retired_at"),
+  },
+  (table) => [
+    index("event_placeholder_participant_event_idx").on(table.eventId),
+    index("event_placeholder_participant_linked_user_idx").on(
+      table.linkedUserId,
+    ),
+  ],
+);
+
+export type EventPlaceholderParticipant = InferSelectModel<
+  typeof eventPlaceholderParticipant
+>;
+export type NewEventPlaceholderParticipant = InferInsertModel<
+  typeof eventPlaceholderParticipant
+>;
+
+export const eventInvitation = pgTable(
+  "event_invitation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => user.id),
+    inviteeUserId: text("invitee_user_id").references(() => user.id),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, {
+      onDelete: "set null",
+    }),
+    role: eventParticipantRoleEnum("role").notNull().default("participant"),
+    status: invitationStatus("status").notNull().default("pending"),
+    token: text("token").unique(),
+    maxUses: integer("max_uses"),
+    useCount: integer("use_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at"),
+  },
+  (table) => [
+    index("event_invitation_event_idx").on(table.eventId),
+    index("event_invitation_invitee_idx").on(table.inviteeUserId),
+    index("event_invitation_token_idx").on(table.token),
+  ],
+);
+
+export type EventInvitation = InferSelectModel<typeof eventInvitation>;
+export type NewEventInvitation = InferInsertModel<typeof eventInvitation>;
+
+export const eventGameType = pgTable(
+  "event_game_type",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    logo: text("logo"),
+    category: gameCategory("category").notNull(),
+    config: text("config").notNull(),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("event_game_type_event_idx").on(table.eventId),
+    index("event_game_type_name_event_idx").on(table.eventId, table.name),
+  ],
+);
+
+export type EventGameType = InferSelectModel<typeof eventGameType>;
+export type NewEventGameType = InferInsertModel<typeof eventGameType>;
+
+export const eventTeam = pgTable(
+  "event_team",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    logo: text("logo"),
+    color: text("color"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_team_event_idx").on(table.eventId),
+    index("event_team_name_event_idx").on(table.eventId, table.name),
+  ],
+);
+
+export type EventTeam = InferSelectModel<typeof eventTeam>;
+export type NewEventTeam = InferInsertModel<typeof eventTeam>;
+
+export const eventTeamMember = pgTable(
+  "event_team_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventTeamId: text("event_team_id")
+      .notNull()
+      .references(() => eventTeam.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_team_member_team_idx").on(table.eventTeamId),
+    index("event_team_member_user_idx").on(table.userId),
+    index("event_team_member_placeholder_idx").on(
+      table.eventPlaceholderParticipantId,
+    ),
+    unique("event_team_member_user_unique").on(table.eventTeamId, table.userId),
+    unique("event_team_member_placeholder_unique").on(
+      table.eventTeamId,
+      table.eventPlaceholderParticipantId,
+    ),
+  ],
+);
+
+export type EventTeamMember = InferSelectModel<typeof eventTeamMember>;
+export type NewEventTeamMember = InferInsertModel<typeof eventTeamMember>;
+
+export const eventMatch = pgTable(
+  "event_match",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    eventGameTypeId: text("event_game_type_id")
+      .notNull()
+      .references(() => eventGameType.id, { onDelete: "cascade" }),
+    playedAt: timestamp("played_at").notNull(),
+    recorderId: text("recorder_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_match_event_idx").on(table.eventId),
+    index("event_match_game_type_idx").on(table.eventGameTypeId),
+    index("event_match_played_at_idx").on(table.playedAt),
+  ],
+);
+
+export type EventMatch = InferSelectModel<typeof eventMatch>;
+export type NewEventMatch = InferInsertModel<typeof eventMatch>;
+
+export const eventMatchParticipant = pgTable(
+  "event_match_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventMatchId: text("event_match_id")
+      .notNull()
+      .references(() => eventMatch.id, { onDelete: "cascade" }),
+    eventTeamId: text("event_team_id").references(() => eventTeam.id, {
+      onDelete: "cascade",
+    }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    side: integer("side"),
+    score: real("score"),
+    rank: integer("rank"),
+    result: matchResult("result"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_match_participant_match_idx").on(table.eventMatchId),
+    index("event_match_participant_team_idx").on(table.eventTeamId),
+    index("event_match_participant_user_idx").on(table.userId),
+    index("event_match_participant_placeholder_idx").on(
+      table.eventPlaceholderParticipantId,
+    ),
+  ],
+);
+
+export type EventMatchParticipant = InferSelectModel<
+  typeof eventMatchParticipant
+>;
+export type NewEventMatchParticipant = InferInsertModel<
+  typeof eventMatchParticipant
+>;
+
+export const highScoreSessionStatusEnum = pgEnum("high_score_session_status", [
+  HighScoreSessionStatus.OPEN,
+  HighScoreSessionStatus.CLOSED,
+]);
+
+export const eventHighScoreSession = pgTable(
+  "event_high_score_session",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    eventGameTypeId: text("event_game_type_id")
+      .notNull()
+      .references(() => eventGameType.id, { onDelete: "cascade" }),
+    name: text("name"),
+    description: text("description"),
+    status: highScoreSessionStatusEnum("status")
+      .notNull()
+      .default(HighScoreSessionStatus.OPEN),
+    placementPointConfig: text("placement_point_config"),
+    openedById: text("opened_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    closedById: text("closed_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    openedAt: timestamp("opened_at").defaultNow().notNull(),
+    closedAt: timestamp("closed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_hs_session_event_idx").on(table.eventId),
+    index("event_hs_session_game_type_idx").on(table.eventGameTypeId),
+    index("event_hs_session_status_idx").on(table.status),
+  ],
+);
+
+export type EventHighScoreSession = InferSelectModel<
+  typeof eventHighScoreSession
+>;
+export type NewEventHighScoreSession = InferInsertModel<
+  typeof eventHighScoreSession
+>;
+
+export const eventHighScoreEntry = pgTable(
+  "event_high_score_entry",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => eventHighScoreSession.id, { onDelete: "cascade" }),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    eventGameTypeId: text("event_game_type_id")
+      .notNull()
+      .references(() => eventGameType.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    eventTeamId: text("event_team_id").references(() => eventTeam.id, {
+      onDelete: "cascade",
+    }),
+    score: real("score").notNull(),
+    recorderId: text("recorder_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    achievedAt: timestamp("achieved_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_hs_entry_session_idx").on(table.sessionId),
+    index("event_hs_entry_event_idx").on(table.eventId),
+    index("event_hs_entry_game_type_idx").on(table.eventGameTypeId),
+    index("event_hs_entry_user_idx").on(table.userId),
+    index("event_hs_entry_placeholder_idx").on(
+      table.eventPlaceholderParticipantId,
+    ),
+    index("event_hs_entry_team_idx").on(table.eventTeamId),
+  ],
+);
+
+export type EventHighScoreEntry = InferSelectModel<typeof eventHighScoreEntry>;
+export type NewEventHighScoreEntry = InferInsertModel<
+  typeof eventHighScoreEntry
+>;
+
+export const eventPointCategoryEnum = pgEnum("event_point_category", [
+  EventPointCategory.H2H_MATCH,
+  EventPointCategory.FFA_MATCH,
+  EventPointCategory.HIGH_SCORE,
+  EventPointCategory.TOURNAMENT,
+]);
+
+export const eventPointOutcomeEnum = pgEnum("event_point_outcome", [
+  EventPointOutcome.WIN,
+  EventPointOutcome.LOSS,
+  EventPointOutcome.DRAW,
+  EventPointOutcome.PLACEMENT,
+  EventPointOutcome.SUBMISSION,
+]);
+
+export const eventPointEntry = pgTable(
+  "event_point_entry",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    category: eventPointCategoryEnum("category").notNull(),
+    outcome: eventPointOutcomeEnum("outcome").notNull(),
+    eventTeamId: text("event_team_id").references(() => eventTeam.id, {
+      onDelete: "cascade",
+    }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    eventMatchId: text("event_match_id").references(() => eventMatch.id, {
+      onDelete: "cascade",
+    }),
+    eventHighScoreSessionId: text("event_high_score_session_id").references(
+      () => eventHighScoreSession.id,
+      { onDelete: "cascade" },
+    ),
+    eventTournamentId: text("event_tournament_id").references(
+      () => eventTournament.id,
+      { onDelete: "cascade" },
+    ),
+    points: real("points").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_point_entry_event_idx").on(table.eventId),
+    index("event_point_entry_team_idx").on(table.eventTeamId),
+    index("event_point_entry_user_idx").on(table.userId),
+    index("event_point_entry_match_idx").on(table.eventMatchId),
+    index("event_point_entry_session_idx").on(table.eventHighScoreSessionId),
+    index("event_point_entry_tournament_idx").on(table.eventTournamentId),
+  ],
+);
+
+export type EventPointEntry = InferSelectModel<typeof eventPointEntry>;
+export type NewEventPointEntry = InferInsertModel<typeof eventPointEntry>;
+
+export const eventTournament = pgTable(
+  "event_tournament",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    eventGameTypeId: text("event_game_type_id")
+      .notNull()
+      .references(() => eventGameType.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    logo: text("logo"),
+    tournamentType: tournamentTypeEnum("tournament_type")
+      .notNull()
+      .default(TournamentType.SINGLE_ELIMINATION),
+    status: tournamentStatusEnum("status")
+      .notNull()
+      .default(TournamentStatus.DRAFT),
+    participantType: text("participant_type").notNull().default("individual"),
+    seedingType: seedingTypeEnum("seeding_type").notNull(),
+    bestOf: integer("best_of").notNull().default(1),
+    placementPointConfig: text("placement_point_config"),
+    totalRounds: integer("total_rounds"),
+    startDate: timestamp("start_date"),
+    completedAt: timestamp("completed_at"),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("event_tournament_event_idx").on(table.eventId),
+    index("event_tournament_game_type_idx").on(table.eventGameTypeId),
+    index("event_tournament_status_idx").on(table.status),
+  ],
+);
+
+export type EventTournament = InferSelectModel<typeof eventTournament>;
+export type NewEventTournament = InferInsertModel<typeof eventTournament>;
+
+export const eventTournamentParticipant = pgTable(
+  "event_tournament_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventTournamentId: text("event_tournament_id")
+      .notNull()
+      .references(() => eventTournament.id, { onDelete: "cascade" }),
+    eventTeamId: text("event_team_id")
+      .notNull()
+      .references(() => eventTeam.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    seed: integer("seed"),
+    isEliminated: boolean("is_eliminated").default(false).notNull(),
+    eliminatedInRound: integer("eliminated_in_round"),
+    finalPlacement: integer("final_placement"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_tp_tournament_idx").on(table.eventTournamentId),
+    index("event_tp_team_idx").on(table.eventTeamId),
+  ],
+);
+
+export type EventTournamentParticipant = InferSelectModel<
+  typeof eventTournamentParticipant
+>;
+export type NewEventTournamentParticipant = InferInsertModel<
+  typeof eventTournamentParticipant
+>;
+
+export const eventTournamentRoundMatch = pgTable(
+  "event_tournament_round_match",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventTournamentId: text("event_tournament_id")
+      .notNull()
+      .references(() => eventTournament.id, { onDelete: "cascade" }),
+    round: integer("round").notNull(),
+    position: integer("position").notNull(),
+    participant1Id: text("participant1_id").references(
+      () => eventTournamentParticipant.id,
+      { onDelete: "set null" },
+    ),
+    participant2Id: text("participant2_id").references(
+      () => eventTournamentParticipant.id,
+      { onDelete: "set null" },
+    ),
+    winnerId: text("winner_id").references(
+      () => eventTournamentParticipant.id,
+      { onDelete: "set null" },
+    ),
+    eventMatchId: text("event_match_id").references(() => eventMatch.id, {
+      onDelete: "set null",
+    }),
+    isBye: boolean("is_bye").default(false).notNull(),
+    isForfeit: boolean("is_forfeit").default(false).notNull(),
+    participant1Score: real("participant1_score"),
+    participant2Score: real("participant2_score"),
+    nextMatchId: text("next_match_id"),
+    nextMatchSlot: integer("next_match_slot"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("event_trm_tournament_idx").on(table.eventTournamentId),
+    index("event_trm_round_idx").on(table.eventTournamentId, table.round),
+    unique("event_trm_unique").on(
+      table.eventTournamentId,
+      table.round,
+      table.position,
+    ),
+  ],
+);
+
+export type EventTournamentRoundMatch = InferSelectModel<
+  typeof eventTournamentRoundMatch
+>;
+export type NewEventTournamentRoundMatch = InferInsertModel<
+  typeof eventTournamentRoundMatch
+>;
+
+// Event relations
+
+export const eventRelations = relations(event, ({ one, many }) => ({
+  createdBy: one(user, {
+    fields: [event.createdById],
+    references: [user.id],
+  }),
+  participants: many(eventParticipant),
+  placeholderParticipants: many(eventPlaceholderParticipant),
+  invitations: many(eventInvitation),
+  gameTypes: many(eventGameType),
+  teams: many(eventTeam),
+  matches: many(eventMatch),
+  highScoreSessions: many(eventHighScoreSession),
+  pointEntries: many(eventPointEntry),
+  tournaments: many(eventTournament),
+}));
+
+export const eventParticipantRelations = relations(
+  eventParticipant,
+  ({ one }) => ({
+    event: one(event, {
+      fields: [eventParticipant.eventId],
+      references: [event.id],
+    }),
+    user: one(user, {
+      fields: [eventParticipant.userId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const eventPlaceholderParticipantRelations = relations(
+  eventPlaceholderParticipant,
+  ({ one }) => ({
+    event: one(event, {
+      fields: [eventPlaceholderParticipant.eventId],
+      references: [event.id],
+    }),
+    linkedUser: one(user, {
+      fields: [eventPlaceholderParticipant.linkedUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const eventInvitationRelations = relations(
+  eventInvitation,
+  ({ one }) => ({
+    event: one(event, {
+      fields: [eventInvitation.eventId],
+      references: [event.id],
+    }),
+    inviter: one(user, {
+      fields: [eventInvitation.inviterId],
+      references: [user.id],
+    }),
+    invitee: one(user, {
+      fields: [eventInvitation.inviteeUserId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventInvitation.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+  }),
+);
+
+export const eventGameTypeRelations = relations(
+  eventGameType,
+  ({ one, many }) => ({
+    event: one(event, {
+      fields: [eventGameType.eventId],
+      references: [event.id],
+    }),
+    matches: many(eventMatch),
+    highScoreSessions: many(eventHighScoreSession),
+  }),
+);
+
+export const eventTeamRelations = relations(eventTeam, ({ one, many }) => ({
+  event: one(event, {
+    fields: [eventTeam.eventId],
+    references: [event.id],
+  }),
+  members: many(eventTeamMember),
+}));
+
+export const eventTeamMemberRelations = relations(
+  eventTeamMember,
+  ({ one }) => ({
+    team: one(eventTeam, {
+      fields: [eventTeamMember.eventTeamId],
+      references: [eventTeam.id],
+    }),
+    user: one(user, {
+      fields: [eventTeamMember.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventTeamMember.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+  }),
+);
+
+export const eventMatchRelations = relations(eventMatch, ({ one, many }) => ({
+  event: one(event, {
+    fields: [eventMatch.eventId],
+    references: [event.id],
+  }),
+  gameType: one(eventGameType, {
+    fields: [eventMatch.eventGameTypeId],
+    references: [eventGameType.id],
+  }),
+  recorder: one(user, {
+    fields: [eventMatch.recorderId],
+    references: [user.id],
+  }),
+  participants: many(eventMatchParticipant),
+}));
+
+export const eventMatchParticipantRelations = relations(
+  eventMatchParticipant,
+  ({ one }) => ({
+    match: one(eventMatch, {
+      fields: [eventMatchParticipant.eventMatchId],
+      references: [eventMatch.id],
+    }),
+    team: one(eventTeam, {
+      fields: [eventMatchParticipant.eventTeamId],
+      references: [eventTeam.id],
+    }),
+    user: one(user, {
+      fields: [eventMatchParticipant.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventMatchParticipant.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+  }),
+);
+
+export const eventHighScoreSessionRelations = relations(
+  eventHighScoreSession,
+  ({ one, many }) => ({
+    event: one(event, {
+      fields: [eventHighScoreSession.eventId],
+      references: [event.id],
+    }),
+    gameType: one(eventGameType, {
+      fields: [eventHighScoreSession.eventGameTypeId],
+      references: [eventGameType.id],
+    }),
+    openedBy: one(user, {
+      fields: [eventHighScoreSession.openedById],
+      references: [user.id],
+      relationName: "openedSessions",
+    }),
+    closedBy: one(user, {
+      fields: [eventHighScoreSession.closedById],
+      references: [user.id],
+      relationName: "closedSessions",
+    }),
+    entries: many(eventHighScoreEntry),
+  }),
+);
+
+export const eventHighScoreEntryRelations = relations(
+  eventHighScoreEntry,
+  ({ one }) => ({
+    session: one(eventHighScoreSession, {
+      fields: [eventHighScoreEntry.sessionId],
+      references: [eventHighScoreSession.id],
+    }),
+    event: one(event, {
+      fields: [eventHighScoreEntry.eventId],
+      references: [event.id],
+    }),
+    gameType: one(eventGameType, {
+      fields: [eventHighScoreEntry.eventGameTypeId],
+      references: [eventGameType.id],
+    }),
+    user: one(user, {
+      fields: [eventHighScoreEntry.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventHighScoreEntry.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+    team: one(eventTeam, {
+      fields: [eventHighScoreEntry.eventTeamId],
+      references: [eventTeam.id],
+    }),
+    recorder: one(user, {
+      fields: [eventHighScoreEntry.recorderId],
+      references: [user.id],
+      relationName: "recordedEventHighScores",
+    }),
+  }),
+);
+
+export const eventPointEntryRelations = relations(
+  eventPointEntry,
+  ({ one }) => ({
+    event: one(event, {
+      fields: [eventPointEntry.eventId],
+      references: [event.id],
+    }),
+    team: one(eventTeam, {
+      fields: [eventPointEntry.eventTeamId],
+      references: [eventTeam.id],
+    }),
+    user: one(user, {
+      fields: [eventPointEntry.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventPointEntry.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+    match: one(eventMatch, {
+      fields: [eventPointEntry.eventMatchId],
+      references: [eventMatch.id],
+    }),
+    highScoreSession: one(eventHighScoreSession, {
+      fields: [eventPointEntry.eventHighScoreSessionId],
+      references: [eventHighScoreSession.id],
+    }),
+    tournament: one(eventTournament, {
+      fields: [eventPointEntry.eventTournamentId],
+      references: [eventTournament.id],
+    }),
+  }),
+);
+
+export const eventTournamentRelations = relations(
+  eventTournament,
+  ({ one, many }) => ({
+    event: one(event, {
+      fields: [eventTournament.eventId],
+      references: [event.id],
+    }),
+    gameType: one(eventGameType, {
+      fields: [eventTournament.eventGameTypeId],
+      references: [eventGameType.id],
+    }),
+    createdBy: one(user, {
+      fields: [eventTournament.createdById],
+      references: [user.id],
+    }),
+    participants: many(eventTournamentParticipant),
+    roundMatches: many(eventTournamentRoundMatch),
+  }),
+);
+
+export const eventTournamentParticipantRelations = relations(
+  eventTournamentParticipant,
+  ({ one }) => ({
+    tournament: one(eventTournament, {
+      fields: [eventTournamentParticipant.eventTournamentId],
+      references: [eventTournament.id],
+    }),
+    team: one(eventTeam, {
+      fields: [eventTournamentParticipant.eventTeamId],
+      references: [eventTeam.id],
+    }),
+    user: one(user, {
+      fields: [eventTournamentParticipant.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventTournamentParticipant.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+  }),
+);
+
+export const eventTournamentRoundMatchRelations = relations(
+  eventTournamentRoundMatch,
+  ({ one }) => ({
+    tournament: one(eventTournament, {
+      fields: [eventTournamentRoundMatch.eventTournamentId],
+      references: [eventTournament.id],
+    }),
+    participant1: one(eventTournamentParticipant, {
+      fields: [eventTournamentRoundMatch.participant1Id],
+      references: [eventTournamentParticipant.id],
+      relationName: "eventParticipant1Matches",
+    }),
+    participant2: one(eventTournamentParticipant, {
+      fields: [eventTournamentRoundMatch.participant2Id],
+      references: [eventTournamentParticipant.id],
+      relationName: "eventParticipant2Matches",
+    }),
+    winner: one(eventTournamentParticipant, {
+      fields: [eventTournamentRoundMatch.winnerId],
+      references: [eventTournamentParticipant.id],
+      relationName: "eventWonMatches",
+    }),
+    match: one(eventMatch, {
+      fields: [eventTournamentRoundMatch.eventMatchId],
+      references: [eventMatch.id],
+    }),
+  }),
+);
+
+// Event column exports
+export const eventColumns = getTableColumns(event);
+export const eventParticipantColumns = getTableColumns(eventParticipant);
+export const eventPlaceholderParticipantColumns = getTableColumns(
+  eventPlaceholderParticipant,
+);
+export const eventInvitationColumns = getTableColumns(eventInvitation);
+export const eventGameTypeColumns = getTableColumns(eventGameType);
+export const eventTeamColumns = getTableColumns(eventTeam);
+export const eventTeamMemberColumns = getTableColumns(eventTeamMember);
+export const eventMatchColumns = getTableColumns(eventMatch);
+export const eventMatchParticipantColumns = getTableColumns(
+  eventMatchParticipant,
+);
+export const eventHighScoreSessionColumns = getTableColumns(
+  eventHighScoreSession,
+);
+export const eventHighScoreEntryColumns = getTableColumns(eventHighScoreEntry);
+export const eventPointEntryColumns = getTableColumns(eventPointEntry);
+export const eventTournamentColumns = getTableColumns(eventTournament);
+export const eventTournamentParticipantColumns = getTableColumns(
+  eventTournamentParticipant,
+);
+export const eventTournamentRoundMatchColumns = getTableColumns(
+  eventTournamentRoundMatch,
+);

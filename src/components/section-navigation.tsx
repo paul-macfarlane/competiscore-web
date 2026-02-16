@@ -12,15 +12,23 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 interface SectionNavigationProps {
-  tabs: { label: string; href: string }[];
+  tabs: { label: string; href: string; matchPrefixes?: string[] }[];
 }
 
 export function SectionNavigation({ tabs }: SectionNavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isActive = (href: string) => pathname.startsWith(href);
-  const activeTab = tabs.find((tab) => isActive(tab.href));
+  const activeTab =
+    tabs.find((tab) => pathname === tab.href) ??
+    tabs.find((tab) =>
+      tab.matchPrefixes?.some((prefix) => pathname.startsWith(prefix)),
+    ) ??
+    [...tabs]
+      .sort((a, b) => b.href.length - a.href.length)
+      .find((tab) => pathname.startsWith(tab.href + "/"));
+
+  const isActive = (href: string) => activeTab?.href === href;
 
   return (
     <>

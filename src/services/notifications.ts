@@ -3,6 +3,7 @@ import { getUnacknowledgedModerationActions } from "@/db/moderation-actions";
 import { ModerationActionType } from "@/lib/shared/constants";
 import { Notification, NotificationType } from "@/lib/shared/notifications";
 
+import { getUserPendingEventInvitations } from "./event-invitations";
 import { getUserPendingInvitations } from "./invitations";
 import { ServiceResult } from "./shared";
 import { getUserPendingTeamInvitations } from "./team-invitations";
@@ -45,6 +46,25 @@ export async function getNotifications(
           teamLogo: inv.team.logo,
           leagueId: inv.team.league.id,
           leagueName: inv.team.league.name,
+          role: inv.role,
+          inviterName: inv.inviter.name,
+        },
+      });
+    }
+  }
+
+  const eventInvitationsResult = await getUserPendingEventInvitations(userId);
+  if (eventInvitationsResult.data) {
+    for (const inv of eventInvitationsResult.data) {
+      notifications.push({
+        type: NotificationType.EVENT_INVITATION,
+        id: `event_invitation_${inv.id}`,
+        createdAt: inv.createdAt,
+        data: {
+          invitationId: inv.id,
+          eventId: inv.event.id,
+          eventName: inv.event.name,
+          eventLogo: inv.event.logo,
           role: inv.role,
           inviterName: inv.inviter.name,
         },

@@ -6,6 +6,10 @@ import {
   NotificationType,
 } from "@/lib/shared/notifications";
 import { acceptChallenge, declineChallenge } from "@/services/challenges";
+import {
+  acceptDirectEventInvitation,
+  declineEventInvitation,
+} from "@/services/event-invitations";
 import { acceptInvitation, declineInvitation } from "@/services/invitations";
 import { acknowledgeModerationAction } from "@/services/moderation";
 import { getNotifications } from "@/services/notifications";
@@ -92,6 +96,30 @@ export async function handleNotificationAction(input: unknown) {
         );
         if (result.data) {
           revalidatePath("/invitations");
+        }
+        return result;
+      }
+      return { error: "Invalid action" };
+    }
+
+    case NotificationType.EVENT_INVITATION: {
+      const invitationId = notificationId.replace("event_invitation_", "");
+
+      if (action === NotificationAction.ACCEPT) {
+        const result = await acceptDirectEventInvitation(session.user.id, {
+          invitationId,
+        });
+        if (result.data) {
+          revalidatePath("/events");
+          revalidatePath(`/events/${result.data.eventId}`);
+        }
+        return result;
+      } else if (action === NotificationAction.DECLINE) {
+        const result = await declineEventInvitation(session.user.id, {
+          invitationId,
+        });
+        if (result.data) {
+          revalidatePath("/events");
         }
         return result;
       }

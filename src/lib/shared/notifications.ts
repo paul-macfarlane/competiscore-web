@@ -1,4 +1,5 @@
 import {
+  EventParticipantRole,
   LeagueMemberRole,
   ModerationActionType,
   TeamMemberRole,
@@ -7,6 +8,7 @@ import {
 export const NotificationType = {
   LEAGUE_INVITATION: "league_invitation",
   TEAM_INVITATION: "team_invitation",
+  EVENT_INVITATION: "event_invitation",
   MODERATION_ACTION: "moderation_action",
   CHALLENGE: "challenge",
   // Future: MATCH_RESULT: "match_result",
@@ -80,9 +82,22 @@ export type ChallengeNotification = BaseNotification & {
   };
 };
 
+export type EventInvitationNotification = BaseNotification & {
+  type: typeof NotificationType.EVENT_INVITATION;
+  data: {
+    invitationId: string;
+    eventId: string;
+    eventName: string;
+    eventLogo: string | null;
+    role: EventParticipantRole;
+    inviterName: string;
+  };
+};
+
 export type Notification =
   | LeagueInvitationNotification
   | TeamInvitationNotification
+  | EventInvitationNotification
   | ModerationActionNotification
   | ChallengeNotification;
 // Future: | MatchResultNotification

@@ -1,5 +1,6 @@
 "use client";
 
+import { TeamColorBadge } from "@/components/team-color-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,18 @@ export function ParticipantSelector({
               <div className="flex flex-col items-start min-w-0">
                 <span className="truncate max-w-full text-sm leading-tight">
                   {selectedOption.name}
+                  {selectedOption.teamName &&
+                    (selectedOption.teamColor ? (
+                      <TeamColorBadge
+                        name={selectedOption.teamName}
+                        color={selectedOption.teamColor}
+                        className="ml-1"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground ml-1">
+                        ({selectedOption.teamName})
+                      </span>
+                    ))}
                 </span>
                 {selectedOption.username && (
                   <span className="text-muted-foreground text-xs truncate max-w-full leading-tight">
@@ -90,7 +103,7 @@ export function ParticipantSelector({
                 {users.map((option) => (
                   <CommandItem
                     key={`user-${option.id}`}
-                    value={`${option.name} ${option.username || ""}`}
+                    value={`${option.name} ${option.username || ""} ${option.teamName || ""}`}
                     disabled={option.isSuspended}
                     onSelect={() => {
                       if (option.isSuspended) return;
@@ -113,7 +126,21 @@ export function ParticipantSelector({
                     <div className="flex items-center gap-2">
                       <ParticipantAvatar option={option} size="sm" />
                       <div className="flex flex-col">
-                        <span>{option.name}</span>
+                        <span>
+                          {option.name}
+                          {option.teamName &&
+                            (option.teamColor ? (
+                              <TeamColorBadge
+                                name={option.teamName}
+                                color={option.teamColor}
+                                className="ml-1"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground ml-1">
+                                ({option.teamName})
+                              </span>
+                            ))}
+                        </span>
                         {option.username && (
                           <span className="text-muted-foreground text-xs">
                             @{option.username}
@@ -155,7 +182,14 @@ export function ParticipantSelector({
                     />
                     <div className="flex items-center gap-2">
                       <ParticipantAvatar option={option} size="sm" />
-                      <span>{option.name}</span>
+                      {option.teamColor ? (
+                        <TeamColorBadge
+                          name={option.name}
+                          color={option.teamColor}
+                        />
+                      ) : (
+                        <span>{option.name}</span>
+                      )}
                     </div>
                   </CommandItem>
                 ))}
@@ -166,7 +200,7 @@ export function ParticipantSelector({
                 {placeholders.map((option) => (
                   <CommandItem
                     key={`placeholder-${option.id}`}
-                    value={option.name}
+                    value={`${option.name} ${option.teamName || ""}`}
                     onSelect={() => {
                       onChange(
                         value?.id === option.id && value?.type === option.type
@@ -186,7 +220,21 @@ export function ParticipantSelector({
                     />
                     <div className="flex items-center gap-2">
                       <ParticipantAvatar option={option} size="sm" />
-                      <span>{option.name}</span>
+                      <span>
+                        {option.name}
+                        {option.teamName &&
+                          (option.teamColor ? (
+                            <TeamColorBadge
+                              name={option.teamName}
+                              color={option.teamColor}
+                              className="ml-1"
+                            />
+                          ) : (
+                            <span className="text-muted-foreground ml-1">
+                              ({option.teamName})
+                            </span>
+                          ))}
+                      </span>
                     </div>
                   </CommandItem>
                 ))}

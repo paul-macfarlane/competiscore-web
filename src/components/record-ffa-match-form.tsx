@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import {
@@ -34,6 +35,23 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { ParticipantSelector } from "./participant-selector";
+
+function getSelectedIds(
+  participants: Array<{
+    userId?: string;
+    teamId?: string;
+    placeholderMemberId?: string;
+  }>,
+  excludeIndex: number,
+): Set<string> {
+  const ids = new Set<string>();
+  participants.forEach((p, i) => {
+    if (i === excludeIndex) return;
+    const id = p.userId || p.teamId || p.placeholderMemberId;
+    if (id) ids.add(id);
+  });
+  return ids;
+}
 
 type RecordFFAMatchFormProps = {
   leagueId: string;
@@ -264,9 +282,14 @@ function RankedForm({
               )}
               <div className="min-w-0 w-full sm:w-auto sm:flex-1">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedIds(
+                      form.watch("participants"),
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
-                    // eslint-disable-next-line react-hooks/incompatible-library
                     form.watch(`participants.${index}`),
                   )}
                   onChange={(participant) => {
@@ -329,6 +352,7 @@ function ScoreBasedForm({
   onSuccess,
   onCancel,
 }: RecordFFAMatchFormProps) {
+  const scoreLabel = config.scoreDescription || "Score";
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -434,9 +458,14 @@ function ScoreBasedForm({
             <div key={field.id} className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 w-full sm:w-auto sm:flex-1">
                 <ParticipantSelector
-                  options={participantOptions}
+                  options={participantOptions.filter((o) => {
+                    const selected = getSelectedIds(
+                      form.watch("participants"),
+                      index,
+                    );
+                    return !selected.has(o.id);
+                  })}
                   value={getParticipantValue(
-                    // eslint-disable-next-line react-hooks/incompatible-library
                     form.watch(`participants.${index}`),
                   )}
                   onChange={(participant) => {
@@ -473,7 +502,7 @@ function ScoreBasedForm({
                       <Input
                         type="number"
                         step="any"
-                        placeholder="Score"
+                        placeholder={scoreLabel}
                         {...scoreField}
                         onChange={(e) => {
                           const value = e.target.value;

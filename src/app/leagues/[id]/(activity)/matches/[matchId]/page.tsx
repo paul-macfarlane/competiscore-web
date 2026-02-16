@@ -13,6 +13,7 @@ import {
   MatchResult,
   MatchStatus,
 } from "@/lib/shared/constants";
+import { getScoreDescription } from "@/lib/shared/game-config-parser";
 import { getResultBadgeClasses } from "@/lib/shared/match-styles";
 import { cn } from "@/lib/shared/utils";
 import { getMatch } from "@/services/matches";
@@ -46,6 +47,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
   const side2 = match.participants.filter((p) => p.side === 2);
   const isH2H = side1.length > 0 && side2.length > 0;
   const isFFA = match.participants.some((p) => p.rank !== null);
+  const scoreLabel = match.gameType?.config
+    ? getScoreDescription(match.gameType.config, match.gameType.category)
+    : undefined;
 
   const statusBadgeVariant = (status: string) => {
     switch (status) {
@@ -93,8 +97,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
             <CardTitle>Match Result</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex-1 w-full sm:w-auto min-w-0">
+            {/* Desktop: horizontal layout */}
+            <div className="hidden sm:flex items-center gap-4">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   {match.challengerId ? "Challenger" : "Side 1"}
                 </h3>
@@ -105,12 +110,19 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="text-center shrink-0 w-full sm:w-auto">
+              <div className="text-center shrink-0">
                 {match.status === MatchStatus.COMPLETED &&
                 side1[0]?.score !== null &&
                 side2[0]?.score !== null ? (
-                  <div className="text-2xl sm:text-3xl font-extrabold tabular-nums tracking-tight">
-                    {side1[0].score} - {side2[0].score}
+                  <div>
+                    <div className="text-3xl font-extrabold tabular-nums tracking-tight">
+                      {side1[0].score} - {side2[0].score}
+                    </div>
+                    {scoreLabel && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {scoreLabel}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <span className="text-lg font-medium text-muted-foreground uppercase tracking-wider">
@@ -119,7 +131,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                 )}
               </div>
 
-              <div className="flex-1 w-full sm:w-auto min-w-0 sm:text-right">
+              <div className="flex-1 min-w-0 text-right">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   {match.challengerId ? "Challenged" : "Side 2"}
                 </h3>
@@ -128,6 +140,46 @@ export default async function MatchDetailPage({ params }: PageProps) {
                     <ParticipantRow key={p.id} participant={p} align="right" />
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Mobile: vertical with inline scores */}
+            <div className="sm:hidden space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  {side1.map((p) => (
+                    <ParticipantRow key={p.id} participant={p} />
+                  ))}
+                </div>
+                {match.status === MatchStatus.COMPLETED &&
+                  side1[0]?.score !== null && (
+                    <span className="text-xl font-bold tabular-nums shrink-0">
+                      {side1[0].score}
+                      {scoreLabel && (
+                        <span className="text-xs text-muted-foreground font-normal ml-1">
+                          {scoreLabel}
+                        </span>
+                      )}
+                    </span>
+                  )}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  {side2.map((p) => (
+                    <ParticipantRow key={p.id} participant={p} />
+                  ))}
+                </div>
+                {match.status === MatchStatus.COMPLETED &&
+                  side2[0]?.score !== null && (
+                    <span className="text-xl font-bold tabular-nums shrink-0">
+                      {side2[0].score}
+                      {scoreLabel && (
+                        <span className="text-xs text-muted-foreground font-normal ml-1">
+                          {scoreLabel}
+                        </span>
+                      )}
+                    </span>
+                  )}
               </div>
             </div>
           </CardContent>
@@ -163,7 +215,14 @@ export default async function MatchDetailPage({ params }: PageProps) {
                     </div>
                     <ParticipantRow participant={p} showResult={false} />
                     {p.score !== null && (
-                      <span className="ml-auto font-medium">{p.score}</span>
+                      <span className="ml-auto font-medium">
+                        {p.score}
+                        {scoreLabel && (
+                          <span className="text-xs text-muted-foreground font-normal ml-1">
+                            {scoreLabel}
+                          </span>
+                        )}
+                      </span>
                     )}
                   </div>
                 ))}

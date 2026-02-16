@@ -35,7 +35,7 @@ Friend groups, offices, and clubs frequently play casual competitive games but l
 
 ### 2.1 Leagues
 
-A **League** is a community of players who compete against each other. Each league has its own game types, tournaments, events, and leaderboards. Users can belong to multiple leagues. Leagues can be public (discoverable and open to join) or private (invite-only).
+A **League** is a community of players who compete against each other. Each league has its own game types, tournaments, and leaderboards. Users can belong to multiple leagues. Leagues can be public (discoverable and open to join) or private (invite-only).
 
 ### 2.2 Members & Roles
 
@@ -50,7 +50,6 @@ Each league has three member roles with escalating permissions:
 | Record matches for others  |        | ✓       | ✓         |
 | Create game types          |        | ✓       | ✓         |
 | Create tournaments         |        | ✓       | ✓         |
-| Create events              |        | ✓       | ✓         |
 | Invite members             |        | ✓       | ✓         |
 | Create placeholder members |        | ✓       | ✓         |
 | Remove members             |        | ✓       | ✓         |
@@ -370,46 +369,149 @@ Tournament matches affect ELO ratings the same as regular matches. There is no s
 
 ### 8.1 Event Overview
 
-Events are flexible, time-bounded competitions where participating in matches, free-for-alls, tournaments, and other activities earns points toward an overall event leaderboard. Events allow leagues to run multi-game competitions like "War Week" where diverse competitions all contribute to a single standings. Events can be individual-based or team-based.
+Events are independent, top-level entities (separate from leagues) for running time-bounded, multi-game competitions. Events have their own participants, game types, teams, and point-based leaderboards. Think "Game Night Tournament" or "Office Olympics" — events aggregate multiple competitions (H2H matches, FFA matches, high score sessions, tournaments) into a unified team-based standings.
 
-### 8.2 Event Configuration
+Events are completely separate from leagues. They have their own participant system, game types, and match recording. No data is shared between events and leagues. Only participants that are members of teams can take part in matches, FFA, high score, and tournaments. Participant teams should be visible when viewing that participant throughout the UI.
 
-- Name and optional logo
-- Scoring type: Individual or Team
-  - **Individual:** Points are earned by individual participants. The winner is the person with the most points.
-  - **Team:** Players are assigned to event teams. Individual match/tournament results contribute points to the player's team score. Events can also include team-vs-team matches, free-for-alls, and tournaments where the winning team earns points directly.
-- Start date (manager-specified)
-- No fixed end date — events run until a Manager or Executive manually stops them
-- Point rules: Configurable point values for different competition outcomes (see 8.3)
+The current focus is on team-based events, but the architecture is not tightly coupled to this to allow for individual-based events in the future.
 
-### 8.3 Event Point Rules
+### 8.2 Event Lifecycle
 
-Managers define how each competition outcome earns points in the event. Points are arbitrary and fully configurable per event. Examples:
+Events follow a three-phase lifecycle:
 
-- 1st place in a tournament: +10 points
-- 2nd place in a tournament: +5 points
-- Winning a head-to-head match: +1 point
-- 2nd place in a free-for-all: +3 points
-- 1st place in a free-for-all: +5 points
-- Winning a team-vs-team match: +2 points for the winning team
+1. **Draft:** Set up game types, create teams, invite participants, assign participants to teams. Game types can only be added during draft.
+2. **Active:** Record matches, run high score sessions, run tournaments. All activities earn points toward the event leaderboard.
+3. **Completed:** Event is finished. Leaderboard is frozen. Historical data preserved for reference.
 
-Different events can have completely different point structures. This flexibility supports everything from casual "most wins" events to elaborate multi-day competitions with varying point values across different game types and formats.
+Organizers can reopen completed events (transition back to Active) if additional activity needs to be recorded.
 
-### 8.4 Event Scoring (Team-Based)
+### 8.3 Event Participants & Roles
 
-In a team-based event:
+Events have two roles (referred to as "participants" in the UI, not "members"):
 
-- Individual match results (H2H wins, FFA placements, tournament results) earn points for the player's assigned team
-- Team-vs-team matches, free-for-alls, and tournaments can also be included, where the winning team directly earns the configured point value
-- The event leaderboard ranks teams by total accumulated points
+| Permission                      | Participant | Organizer |
+| ------------------------------- | ----------- | --------- |
+| View event                      | ✓           | ✓         |
+| Submit own high scores          | ✓           | ✓         |
+| Record own matches              | ✓           | ✓         |
+| Record matches for others       |             | ✓         |
+| Submit high scores for others   |             | ✓         |
+| Delete own matches & scores     | ✓           | ✓         |
+| Delete others' matches & scores |             | ✓         |
+| Manage game types               |             | ✓         |
+| Manage teams                    |             | ✓         |
+| Manage participants             |             | ✓         |
+| Open/close high score sessions  |             | ✓         |
+| Create tournaments              |             | ✓         |
+| Invite participants             |             | ✓         |
+| Manage placeholders             |             | ✓         |
+| Promote to organizer            |             | ✓         |
+| Start/complete/reopen event     |             | ✓         |
+| Edit/archive/delete event       |             | ✓         |
 
-### 8.5 Event Leaderboard
+The event creator is automatically assigned the Organizer role.
+
+### 8.4 Event Configuration
+
+- Name and optional logo (uses event icon set)
+- Description (optional)
+- Start date (optional)
+- Visibility: Private only (invite-only via invite link or direct invite). Schema supports future public events.
+- Scoring type: Team only (schema supports future individual scoring)
+
+### 8.5 Event Game Types
+
+Events define their own game types independently from leagues. Supports the same three categories:
+
+- **Head-to-Head (H2H):** Same configuration as league H2H game types
+- **Free-for-All (FFA):** Same configuration as league FFA game types
+- **High Score:** Same configuration as league High Score game types
+
+Game types can only be added during the draft phase. They can be archived but not deleted.
+
+### 8.6 Event Teams
+
+Organizers create teams and assign participants (real users or placeholder members) to teams. Participants can only be on one team per event. Teams have a name and optional logo. Organizers can edit team details and delete teams.
+
+### 8.7 Event Point Configuration
+
+Points are set per-activity at recording time, not as pre-defined rules:
+
+- **H2H matches:** Win points, loss points, and optional draw points set at recording time. These are optional — matches don't need points associated with them.
+- **FFA matches:** Per-placement points set at recording time alongside ranks/scores. These are optional.
+- **High scores:** Optional placement point config set when opening a session, applied when closing.
+- **Tournaments:** Optional placement point config set at creation, applied when tournament completes.
+
+This approach gives maximum flexibility — the same event can award different point values for different matches.
+
+### 8.8 Event Match Recording & Deletion
+
+**Recording:** Both organizers and participants can record H2H and FFA matches. Participants can only record matches they are personally involved in; organizers can record matches for anyone.
+
+**Deletion:** Matches can be deleted. The same self-only restriction applies — participants can only delete matches they are involved in; organizers can delete any match. When a match is deleted, associated point entries are removed from the leaderboard.
+
+_Future: Match editing (modify results after recording, with point recalculation)._
+
+### 8.9 Event High Score Sessions
+
+High scores in events work through a session-based flow:
+
+1. **Organizer opens a session** for a specific high score game type, optionally configuring placement point awards
+2. **Participants submit their own scores** to the open session. Organizers can submit scores on behalf of any participant.
+3. **Organizer closes the session** — scores are ranked and placement points (if configured) are awarded to the submitters' teams
+
+**Deletion:** Individual high score entries can be deleted. Participants can only delete their own entries; organizers can delete any entry.
+
+_Future: High score entry editing (modify scores after submission)._
+
+### 8.10 Event Scoring
+
+Team-based scoring only (for now):
+
+- Match results (H2H wins, FFA placements) earn points for the participating teams
+- High score session closures award placement points to submitters' teams
+- Tournament completions award placement points to participating teams
+- Points are tracked per-team with category labels (h2h_match, ffa_match, high_score, tournament)
+- Points are removed when matches/entries are deleted
+
+No ELO ratings in events — points only.
+
+### 8.11 Event Leaderboard
 
 The event leaderboard shows:
 
-- Accumulated points and ranking (individuals or teams, based on event scoring type)
-- Breakdown by competition type / point source
-- Historical events are preserved for reference after they end
+- Teams ranked by total accumulated points
+- Per-game-type leaderboards for high score game types (individual-based, showing participant name and team)
+- Historical events preserved for reference after completion
+
+### 8.12 Event Placeholder Members
+
+Events support placeholder members (same concept as leagues) for tracking participants who haven't signed up yet. Placeholders can be assigned to teams and participate in matches.
+
+### 8.13 Event Invitations
+
+Events are private and invite-only. Organizers can:
+
+- **Invite users directly** via in-app search
+- **Generate invite links** that can be shared externally
+
+Invite links handle the same scenarios as league invite links (authenticated, non-authenticated users).
+
+### 8.14 Event Tournaments
+
+Events support single elimination tournaments with individual participants (representing their teams). Tournament matches earn points for the event leaderboard. Optional placement point config awards bonus points when the tournament completes.
+
+**Recording:** Both organizers and participants can record tournament match results. Participants can only record results for matches they are involved in.
+
+**Undo:** Tournament match results can be undone (reverted) if no subsequent match further down the bracket has been played. This prevents cascading inconsistencies in the bracket.
+
+_Future: Tournament match editing (modify results in-place without undo)._
+
+### 8.15 Future Event Enhancements
+
+- Public events (discoverable and open to join)
+- Individual scoring mode (no teams required)
+- Event templates for common formats
 
 ---
 
@@ -617,7 +719,7 @@ Times displayed in the user’s browser/device timezone. No explicit timezone st
 ### Phase 2.5: UX Simplification (Complete)
 
 1. ~~Remove `/dashboard`, make `/leagues` the default landing page for authenticated users~~
-2. ~~Add league sub-navigation tabs (Home, Matches, Challenges, Leaderboards, Members, Teams, Moderation + Game Types for managers + Settings for executives)~~
+2. ~~Add league sub-navigation tabs (Home, Activity, Leaderboards, People + Manage for managers)~~
 3. ~~League-level Leaderboards page showing all game type standings in one view~~
 4. ~~Quick-action buttons on league home (Record Match, Submit Score, Challenge) with game type dropdown~~
 5. ~~Recent match activity on league home page~~
@@ -634,11 +736,11 @@ When `/dashboard` returns, it should show cross-league personal data:
 - **Performance Summary**: Overall W/L/D record, win rate trends
 - **League Quick Access**: Cards for each league with activity indicators
 
-### Phase 3: Tournaments
+### Phase 3: Tournaments (Complete)
 
-1. Single Elimination tournaments (MVP tournament type)
-2. Bracket management and bye handling
-3. Tournament history
+1. ~~Single Elimination tournaments (MVP tournament type)~~
+2. ~~Bracket management and bye handling~~
+3. ~~Tournament history~~
 4. _Future: Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination_
 
 ### Phase 4: Enhanced Stats & Records
@@ -650,12 +752,22 @@ When `/dashboard` returns, it should show cross-league personal data:
 5. Ad-hoc teams for one-off match groupings
 6. Admin UI for managing usage limit overrides
 
-### Phase 5: Events
+### Phase 5: Events (Complete)
 
-1. Event creation and configuration (individual and team-based)
-2. Event point rules (configurable per event)
-3. Event leaderboards
-4. Event history
+1. ~~Independent event entity (separate from leagues) with own participants, game types, teams~~
+2. ~~Event lifecycle: Draft → Active → Completed (with reopen capability)~~
+3. ~~Two-role participant system: Organizer + Participant~~
+4. ~~Team-based scoring with point-based leaderboards (no ELO)~~
+5. ~~H2H match recording, FFA match recording, high score sessions~~
+6. ~~Match and high score deletion with self-only restriction for participants~~
+7. ~~Per-activity point configuration (set at recording time), removed on delete~~
+8. ~~High score session flow (open → submit → close with optional placement points)~~
+9. ~~Event tournaments (single elimination, individual participants representing teams)~~
+10. ~~Tournament match undo with downstream bracket protection~~
+11. ~~Event invitations (direct invite + invite links, private events only)~~
+12. ~~Placeholder member support~~
+13. ~~Top-level navigation (Events alongside Leagues in header)~~
+14. ~~Per-game-type individual leaderboards for high score game types~~
 
 ### Post-MVP Features
 
@@ -679,6 +791,9 @@ When `/dashboard` returns, it should show cross-league personal data:
 - Uploaded profile pictures (replacing predefined avatars)
 - Apple Sign-In
 - Magic Link Email authentication
+- Public events (discoverable and open to join)
+- Individual scoring mode for events (no teams required)
+- Event templates for common formats
 
 ---
 

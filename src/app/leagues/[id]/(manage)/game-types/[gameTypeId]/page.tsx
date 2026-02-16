@@ -161,6 +161,16 @@ function H2HConfigDisplay({ config }: { config: H2HConfig }) {
           <span className="font-medium">{config.scoreDescription}</span>
         </div>
       )}
+      {config.scoreOrder && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Score Order:</span>
+          <span className="font-medium">
+            {config.scoreOrder === ScoreOrder.HIGHEST_WINS
+              ? "Highest Wins"
+              : "Lowest Wins"}
+          </span>
+        </div>
+      )}
       <div className="flex justify-between">
         <span className="text-muted-foreground">Draws Allowed:</span>
         <span className="font-medium">
@@ -200,14 +210,22 @@ function FFAConfigDisplay({ config }: { config: FFAConfig }) {
             : "Score-Based Ranking"}
         </span>
       </div>
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Score Order:</span>
-        <span className="font-medium">
-          {config.scoreOrder === ScoreOrder.HIGHEST_WINS
-            ? "Highest Wins"
-            : "Lowest Wins"}
-        </span>
-      </div>
+      {config.scoreDescription && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Score Label:</span>
+          <span className="font-medium">{config.scoreDescription}</span>
+        </div>
+      )}
+      {config.scoringType === ScoringType.SCORE_BASED && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Score Order:</span>
+          <span className="font-medium">
+            {config.scoreOrder === ScoreOrder.HIGHEST_WINS
+              ? "Highest Wins"
+              : "Lowest Wins"}
+          </span>
+        </div>
+      )}
       <div className="flex justify-between">
         <span className="text-muted-foreground">Player Range:</span>
         <span className="font-medium">

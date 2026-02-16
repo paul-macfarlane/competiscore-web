@@ -10,3 +10,7 @@ Disallow: /leagues/*/settings/
 Disallow: /leagues/*/my-reports
 Disallow: /leagues/*/my-warnings
 Disallow: /leagues/archived/
+Disallow: /events/*/participants/
+Disallow: /events/*/teams/
+Disallow: /events/*/settings/
+Disallow: /events/*/game-types/

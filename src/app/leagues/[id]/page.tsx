@@ -10,9 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
 import { LeagueMemberRole, LeagueVisibility } from "@/lib/shared/constants";
-import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
+import { getScoreDescription } from "@/lib/shared/game-config-parser";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/shared/roles";
-import { getLeagueGameTypes } from "@/services/game-types";
 import { getExecutiveCount, getLeagueWithRole } from "@/services/leagues";
 import {
   HighScoreActivityItem,
@@ -29,7 +28,6 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { LeaveLeagueButton } from "./leave-league-button";
-import { QuickActions } from "./quick-actions";
 
 interface LeagueDashboardPageProps {
   params: Promise<{ id: string }>;
@@ -111,17 +109,8 @@ async function LeagueDashboardContent({
   const isExecutive = league.role === LeagueMemberRole.EXECUTIVE;
   const executiveCount = await getExecutiveCount(leagueId);
   const isSoleExecutive = isExecutive && executiveCount <= 1;
-  const canPlay = canPerformAction(league.role, LeagueAction.PLAY_GAMES);
-
   const isSuspended =
     league.suspendedUntil && league.suspendedUntil > new Date();
-
-  const [gameTypesResult] = await Promise.all([
-    getLeagueGameTypes(userId, leagueId),
-  ]);
-
-  const allGameTypes = gameTypesResult.data ?? [];
-  const activeGameTypes = allGameTypes.filter((gt) => !gt.isArchived);
 
   return (
     <>
@@ -206,10 +195,6 @@ async function LeagueDashboardContent({
         />
       </div>
 
-      {canPlay && !isSuspended && activeGameTypes.length > 0 && (
-        <QuickActions leagueId={leagueId} gameTypes={activeGameTypes} />
-      )}
-
       <Suspense
         fallback={
           <Card>
@@ -276,6 +261,14 @@ async function RecentMatchesSection({
                 matchId={item.id}
                 leagueId={leagueId}
                 gameTypeName={item.gameType?.name}
+                scoreLabel={
+                  item.gameType?.config
+                    ? getScoreDescription(
+                        item.gameType.config,
+                        item.gameType.category,
+                      )
+                    : undefined
+                }
                 playedAt={item.playedAt}
                 status={item.status}
                 participants={item.participants}
@@ -302,7 +295,7 @@ function HighScoreActivityCard({
       <CardHeader className="pb-2 space-y-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-semibold text-sm truncate">
-            {highScore.gameType?.name || "High Score"}
+            {highScore.gameType?.name || "Best Score"}
           </span>
           <Badge variant="secondary" className="shrink-0 text-xs">
             <Trophy className="h-3 w-3 mr-1" />

@@ -38,4 +38,29 @@ export const MAX_TOURNAMENT_PARTICIPANTS = 64;
 export const MIN_TOURNAMENT_PARTICIPANTS = 2;
 export const MAX_TOURNAMENTS_PER_LEAGUE = 20;
 
+export const EVENT_NAME_MAX_LENGTH = 100;
+export const EVENT_DESCRIPTION_MAX_LENGTH = 500;
+export const MAX_EVENTS_PER_USER = 5;
+export const MAX_EVENT_GAME_TYPES = 20;
+export const MAX_EVENT_TEAMS = 50;
+export const MAX_EVENT_TEAM_NAME_MAX_LENGTH = 100;
+export const MAX_EVENT_TEAM_MEMBERS = 20;
+export const MAX_EVENT_PARTICIPANTS = 100;
+export const MAX_EVENT_PLACEHOLDER_PARTICIPANTS = 100;
+
+export const EVENT_TEAM_COLORS = [
+  { value: "red", label: "Red", bg: "#dc2626", text: "white" },
+  { value: "blue", label: "Blue", bg: "#2563eb", text: "white" },
+  { value: "green", label: "Green", bg: "#16a34a", text: "white" },
+  { value: "orange", label: "Orange", bg: "#ea580c", text: "white" },
+  { value: "purple", label: "Purple", bg: "#9333ea", text: "white" },
+  { value: "yellow", label: "Yellow", bg: "#ca8a04", text: "white" },
+  { value: "teal", label: "Teal", bg: "#0d9488", text: "white" },
+  { value: "pink", label: "Pink", bg: "#db2777", text: "white" },
+] as const;
+export type EventTeamColor = (typeof EVENT_TEAM_COLORS)[number]["value"];
+
+export const HIGH_SCORE_SESSION_NAME_MAX_LENGTH = 100;
+export const HIGH_SCORE_SESSION_DESCRIPTION_MAX_LENGTH = 500;
+
 export const DEFAULT_ITEMS_PER_PAGE = 10;

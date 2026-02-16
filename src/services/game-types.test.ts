@@ -45,6 +45,7 @@ const mockGameType = {
     scoringType: "score_based",
     scoreDescription: "Points",
     drawsAllowed: false,
+    participantType: "individual",
     minPlayersPerSide: 1,
     maxPlayersPerSide: 2,
   }),
@@ -85,6 +86,7 @@ describe("createGameType", () => {
         scoringType: "score_based",
         scoreDescription: "Points",
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 2,
       },
@@ -104,6 +106,7 @@ describe("createGameType", () => {
       config: {
         scoringType: "win_loss",
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
@@ -126,6 +129,7 @@ describe("createGameType", () => {
       config: {
         scoringType: "win_loss",
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
@@ -148,6 +152,7 @@ describe("createGameType", () => {
       config: {
         scoringType: "win_loss",
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },
@@ -180,6 +185,7 @@ describe("createGameType", () => {
       config: {
         scoringType: "win_loss",
         drawsAllowed: false,
+        participantType: "individual",
         minPlayersPerSide: 1,
         maxPlayersPerSide: 1,
       },

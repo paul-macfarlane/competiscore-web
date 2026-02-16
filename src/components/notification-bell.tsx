@@ -17,6 +17,7 @@ import {
 } from "@/lib/shared/constants";
 import {
   ChallengeNotification,
+  EventInvitationNotification,
   LeagueInvitationNotification,
   ModerationActionNotification,
   Notification,
@@ -24,11 +25,16 @@ import {
   NotificationType,
   TeamInvitationNotification,
 } from "@/lib/shared/notifications";
-import { ROLE_LABELS, TEAM_ROLE_LABELS } from "@/lib/shared/roles";
+import {
+  EVENT_ROLE_LABELS,
+  ROLE_LABELS,
+  TEAM_ROLE_LABELS,
+} from "@/lib/shared/roles";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   Bell,
+  CalendarDays,
   Check,
   Loader2,
   Shield,
@@ -155,6 +161,13 @@ function NotificationItem({ notification, onAction }: NotificationItemProps) {
           onAction={onAction}
         />
       );
+    case NotificationType.EVENT_INVITATION:
+      return (
+        <EventInvitationNotificationItem
+          notification={notification}
+          onAction={onAction}
+        />
+      );
     case NotificationType.MODERATION_ACTION:
       return (
         <ModerationNotificationItem
@@ -240,6 +253,108 @@ function InvitationNotificationItem({
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               {ROLE_LABELS[notification.data.role]}
+            </Badge>
+          </div>
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleDecline}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <X className="mr-1 h-3 w-3" />
+              )}
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleAccept}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Check className="mr-1 h-3 w-3" />
+              )}
+              Accept
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface EventInvitationNotificationItemProps {
+  notification: EventInvitationNotification;
+  onAction: (
+    notification: Notification,
+    action: NotificationAction,
+  ) => Promise<{ error?: string }>;
+}
+
+function EventInvitationNotificationItem({
+  notification,
+  onAction,
+}: EventInvitationNotificationItemProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAccept = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onAction(notification, NotificationAction.ACCEPT);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        router.push(`/events/${notification.data.eventId}`);
+      }
+    });
+  };
+
+  const handleDecline = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onAction(notification, NotificationAction.DECLINE);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  return (
+    <div className="p-3">
+      <div className="flex items-start gap-3">
+        {notification.data.eventLogo ? (
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            <Image
+              src={notification.data.eventLogo}
+              alt={notification.data.eventName}
+              fill
+              className="object-cover p-0.5"
+            />
+          </div>
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">
+            <span className="font-medium">{notification.data.inviterName}</span>
+            {" invited you to join "}
+            <span className="font-medium">{notification.data.eventName}</span>
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <Badge variant="secondary" className="text-xs">
+              {EVENT_ROLE_LABELS[notification.data.role]}
             </Badge>
           </div>
           {error && <p className="mt-1 text-xs text-destructive">{error}</p>}

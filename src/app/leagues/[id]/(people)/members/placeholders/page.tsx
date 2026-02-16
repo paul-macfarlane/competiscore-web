@@ -3,11 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { hasPlaceholderActivity } from "@/db/placeholder-members";
 import { auth } from "@/lib/server/auth";
 import { LeagueAction, canPerformAction } from "@/lib/shared/permissions";
 import { getLeagueWithRole } from "@/services/leagues";
 import {
+  checkPlaceholderActivity,
   getPlaceholders,
   getRetiredPlaceholders,
 } from "@/services/placeholder-members";
@@ -103,11 +103,17 @@ async function PlaceholdersContent({
   const activePlaceholders = activePlaceholdersResult.data ?? [];
   const retiredPlaceholders = retiredPlaceholdersResult.data ?? [];
 
-  const activePlaceholdersWithActivity = await Promise.all(
-    activePlaceholders.map(async (placeholder) => ({
+  const activityChecks = await Promise.all(
+    activePlaceholders.map((placeholder) =>
+      checkPlaceholderActivity(userId, placeholder.id, leagueId),
+    ),
+  );
+
+  const activePlaceholdersWithActivity = activePlaceholders.map(
+    (placeholder, i) => ({
       ...placeholder,
-      hasActivity: await hasPlaceholderActivity(placeholder.id),
-    })),
+      hasActivity: activityChecks[i].data?.hasActivity ?? false,
+    }),
   );
 
   return (

@@ -14,6 +14,7 @@ export default async function ActivityLayout({
 
   const tabs = [
     { label: "Matches", href: `/leagues/${id}/matches` },
+    { label: "Best Scores", href: `/leagues/${id}/best-scores` },
     { label: "Challenges", href: `/leagues/${id}/challenges` },
     { label: "Tournaments", href: `/leagues/${id}/tournaments` },
   ];

@@ -3,7 +3,20 @@
 import { inviteTeamMemberAction } from "@/app/leagues/[id]/(people)/teams/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -15,7 +28,8 @@ import { User } from "@/db/schema";
 import { getInitials } from "@/lib/client/utils";
 import { TeamMemberRole } from "@/lib/shared/constants";
 import { TEAM_ROLE_LABELS } from "@/lib/shared/roles";
-import { Check, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/shared/utils";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -34,6 +48,7 @@ export function TeamInviteForm({
   const [role, setRole] = useState<TeamMemberRole>(TeamMemberRole.MEMBER);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const selectedUser = availableUsers.find((u) => u.user.id === selectedUserId);
 
@@ -77,30 +92,85 @@ export function TeamInviteForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="user-select">Select Member</Label>
-        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-          <SelectTrigger id="user-select">
-            <SelectValue placeholder="Choose a league member..." />
-          </SelectTrigger>
-          <SelectContent>
-            {availableUsers.map((m) => (
-              <SelectItem key={m.user.id} value={m.user.id}>
-                <div className="flex items-center gap-2">
+        <Label>Select Member</Label>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            >
+              {selectedUser ? (
+                <div className="flex items-center gap-2 min-w-0">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={m.user.image ?? undefined} />
+                    <AvatarImage src={selectedUser.user.image ?? undefined} />
                     <AvatarFallback className="text-xs">
-                      {getInitials(m.user.name)}
+                      {getInitials(selectedUser.user.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{m.user.name}</span>
-                  <span className="text-muted-foreground">
-                    @{m.user.username}
+                  <span className="truncate">{selectedUser.user.name}</span>
+                  <span className="text-muted-foreground truncate">
+                    @{selectedUser.user.username}
                   </span>
                 </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              ) : (
+                <span className="text-muted-foreground">
+                  Choose a league member...
+                </span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[min(300px,calc(100vw-3rem))] max-h-[min(300px,var(--radix-popover-content-available-height,300px))] overflow-y-auto p-0"
+            align="start"
+          >
+            <Command>
+              <CommandInput placeholder="Search members..." />
+              <CommandList className="max-h-none">
+                <CommandEmpty>No member found.</CommandEmpty>
+                <CommandGroup>
+                  {availableUsers.map((m) => (
+                    <CommandItem
+                      key={m.user.id}
+                      value={`${m.user.name} ${m.user.username}`}
+                      onSelect={() => {
+                        setSelectedUserId(
+                          selectedUserId === m.user.id ? "" : m.user.id,
+                        );
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedUserId === m.user.id
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={m.user.image ?? undefined} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(m.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span>{m.user.name}</span>
+                          <span className="text-muted-foreground text-xs">
+                            @{m.user.username}
+                          </span>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {selectedUser && (
