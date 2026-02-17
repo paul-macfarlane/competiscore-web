@@ -161,7 +161,7 @@ export function EventPlaceholderCard({
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {isRetired ? (
               <Button
                 size="sm"
@@ -169,8 +169,8 @@ export function EventPlaceholderCard({
                 onClick={handleRestore}
                 disabled={isSubmitting}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Restore
+                <RotateCcw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Restore</span>
               </Button>
             ) : (
               <>
@@ -179,16 +179,16 @@ export function EventPlaceholderCard({
                   variant="outline"
                   onClick={() => setEditDialogOpen(true)}
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
+                  <Edit className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setRetireDialogOpen(true)}
                 >
-                  <Archive className="h-4 w-4 mr-2" />
-                  Retire
+                  <Archive className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Retire</span>
                 </Button>
                 {!hasActivity && (
                   <Button
@@ -197,8 +197,8 @@ export function EventPlaceholderCard({
                     onClick={() => setDeleteDialogOpen(true)}
                     className="text-destructive hover:text-destructive"
                   >
-                    <Trash className="h-4 w-4 mr-2" />
-                    Delete
+                    <Trash className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Delete</span>
                   </Button>
                 )}
               </>

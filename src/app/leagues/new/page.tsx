@@ -13,7 +13,7 @@ import { CreateLeagueForm } from "./create-league-form";
 
 function CreateLeagueSkeleton() {
   return (
-    <div className="mx-auto max-w-md space-y-4 md:space-y-6">
+    <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <div className="text-center">
         <Skeleton className="mx-auto h-8 w-48" />
         <Skeleton className="mx-auto mt-2 h-5 w-64" />
@@ -34,7 +34,7 @@ async function CreateLeagueContent({ userId }: { userId: string }) {
 
   if (limitInfo.isAtLimit) {
     return (
-      <div className="mx-auto max-w-md space-y-4 md:space-y-6">
+      <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
         <div className="text-center">
           <h1 className="text-xl font-bold md:text-2xl">Create a League</h1>
         </div>
@@ -53,7 +53,7 @@ async function CreateLeagueContent({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4 md:space-y-6">
+    <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <div className="text-center">
         <h1 className="text-xl font-bold md:text-2xl">Create a League</h1>
         <p className="text-muted-foreground text-sm md:text-base">

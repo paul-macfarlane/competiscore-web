@@ -290,32 +290,34 @@ export default async function MatchDetailPage({ params }: PageProps) {
             </>
           )}
           {match.tournament && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tournament</span>
-              <Link
-                href={`/leagues/${leagueId}/tournaments/${match.tournament.tournamentId}`}
-                className="font-medium hover:underline flex items-center gap-1"
-              >
-                {match.tournament.tournamentLogo ? (
-                  <div className="relative h-3 w-3 shrink-0">
-                    <Image
-                      src={match.tournament.tournamentLogo}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <Trophy className="h-3 w-3" />
-                )}
-                {match.tournament.tournamentName}
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground shrink-0">Tournament</span>
+              <div className="text-right">
+                <Link
+                  href={`/leagues/${leagueId}/tournaments/${match.tournament.tournamentId}`}
+                  className="font-medium underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground inline-flex items-center gap-1"
+                >
+                  {match.tournament.tournamentLogo ? (
+                    <div className="relative h-3 w-3 shrink-0">
+                      <Image
+                        src={match.tournament.tournamentLogo}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <Trophy className="h-3 w-3 shrink-0" />
+                  )}
+                  {match.tournament.tournamentName}
+                </Link>
                 {match.tournament.totalRounds && (
                   <span className="text-muted-foreground text-xs ml-1">
                     (Round {match.tournament.round} of{" "}
                     {match.tournament.totalRounds})
                   </span>
                 )}
-              </Link>
+              </div>
             </div>
           )}
         </CardContent>
