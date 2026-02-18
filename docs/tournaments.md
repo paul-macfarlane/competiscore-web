@@ -2,7 +2,7 @@
 
 I am looking to implement the following improvement to tournaments, for both events and leagues.
 
-## 1st priority: Traditional Bracket Style Improvements
+## 1/2 COMPLETED the other half DEFERRED: 1st priority: Traditional Bracket Style Improvements
 
 For traditional bracket elimination tournaments, I'd like to
 
@@ -11,7 +11,7 @@ For traditional bracket elimination tournaments, I'd like to
 
 In both cases, these settings can be tweaked until the tournament starts.
 
-## IN PROGRESS: 2nd priority: Support for game types where individuals on teams
+## DONE: 2nd priority: Support for game types where individuals on teams
 
 Right now when I create a tournment for a game type that requires teams of 2 instead of 1 on 1, the UI and backend still only generate a bracket where people are on teams of 1/competing individually.
 

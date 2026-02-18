@@ -21,7 +21,7 @@ import { getEventTournaments } from "@/services/event-tournaments";
 import { getEvent } from "@/services/events";
 import { idParamSchema } from "@/validators/shared";
 import { formatDistanceToNow } from "date-fns";
-import { Plus, Users } from "lucide-react";
+import { CheckCircle2, Plus, Users } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -85,6 +85,12 @@ export default async function EventTournamentsPage({
       </Suspense>
     </div>
   );
+}
+
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
 const STATUS_VARIANTS: Record<string, "secondary" | "default" | "outline"> = {
@@ -187,17 +193,64 @@ async function TournamentsContent({
                   </div>
                 </div>
               </CardHeader>
-              {tournament.description && (
-                <CardContent>
-                  <CardDescription className="line-clamp-2">
-                    {tournament.description}
-                  </CardDescription>
+              {(tournament.description || tournament.placementPointConfig) && (
+                <CardContent className="space-y-2">
+                  {tournament.description && (
+                    <CardDescription className="line-clamp-2">
+                      {tournament.description}
+                    </CardDescription>
+                  )}
+                  {(() => {
+                    if (!tournament.placementPointConfig) return null;
+                    let config: Array<{ placement: number; points: number }>;
+                    try {
+                      config = JSON.parse(tournament.placementPointConfig);
+                    } catch {
+                      return null;
+                    }
+                    if (!Array.isArray(config) || config.length === 0)
+                      return null;
+                    const sorted = [...config].sort(
+                      (a, b) => a.placement - b.placement,
+                    );
+                    return (
+                      <div>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Scoring
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sorted.map((entry) => (
+                            <span
+                              key={entry.placement}
+                              className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
+                            >
+                              <span className="text-muted-foreground">
+                                {getOrdinal(entry.placement)}
+                              </span>
+                              <span className="font-medium">
+                                {entry.points}pt
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               )}
               <CardFooter className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>{tournament.participantCount} teams</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{tournament.participantCount} teams</span>
+                  </div>
+                  {tournament.status === TournamentStatus.COMPLETED &&
+                    tournament.placementPointConfig && (
+                      <div className="flex items-center gap-1 text-xs text-green-600">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Points awarded</span>
+                      </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">

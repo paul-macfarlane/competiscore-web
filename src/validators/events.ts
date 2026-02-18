@@ -688,6 +688,36 @@ export type AddEventTournamentParticipantInput = z.infer<
   typeof addEventTournamentParticipantSchema
 >;
 
+export const addEventTournamentPartnershipSchema = z.object({
+  eventTournamentId: uuidSchema,
+  members: z
+    .array(
+      z
+        .object({
+          userId: z.string().optional(),
+          eventPlaceholderParticipantId: uuidSchema.optional(),
+        })
+        .refine(
+          (data) => {
+            const count = [
+              data.userId,
+              data.eventPlaceholderParticipantId,
+            ].filter(Boolean).length;
+            return count === 1;
+          },
+          {
+            message:
+              "Exactly one of userId or eventPlaceholderParticipantId must be provided",
+          },
+        ),
+    )
+    .min(2, "A partnership requires at least 2 members"),
+});
+
+export type AddEventTournamentPartnershipInput = z.infer<
+  typeof addEventTournamentPartnershipSchema
+>;
+
 export const removeEventTournamentParticipantSchema = z.object({
   eventTournamentId: uuidSchema,
   participantId: uuidSchema,

@@ -76,6 +76,7 @@ export default async function NewEventTournamentPage({ params }: Props) {
           id: gt.id,
           name: gt.name,
           category: gt.category,
+          config: gt.config,
         }))}
       />
     </div>

@@ -73,11 +73,16 @@ export function ScoringHistoryLog({ log }: ScoringHistoryLogProps) {
                     color={entry.teamColor}
                   />
                 )}
-                {(entry.userName || entry.placeholderDisplayName) && (
-                  <span className="text-muted-foreground truncate">
-                    {entry.userName ?? entry.placeholderDisplayName}
-                  </span>
-                )}
+                {(() => {
+                  const names = entry.participants
+                    .map((p) => p.userName ?? p.placeholderDisplayName)
+                    .filter(Boolean);
+                  return names.length > 0 ? (
+                    <span className="text-muted-foreground truncate">
+                      {names.join(" & ")}
+                    </span>
+                  ) : null;
+                })()}
                 <span
                   className={`ml-auto font-mono font-bold tabular-nums ${
                     entry.points > 0

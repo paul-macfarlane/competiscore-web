@@ -2,6 +2,7 @@ import {
   createEventMatch as dbCreateEventMatch,
   createEventMatchParticipants as dbCreateEventMatchParticipants,
   createEventPointEntries as dbCreateEventPointEntries,
+  createEventPointEntryParticipants as dbCreateEventPointEntryParticipants,
   deleteEventMatch as dbDeleteEventMatch,
   getEventById as dbGetEventById,
   getEventGameTypeById as dbGetEventGameTypeById,
@@ -123,9 +124,27 @@ export async function recordEventH2HMatch(
   }
 
   const config = parseGameConfig(gameType.config, gameType.category);
+  const h2hConfig = config as H2HConfig;
   const isTeamParticipant =
     "participantType" in config &&
     config.participantType === ParticipantType.TEAM;
+
+  if (
+    side1Participants.length < h2hConfig.minPlayersPerSide ||
+    side1Participants.length > h2hConfig.maxPlayersPerSide
+  ) {
+    return {
+      error: `Side 1 must have between ${h2hConfig.minPlayersPerSide} and ${h2hConfig.maxPlayersPerSide} participant(s)`,
+    };
+  }
+  if (
+    side2Participants.length < h2hConfig.minPlayersPerSide ||
+    side2Participants.length > h2hConfig.maxPlayersPerSide
+  ) {
+    return {
+      error: `Side 2 must have between ${h2hConfig.minPlayersPerSide} and ${h2hConfig.maxPlayersPerSide} participant(s)`,
+    };
+  }
 
   // For team-participant games, validate all participants use eventTeamId
   if (isTeamParticipant) {
@@ -173,7 +192,6 @@ export async function recordEventH2HMatch(
     side1Result = MatchResult.DRAW;
     side2Result = MatchResult.DRAW;
   } else if (side1Score !== undefined && side2Score !== undefined) {
-    const h2hConfig = config as H2HConfig;
     const lowestWins = h2hConfig.scoreOrder === ScoreOrder.LOWEST_WINS;
     const side1Better = lowestWins
       ? side1Score < side2Score
@@ -273,7 +291,7 @@ export async function recordEventH2HMatch(
     const hasPoints = winPoints !== undefined || lossPoints !== undefined;
 
     if (hasPoints) {
-      const buildSidePointEntries = (
+      const buildSideEntries = (
         sideResolved: typeof side1Resolved,
         sideResult: typeof side1Result,
       ) => {
@@ -288,7 +306,23 @@ export async function recordEventH2HMatch(
           teamGroups.set(teamId, group);
         }
 
-        const entries = [];
+        const result: Array<{
+          entry: {
+            eventId: string;
+            category: typeof EventPointCategory.H2H_MATCH;
+            outcome: typeof EventPointOutcome.WIN;
+            eventTeamId: string;
+            eventMatchId: string;
+            eventHighScoreSessionId: null;
+            eventTournamentId: null;
+            points: number;
+          };
+          participantInfo: {
+            userId: string | null;
+            eventPlaceholderParticipantId: string | null;
+          } | null;
+        }> = [];
+
         for (const [teamId, group] of teamGroups) {
           const points = isDraw
             ? (drawPoints ?? 0)
@@ -301,34 +335,55 @@ export async function recordEventH2HMatch(
               ? EventPointOutcome.WIN
               : EventPointOutcome.LOSS;
 
-          // Store individual info when exactly one non-team participant per team
           const solo =
             !isTeamParticipant && group.length === 1 ? group[0] : null;
 
-          entries.push({
-            eventId,
-            category:
-              EventPointCategory.H2H_MATCH as typeof EventPointCategory.H2H_MATCH,
-            outcome: outcome as typeof EventPointOutcome.WIN,
-            eventTeamId: teamId,
-            userId: solo?.userId ?? null,
-            eventPlaceholderParticipantId:
-              solo?.eventPlaceholderParticipantId ?? null,
-            eventMatchId: match.id,
-            eventHighScoreSessionId: null,
-            eventTournamentId: null,
-            points,
+          result.push({
+            entry: {
+              eventId,
+              category: EventPointCategory.H2H_MATCH,
+              outcome: outcome as typeof EventPointOutcome.WIN,
+              eventTeamId: teamId,
+              eventMatchId: match.id,
+              eventHighScoreSessionId: null,
+              eventTournamentId: null,
+              points,
+            },
+            participantInfo: solo
+              ? {
+                  userId: solo.userId ?? null,
+                  eventPlaceholderParticipantId:
+                    solo.eventPlaceholderParticipantId ?? null,
+                }
+              : null,
           });
         }
-        return entries;
+        return result;
       };
 
-      const pointEntries = [
-        ...buildSidePointEntries(side1Resolved, side1Result),
-        ...buildSidePointEntries(side2Resolved, side2Result),
+      const allResults = [
+        ...buildSideEntries(side1Resolved, side1Result),
+        ...buildSideEntries(side2Resolved, side2Result),
       ];
 
-      await dbCreateEventPointEntries(pointEntries, tx);
+      const created = await dbCreateEventPointEntries(
+        allResults.map((r) => r.entry),
+        tx,
+      );
+
+      const participantRows = created.flatMap((entry, i) => {
+        const info = allResults[i].participantInfo;
+        if (!info || (!info.userId && !info.eventPlaceholderParticipantId))
+          return [];
+        return [
+          {
+            eventPointEntryId: entry.id,
+            userId: info.userId,
+            eventPlaceholderParticipantId: info.eventPlaceholderParticipantId,
+          },
+        ];
+      });
+      await dbCreateEventPointEntryParticipants(participantRows, tx);
     }
 
     return { data: { match, eventId } };
@@ -453,24 +508,46 @@ export async function recordEventFFAMatch(
 
     const hasPoints = resolved.some((p) => p.points !== undefined);
     if (hasPoints) {
-      const pointEntries = resolved.map((p) => ({
-        eventId,
-        category:
-          EventPointCategory.FFA_MATCH as typeof EventPointCategory.FFA_MATCH,
-        outcome:
-          EventPointOutcome.PLACEMENT as typeof EventPointOutcome.PLACEMENT,
-        eventTeamId: p.team!.id,
-        userId: isTeamFFA ? null : (p.userId ?? null),
-        eventPlaceholderParticipantId: isTeamFFA
+      const entriesWithInfo = resolved.map((p) => ({
+        entry: {
+          eventId,
+          category:
+            EventPointCategory.FFA_MATCH as typeof EventPointCategory.FFA_MATCH,
+          outcome:
+            EventPointOutcome.PLACEMENT as typeof EventPointOutcome.PLACEMENT,
+          eventTeamId: p.team!.id,
+          eventMatchId: match.id,
+          eventHighScoreSessionId: null,
+          eventTournamentId: null,
+          points: p.points ?? 0,
+        },
+        participantInfo: isTeamFFA
           ? null
-          : (p.eventPlaceholderParticipantId ?? null),
-        eventMatchId: match.id,
-        eventHighScoreSessionId: null,
-        eventTournamentId: null,
-        points: p.points ?? 0,
+          : {
+              userId: p.userId ?? null,
+              eventPlaceholderParticipantId:
+                p.eventPlaceholderParticipantId ?? null,
+            },
       }));
 
-      await dbCreateEventPointEntries(pointEntries, tx);
+      const created = await dbCreateEventPointEntries(
+        entriesWithInfo.map((e) => e.entry),
+        tx,
+      );
+
+      const participantRows = created.flatMap((entry, i) => {
+        const info = entriesWithInfo[i].participantInfo;
+        if (!info || (!info.userId && !info.eventPlaceholderParticipantId))
+          return [];
+        return [
+          {
+            eventPointEntryId: entry.id,
+            userId: info.userId,
+            eventPlaceholderParticipantId: info.eventPlaceholderParticipantId,
+          },
+        ];
+      });
+      await dbCreateEventPointEntryParticipants(participantRows, tx);
     }
 
     return { data: { match, eventId } };

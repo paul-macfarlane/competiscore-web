@@ -27,12 +27,16 @@ function makeEntry(
     eventTeamId: TEST_IDS.EVENT_TEAM_ID,
     teamName: "Team A",
     teamColor: "red",
-    userId: TEST_IDS.USER_ID,
-    userName: "User 1",
-    userUsername: "user1",
-    userImage: null,
-    eventPlaceholderParticipantId: null,
-    placeholderDisplayName: null,
+    participants: [
+      {
+        userId: TEST_IDS.USER_ID,
+        userName: "User 1",
+        userUsername: "user1",
+        userImage: null,
+        eventPlaceholderParticipantId: null,
+        placeholderDisplayName: null,
+      },
+    ],
     eventMatchId: TEST_IDS.EVENT_MATCH_ID,
     eventHighScoreSessionId: null,
     eventTournamentId: null,
@@ -234,20 +238,44 @@ describe("getEventMetrics", () => {
       makeEntry({
         id: "entry-1",
         points: 3,
-        userId: TEST_IDS.USER_ID,
-        userName: "Alice",
+        participants: [
+          {
+            userId: TEST_IDS.USER_ID,
+            userName: "Alice",
+            userUsername: "alice",
+            userImage: null,
+            eventPlaceholderParticipantId: null,
+            placeholderDisplayName: null,
+          },
+        ],
       }),
       makeEntry({
         id: "entry-2",
         points: 5,
-        userId: TEST_IDS.USER_ID_2,
-        userName: "Bob",
+        participants: [
+          {
+            userId: TEST_IDS.USER_ID_2,
+            userName: "Bob",
+            userUsername: "bob",
+            userImage: null,
+            eventPlaceholderParticipantId: null,
+            placeholderDisplayName: null,
+          },
+        ],
       }),
       makeEntry({
         id: "entry-3",
         points: 2,
-        userId: TEST_IDS.USER_ID,
-        userName: "Alice",
+        participants: [
+          {
+            userId: TEST_IDS.USER_ID,
+            userName: "Alice",
+            userUsername: "alice",
+            userImage: null,
+            eventPlaceholderParticipantId: null,
+            placeholderDisplayName: null,
+          },
+        ],
       }),
     ];
 
@@ -284,14 +312,21 @@ describe("getEventMetrics", () => {
       makeEntry({
         id: "entry-1",
         points: 3,
-        userId: TEST_IDS.USER_ID,
-        userName: "Alice",
+        participants: [
+          {
+            userId: TEST_IDS.USER_ID,
+            userName: "Alice",
+            userUsername: "alice",
+            userImage: null,
+            eventPlaceholderParticipantId: null,
+            placeholderDisplayName: null,
+          },
+        ],
       }),
       makeEntry({
         id: "entry-2",
         points: 5,
-        userId: null,
-        userName: null,
+        participants: [],
       }),
     ];
 
@@ -368,14 +403,17 @@ describe("getEventMetrics", () => {
     const entries: EnrichedPointEntry[] = [
       makeEntry({
         id: "entry-1",
+        eventMatchId: "match-1",
         createdAt: new Date("2025-01-01T00:00:00Z"),
       }),
       makeEntry({
         id: "entry-2",
+        eventMatchId: "match-2",
         createdAt: new Date("2025-01-02T00:00:00Z"),
       }),
       makeEntry({
         id: "entry-3",
+        eventMatchId: "match-3",
         createdAt: new Date("2025-01-03T00:00:00Z"),
       }),
     ];

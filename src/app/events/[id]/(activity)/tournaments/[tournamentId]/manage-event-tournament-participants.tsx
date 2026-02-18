@@ -17,9 +17,21 @@ import { toast } from "sonner";
 
 import {
   addEventTournamentParticipantAction,
+  addEventTournamentPartnershipAction,
   removeEventTournamentParticipantAction,
   setEventParticipantSeedsAction,
 } from "../../../actions";
+
+type PartnershipMember = {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    image: string | null;
+  } | null;
+  placeholderParticipant: { id: string; displayName: string } | null;
+};
 
 type Participant = {
   id: string;
@@ -33,6 +45,7 @@ type Participant = {
     image: string | null;
   } | null;
   placeholderParticipant: { id: string; displayName: string } | null;
+  members?: PartnershipMember[];
 };
 
 type Props = {
@@ -41,6 +54,7 @@ type Props = {
   participantOptions: ParticipantOption[];
   seedingType: string;
   isTeamTournament?: boolean;
+  partnershipSize?: number;
 };
 
 export function ManageEventTournamentParticipants({
@@ -49,12 +63,21 @@ export function ManageEventTournamentParticipants({
   participantOptions,
   seedingType,
   isTeamTournament,
+  partnershipSize,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedParticipant, setSelectedParticipant] = useState<
     { id: string; type: MatchParticipantType } | undefined
   >();
+  const isPartnership = partnershipSize != null && partnershipSize > 1;
+  const [partnerSelections, setPartnerSelections] = useState<
+    ({ id: string; type: MatchParticipantType } | undefined)[]
+  >(
+    isPartnership
+      ? Array.from({ length: partnershipSize }, () => undefined)
+      : [],
+  );
   const [seeds, setSeeds] = useState<Record<string, number>>(
     Object.fromEntries(
       participants
@@ -63,29 +86,64 @@ export function ManageEventTournamentParticipants({
     ),
   );
 
+  const takenIds = (() => {
+    const userIds = new Set<string>();
+    const placeholderIds = new Set<string>();
+    for (const p of participants) {
+      if (isPartnership && p.members && p.members.length > 0) {
+        for (const m of p.members) {
+          if (m.user) userIds.add(m.user.id);
+          if (m.placeholderParticipant)
+            placeholderIds.add(m.placeholderParticipant.id);
+        }
+      } else {
+        if (p.user) userIds.add(p.user.id);
+        if (p.placeholderParticipant)
+          placeholderIds.add(p.placeholderParticipant.id);
+      }
+    }
+    return { userIds, placeholderIds };
+  })();
+
   const availableOptions = (() => {
     if (isTeamTournament) {
       const existingTeamIds = new Set(participants.map((p) => p.eventTeamId));
       return participantOptions.filter((opt) => !existingTeamIds.has(opt.id));
     }
-    const existingUserIds = new Set(
-      participants.filter((p) => p.user).map((p) => p.user!.id),
-    );
-    const existingPlaceholderIds = new Set(
-      participants
-        .filter((p) => p.placeholderParticipant)
-        .map((p) => p.placeholderParticipant!.id),
-    );
     return participantOptions.filter((opt) => {
       if (opt.type === MatchParticipantType.USER) {
-        return !existingUserIds.has(opt.id);
+        return !takenIds.userIds.has(opt.id);
       }
       if (opt.type === MatchParticipantType.PLACEHOLDER) {
-        return !existingPlaceholderIds.has(opt.id);
+        return !takenIds.placeholderIds.has(opt.id);
       }
       return true;
     });
   })();
+
+  const getPartnerOptions = (slotIndex: number) => {
+    const firstSelection = partnerSelections[0];
+    const otherSelectedIds = new Set(
+      partnerSelections
+        .filter((s, i) => i !== slotIndex && s != null)
+        .map((s) => `${s!.type}:${s!.id}`),
+    );
+
+    let opts = availableOptions.filter(
+      (opt) => !otherSelectedIds.has(`${opt.type}:${opt.id}`),
+    );
+
+    if (slotIndex > 0 && firstSelection) {
+      const firstOption = participantOptions.find(
+        (o) => o.id === firstSelection.id && o.type === firstSelection.type,
+      );
+      if (firstOption?.teamName) {
+        opts = opts.filter((o) => o.teamName === firstOption.teamName);
+      }
+    }
+
+    return opts;
+  };
 
   const handleAdd = () => {
     if (!selectedParticipant) return;
@@ -106,6 +164,31 @@ export function ManageEventTournamentParticipants({
       } else {
         toast.success("Participant added");
         setSelectedParticipant(undefined);
+        router.refresh();
+      }
+    });
+  };
+
+  const handleAddPartnership = () => {
+    if (partnerSelections.some((s) => s == null)) return;
+    const members = partnerSelections.map((s) => {
+      if (s!.type === MatchParticipantType.USER) {
+        return { userId: s!.id };
+      }
+      return { eventPlaceholderParticipantId: s!.id };
+    });
+    startTransition(async () => {
+      const result = await addEventTournamentPartnershipAction({
+        eventTournamentId: tournamentId,
+        members,
+      });
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Partnership added");
+        setPartnerSelections(
+          Array.from({ length: partnershipSize! }, () => undefined),
+        );
         router.refresh();
       }
     });
@@ -150,6 +233,8 @@ export function ManageEventTournamentParticipants({
       {participants.length > 0 ? (
         <ul className="space-y-2">
           {participants.map((p) => {
+            const hasMembers =
+              isPartnership && p.members && p.members.length > 0;
             const participant: ParticipantData = isTeamTournament
               ? { team: p.team }
               : {
@@ -176,11 +261,24 @@ export function ManageEventTournamentParticipants({
                   />
                 )}
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <ParticipantDisplay
-                    participant={participant}
-                    showAvatar
-                    size="sm"
-                  />
+                  {hasMembers ? (
+                    <span className="text-sm font-medium">
+                      {p
+                        .members!.map(
+                          (m) =>
+                            m.user?.name ??
+                            m.placeholderParticipant?.displayName ??
+                            "Unknown",
+                        )
+                        .join(" & ")}
+                    </span>
+                  ) : (
+                    <ParticipantDisplay
+                      participant={participant}
+                      showAvatar
+                      size="sm"
+                    />
+                  )}
                   {!isTeamTournament &&
                     (p.team.color ? (
                       <TeamColorBadge name={p.team.name} color={p.team.color} />
@@ -220,25 +318,63 @@ export function ManageEventTournamentParticipants({
         </Button>
       )}
 
-      {availableOptions.length > 0 && (
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <ParticipantSelector
-              options={availableOptions}
-              value={selectedParticipant}
-              onChange={setSelectedParticipant}
-              placeholder="Select a participant to add"
-            />
+      {availableOptions.length > 0 &&
+        (isPartnership ? (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              Select {partnershipSize} members from the same team to form a
+              partnership:
+            </p>
+            {partnerSelections.map((selection, idx) => (
+              <div key={idx} className="flex items-end gap-2">
+                <div className="flex-1">
+                  <ParticipantSelector
+                    options={getPartnerOptions(idx)}
+                    value={selection}
+                    onChange={(val) => {
+                      setPartnerSelections((prev) => {
+                        const next = [...prev];
+                        next[idx] = val;
+                        if (idx === 0) {
+                          for (let i = 1; i < next.length; i++) {
+                            next[i] = undefined;
+                          }
+                        }
+                        return next;
+                      });
+                    }}
+                    placeholder={`Select member ${idx + 1}`}
+                  />
+                </div>
+              </div>
+            ))}
+            <Button
+              disabled={partnerSelections.some((s) => s == null) || isPending}
+              onClick={handleAddPartnership}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add Partnership
+            </Button>
           </div>
-          <Button
-            disabled={!selectedParticipant || isPending}
-            onClick={handleAdd}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <ParticipantSelector
+                options={availableOptions}
+                value={selectedParticipant}
+                onChange={setSelectedParticipant}
+                placeholder="Select a participant to add"
+              />
+            </div>
+            <Button
+              disabled={!selectedParticipant || isPending}
+              onClick={handleAdd}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add
+            </Button>
+          </div>
+        ))}
     </div>
   );
 }

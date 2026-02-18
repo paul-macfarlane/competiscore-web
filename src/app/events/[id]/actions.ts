@@ -59,6 +59,7 @@ import {
 } from "@/services/event-teams";
 import {
   addEventTournamentParticipant,
+  addEventTournamentPartnership,
   createEventTournament,
   deleteEventTournament,
   forfeitEventTournamentMatch,
@@ -629,6 +630,19 @@ export async function addEventTournamentParticipantAction(
   if (!userId) return { error: "Unauthorized" };
 
   return addEventTournamentParticipant(userId, input);
+}
+
+export async function addEventTournamentPartnershipAction(
+  input: unknown,
+): Promise<ServiceResult<EventTournamentParticipant>> {
+  const userId = await getSessionUserId();
+  if (!userId) return { error: "Unauthorized" };
+
+  const result = await addEventTournamentPartnership(userId, input);
+  if (result.data) {
+    revalidatePath(`/events`);
+  }
+  return result;
 }
 
 export async function removeEventTournamentParticipantAction(

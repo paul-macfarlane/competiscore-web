@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import { SimpleIconSelector } from "@/components/icon-selector";
@@ -22,10 +23,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  GameCategory,
   ParticipantType,
   SEEDING_TYPE_LABELS,
   TOURNAMENT_ICON_OPTIONS,
 } from "@/lib/shared/constants";
+import {
+  getPartnershipSize,
+  isPartnershipGameType,
+  parseH2HConfig,
+} from "@/lib/shared/game-config-parser";
 import {
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
   TOURNAMENT_NAME_MAX_LENGTH,
@@ -33,7 +40,7 @@ import {
 import { MAX_BEST_OF } from "@/services/constants";
 import { createEventTournamentSchema } from "@/validators/events";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Trophy } from "lucide-react";
+import { Info, Plus, Trash2, Trophy } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -47,7 +54,7 @@ type FormValues = z.input<typeof createEventTournamentSchema>;
 
 type Props = {
   eventId: string;
-  gameTypes: { id: string; name: string; category: string }[];
+  gameTypes: { id: string; name: string; category: string; config: string }[];
 };
 
 function BestOfSection({
@@ -411,6 +418,35 @@ export function CreateEventTournamentForm({ eventId, gameTypes }: Props) {
             </FormItem>
           )}
         />
+
+        {(() => {
+          const selectedGameTypeId = form.watch("gameTypeId");
+          const selectedParticipantType = form.watch("participantType");
+          const selectedGameType = gameTypes.find(
+            (gt) => gt.id === selectedGameTypeId,
+          );
+          if (
+            selectedGameType &&
+            selectedGameType.category === GameCategory.HEAD_TO_HEAD &&
+            selectedParticipantType === ParticipantType.INDIVIDUAL
+          ) {
+            const h2hConfig = parseH2HConfig(selectedGameType.config);
+            if (h2hConfig && isPartnershipGameType(h2hConfig)) {
+              const size = getPartnershipSize(h2hConfig);
+              return (
+                <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-sm">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                  <span>
+                    This game type requires partnerships of {size} players per
+                    side. You&apos;ll add partnerships during the draft phase
+                    after creating the tournament.
+                  </span>
+                </div>
+              );
+            }
+          }
+          return null;
+        })()}
 
         <FormField
           control={form.control}

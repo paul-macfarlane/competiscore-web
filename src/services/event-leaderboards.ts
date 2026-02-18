@@ -1,4 +1,8 @@
 import {
+  EventTournamentMatchInfo,
+  getTournamentInfoByEventMatchIds as dbGetTournamentInfoByEventMatchIds,
+} from "@/db/event-tournaments";
+import {
   EventActivityItem,
   EventIndividualHighScoreEntry,
   EventLeaderboardEntry,
@@ -106,13 +110,17 @@ export async function getEventTeamMembersForParticipants(
   return { data: members };
 }
 
+export type EventMatchWithTournament = EventMatchWithParticipantsAndPoints & {
+  tournament: EventTournamentMatchInfo | null;
+};
+
 export async function getEventMatches(
   userId: string,
   eventId: string,
   options: { limit?: number; offset?: number; gameTypeId?: string } = {},
 ): Promise<
   ServiceResult<{
-    matches: EventMatchWithParticipantsAndPoints[];
+    matches: EventMatchWithTournament[];
     total: number;
   }>
 > {
@@ -129,7 +137,10 @@ export async function getEventMatches(
   });
 
   const matchIds = result.matches.map((m) => m.id);
-  const pointEntries = await dbGetPointEntriesForMatches(matchIds);
+  const [pointEntries, tournamentInfos] = await Promise.all([
+    dbGetPointEntriesForMatches(matchIds),
+    dbGetTournamentInfoByEventMatchIds(matchIds),
+  ]);
 
   const pointsByMatch = new Map<string, typeof pointEntries>();
   for (const entry of pointEntries) {
@@ -139,11 +150,15 @@ export async function getEventMatches(
     pointsByMatch.set(entry.eventMatchId, existing);
   }
 
-  const matchesWithPoints: EventMatchWithParticipantsAndPoints[] =
-    result.matches.map((m) => ({
+  const tournamentByMatch = new Map(tournamentInfos.map((t) => [t.matchId, t]));
+
+  const matchesWithPoints: EventMatchWithTournament[] = result.matches.map(
+    (m) => ({
       ...m,
       pointEntries: pointsByMatch.get(m.id) ?? [],
-    }));
+      tournament: tournamentByMatch.get(m.id) ?? null,
+    }),
+  );
 
   return { data: { matches: matchesWithPoints, total: result.total } };
 }
@@ -151,7 +166,7 @@ export async function getEventMatches(
 export async function getEventMatch(
   userId: string,
   matchId: string,
-): Promise<ServiceResult<EventMatchWithParticipantsAndPoints>> {
+): Promise<ServiceResult<EventMatchWithTournament>> {
   const match = await dbGetEventMatchWithParticipants(matchId);
   if (!match) {
     return { error: "Match not found" };
@@ -162,9 +177,14 @@ export async function getEventMatch(
     return { error: "You are not a participant in this event" };
   }
 
-  const pointEntries = await dbGetPointEntriesForMatch(matchId);
+  const [pointEntries, tournamentInfos] = await Promise.all([
+    dbGetPointEntriesForMatch(matchId),
+    dbGetTournamentInfoByEventMatchIds([matchId]),
+  ]);
 
-  return { data: { ...match, pointEntries } };
+  return {
+    data: { ...match, pointEntries, tournament: tournamentInfos[0] ?? null },
+  };
 }
 
 export async function getEventGameTypeLeaderboard(

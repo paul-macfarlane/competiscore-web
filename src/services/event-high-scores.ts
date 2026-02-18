@@ -4,6 +4,7 @@ import {
   closeHighScoreSession as dbCloseHighScoreSession,
   createEventHighScoreEntry as dbCreateEventHighScoreEntry,
   createEventPointEntries as dbCreateEventPointEntries,
+  createEventPointEntryParticipants as dbCreateEventPointEntryParticipants,
   createHighScoreSession as dbCreateHighScoreSession,
   deleteEventPointEntriesForHighScoreSession as dbDeleteEventPointEntriesForHighScoreSession,
   deleteHighScoreEntry as dbDeleteHighScoreEntry,
@@ -330,28 +331,64 @@ export async function closeHighScoreSession(
     await withTransaction(async (tx) => {
       await dbCloseHighScoreSession(sessionId, userId, tx);
 
-      const pointEntries = [];
+      const entriesWithInfo: Array<{
+        entry: {
+          eventId: string;
+          category: typeof EventPointCategory.HIGH_SCORE;
+          outcome: typeof EventPointOutcome.PLACEMENT;
+          eventTeamId: string;
+          eventMatchId: null;
+          eventHighScoreSessionId: string;
+          eventTournamentId: null;
+          points: number;
+        };
+        participantInfo: {
+          userId: string | null;
+          eventPlaceholderParticipantId: string | null;
+        };
+      }> = [];
 
       for (const [teamId, best] of teamBestPlacement) {
         const points = configMap.get(best.placement);
         if (points !== undefined) {
-          pointEntries.push({
-            eventId: session.eventId,
-            category: EventPointCategory.HIGH_SCORE,
-            outcome: EventPointOutcome.PLACEMENT,
-            eventTeamId: teamId,
-            userId: best.userId,
-            eventPlaceholderParticipantId: best.eventPlaceholderParticipantId,
-            eventMatchId: null,
-            eventHighScoreSessionId: sessionId,
-            eventTournamentId: null,
-            points,
+          entriesWithInfo.push({
+            entry: {
+              eventId: session.eventId,
+              category: EventPointCategory.HIGH_SCORE,
+              outcome: EventPointOutcome.PLACEMENT,
+              eventTeamId: teamId,
+              eventMatchId: null,
+              eventHighScoreSessionId: sessionId,
+              eventTournamentId: null,
+              points,
+            },
+            participantInfo: {
+              userId: best.userId,
+              eventPlaceholderParticipantId: best.eventPlaceholderParticipantId,
+            },
           });
         }
       }
 
-      if (pointEntries.length > 0) {
-        await dbCreateEventPointEntries(pointEntries, tx);
+      if (entriesWithInfo.length > 0) {
+        const created = await dbCreateEventPointEntries(
+          entriesWithInfo.map((e) => e.entry),
+          tx,
+        );
+
+        const participantRows = created.flatMap((entry, i) => {
+          const info = entriesWithInfo[i].participantInfo;
+          if (!info || (!info.userId && !info.eventPlaceholderParticipantId))
+            return [];
+          return [
+            {
+              eventPointEntryId: entry.id,
+              userId: info.userId,
+              eventPlaceholderParticipantId: info.eventPlaceholderParticipantId,
+            },
+          ];
+        });
+        await dbCreateEventPointEntryParticipants(participantRows, tx);
       }
     });
   } else {

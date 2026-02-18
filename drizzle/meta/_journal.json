@@ -246,6 +246,20 @@
       "when": 1771365420118,
       "tag": "0034_handy_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1771372210904,
+      "tag": "0035_robust_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1771375597610,
+      "tag": "0036_glossy_hairball",
+      "breakpoints": true
     }
   ]
 }

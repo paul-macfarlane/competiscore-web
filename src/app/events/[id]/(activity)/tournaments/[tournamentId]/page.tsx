@@ -20,7 +20,11 @@ import {
   TOURNAMENT_STATUS_LABELS,
   TournamentStatus,
 } from "@/lib/shared/constants";
-import { parseH2HConfig } from "@/lib/shared/game-config-parser";
+import {
+  getPartnershipSize,
+  isPartnershipGameType,
+  parseH2HConfig,
+} from "@/lib/shared/game-config-parser";
 import {
   buildEventParticipantOptions,
   buildEventTeamOptions,
@@ -40,6 +44,12 @@ import { notFound, redirect } from "next/navigation";
 import { DraftEventActions } from "./draft-event-actions";
 import { EventTournamentBracketView } from "./event-tournament-bracket-view";
 import { ManageEventTournamentParticipants } from "./manage-event-tournament-participants";
+
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
 
 type Props = {
   params: Promise<{ id: string; tournamentId: string }>;
@@ -105,6 +115,14 @@ export default async function EventTournamentDetailPage({ params }: Props) {
   const tournament = tournamentResult.data;
   const { participants, bracket } = tournament;
   const isTeamTournament = tournament.participantType === ParticipantType.TEAM;
+  const h2hConfig =
+    tournament.gameType.category === GameCategory.HEAD_TO_HEAD
+      ? parseH2HConfig(tournament.gameType.config)
+      : undefined;
+  const partnershipSize =
+    h2hConfig && isPartnershipGameType(h2hConfig)
+      ? getPartnershipSize(h2hConfig)
+      : undefined;
 
   const participantOptions = await (async () => {
     if (!canManage) return [];
@@ -215,40 +233,120 @@ export default async function EventTournamentDetailPage({ params }: Props) {
                 {tournament.seedingType}
               </dd>
             </div>
+            {tournament.placementPointConfig &&
+              (() => {
+                let config: Array<{ placement: number; points: number }>;
+                try {
+                  config = JSON.parse(tournament.placementPointConfig);
+                } catch {
+                  return null;
+                }
+                if (!Array.isArray(config) || config.length === 0) return null;
+                const sorted = [...config].sort(
+                  (a, b) => a.placement - b.placement,
+                );
+                return (
+                  <div className="col-span-2">
+                    <dt className="text-muted-foreground">Point Scoring</dt>
+                    <dd className="mt-1 flex flex-wrap gap-1.5">
+                      {sorted.map((entry) => (
+                        <span
+                          key={entry.placement}
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
+                        >
+                          <span className="text-muted-foreground">
+                            {getOrdinal(entry.placement)}
+                          </span>
+                          <span className="font-medium">{entry.points}pt</span>
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                );
+              })()}
           </dl>
         </CardContent>
       </Card>
 
       {tournament.status === TournamentStatus.COMPLETED &&
         (() => {
-          const winner = participants.find((p) => p.finalPlacement === 1);
-          if (!winner) return null;
-          const winnerParticipant: ParticipantData = isTeamTournament
-            ? { team: winner.team }
-            : {
-                user: winner.user,
-                placeholderMember: winner.placeholderParticipant,
-              };
+          const placedParticipants = participants
+            .filter((p) => p.finalPlacement !== null)
+            .sort((a, b) => (a.finalPlacement ?? 0) - (b.finalPlacement ?? 0));
+          if (placedParticipants.length === 0) return null;
+
+          let pointConfig: Array<{
+            placement: number;
+            points: number;
+          }> | null = null;
+          if (tournament.placementPointConfig) {
+            try {
+              pointConfig = JSON.parse(tournament.placementPointConfig);
+            } catch {
+              /* ignore */
+            }
+          }
+
           return (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Trophy className="h-5 w-5 text-yellow-500" />
-                  Winner
+                  Final Results
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2">
-                  <ParticipantDisplay
-                    participant={winnerParticipant}
-                    showAvatar
-                    size="md"
-                  />
-                  {!isTeamTournament && (
-                    <span className="text-muted-foreground text-sm">
-                      ({winner.team.name})
-                    </span>
-                  )}
+                <div className="space-y-3">
+                  {placedParticipants.map((p) => {
+                    const placement = p.finalPlacement!;
+                    const points =
+                      pointConfig?.find((c) => c.placement === placement)
+                        ?.points ?? null;
+                    const hasMembers = p.members && p.members.length > 0;
+                    const participant: ParticipantData = isTeamTournament
+                      ? { team: p.team }
+                      : {
+                          user: p.user,
+                          placeholderMember: p.placeholderParticipant,
+                        };
+                    return (
+                      <div key={p.id} className="flex items-center gap-3">
+                        <span className="w-8 shrink-0 text-sm font-medium text-muted-foreground">
+                          {getOrdinal(placement)}
+                        </span>
+                        {hasMembers ? (
+                          <span className="flex-1 font-medium">
+                            {p
+                              .members!.map(
+                                (m) =>
+                                  m.user?.name ??
+                                  m.placeholderParticipant?.displayName ??
+                                  "Unknown",
+                              )
+                              .join(" & ")}
+                          </span>
+                        ) : (
+                          <div className="flex flex-1 items-center gap-2">
+                            <ParticipantDisplay
+                              participant={participant}
+                              showAvatar
+                              size="sm"
+                            />
+                            {!isTeamTournament && (
+                              <span className="text-sm text-muted-foreground">
+                                ({p.team.name})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {points !== null && (
+                          <span className="text-sm font-semibold text-primary">
+                            +{points}pt
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -281,14 +379,17 @@ export default async function EventTournamentDetailPage({ params }: Props) {
                     },
                     user: p.user,
                     placeholderParticipant: p.placeholderParticipant,
+                    members: p.members,
                   }))}
                   participantOptions={participantOptions}
                   seedingType={tournament.seedingType}
                   isTeamTournament={isTeamTournament}
+                  partnershipSize={partnershipSize}
                 />
               ) : (
                 <ul className="space-y-2">
                   {participants.map((p) => {
+                    const hasMembers = p.members && p.members.length > 0;
                     const participant: ParticipantData = isTeamTournament
                       ? { team: p.team }
                       : {
@@ -297,11 +398,24 @@ export default async function EventTournamentDetailPage({ params }: Props) {
                         };
                     return (
                       <li key={p.id} className="flex items-center gap-2">
-                        <ParticipantDisplay
-                          participant={participant}
-                          showAvatar
-                          size="sm"
-                        />
+                        {hasMembers ? (
+                          <span className="text-sm font-medium">
+                            {p
+                              .members!.map(
+                                (m) =>
+                                  m.user?.name ??
+                                  m.placeholderParticipant?.displayName ??
+                                  "Unknown",
+                              )
+                              .join(" & ")}
+                          </span>
+                        ) : (
+                          <ParticipantDisplay
+                            participant={participant}
+                            showAvatar
+                            size="sm"
+                          />
+                        )}
                         {!isTeamTournament &&
                           (p.team.color ? (
                             <TeamColorBadge
@@ -361,11 +475,7 @@ export default async function EventTournamentDetailPage({ params }: Props) {
                 eventId={eventId}
                 tournamentId={tournamentId}
                 isTeamTournament={isTeamTournament}
-                config={
-                  tournament.gameType.category === GameCategory.HEAD_TO_HEAD
-                    ? parseH2HConfig(tournament.gameType.config)
-                    : undefined
-                }
+                config={h2hConfig}
                 bestOf={tournament.bestOf}
                 roundBestOf={tournament.roundBestOf}
               />

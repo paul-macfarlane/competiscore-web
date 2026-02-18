@@ -1726,10 +1726,6 @@ export const eventPointEntry = pgTable(
     eventTeamId: text("event_team_id").references(() => eventTeam.id, {
       onDelete: "cascade",
     }),
-    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-    eventPlaceholderParticipantId: text(
-      "event_placeholder_participant_id",
-    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
     eventMatchId: text("event_match_id").references(() => eventMatch.id, {
       onDelete: "cascade",
     }),
@@ -1751,7 +1747,6 @@ export const eventPointEntry = pgTable(
   (table) => [
     index("event_point_entry_event_idx").on(table.eventId),
     index("event_point_entry_team_idx").on(table.eventTeamId),
-    index("event_point_entry_user_idx").on(table.userId),
     index("event_point_entry_match_idx").on(table.eventMatchId),
     index("event_point_entry_session_idx").on(table.eventHighScoreSessionId),
     index("event_point_entry_tournament_idx").on(table.eventTournamentId),
@@ -1763,6 +1758,35 @@ export const eventPointEntry = pgTable(
 
 export type EventPointEntry = InferSelectModel<typeof eventPointEntry>;
 export type NewEventPointEntry = InferInsertModel<typeof eventPointEntry>;
+
+export const eventPointEntryParticipant = pgTable(
+  "event_point_entry_participant",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventPointEntryId: text("event_point_entry_id")
+      .notNull()
+      .references(() => eventPointEntry.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_pep_entry_idx").on(table.eventPointEntryId),
+    index("event_pep_user_idx").on(table.userId),
+    index("event_pep_placeholder_idx").on(table.eventPlaceholderParticipantId),
+  ],
+);
+
+export type EventPointEntryParticipant = InferSelectModel<
+  typeof eventPointEntryParticipant
+>;
+export type NewEventPointEntryParticipant = InferInsertModel<
+  typeof eventPointEntryParticipant
+>;
 
 export const eventTournament = pgTable(
   "event_tournament",
@@ -1903,6 +1927,35 @@ export type EventTournamentRoundMatch = InferSelectModel<
 >;
 export type NewEventTournamentRoundMatch = InferInsertModel<
   typeof eventTournamentRoundMatch
+>;
+
+export const eventTournamentParticipantMember = pgTable(
+  "event_tournament_participant_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventTournamentParticipantId: text("event_tournament_participant_id")
+      .notNull()
+      .references(() => eventTournamentParticipant.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_tpm_participant_idx").on(table.eventTournamentParticipantId),
+    index("event_tpm_user_idx").on(table.userId),
+    index("event_tpm_placeholder_idx").on(table.eventPlaceholderParticipantId),
+  ],
+);
+
+export type EventTournamentParticipantMember = InferSelectModel<
+  typeof eventTournamentParticipantMember
+>;
+export type NewEventTournamentParticipantMember = InferInsertModel<
+  typeof eventTournamentParticipantMember
 >;
 
 // Event relations
@@ -2127,7 +2180,7 @@ export const eventDiscretionaryAwardRelations = relations(
 
 export const eventPointEntryRelations = relations(
   eventPointEntry,
-  ({ one }) => ({
+  ({ one, many }) => ({
     event: one(event, {
       fields: [eventPointEntry.eventId],
       references: [event.id],
@@ -2135,14 +2188,6 @@ export const eventPointEntryRelations = relations(
     team: one(eventTeam, {
       fields: [eventPointEntry.eventTeamId],
       references: [eventTeam.id],
-    }),
-    user: one(user, {
-      fields: [eventPointEntry.userId],
-      references: [user.id],
-    }),
-    placeholderParticipant: one(eventPlaceholderParticipant, {
-      fields: [eventPointEntry.eventPlaceholderParticipantId],
-      references: [eventPlaceholderParticipant.id],
     }),
     match: one(eventMatch, {
       fields: [eventPointEntry.eventMatchId],
@@ -2159,6 +2204,25 @@ export const eventPointEntryRelations = relations(
     discretionaryAward: one(eventDiscretionaryAward, {
       fields: [eventPointEntry.eventDiscretionaryAwardId],
       references: [eventDiscretionaryAward.id],
+    }),
+    participants: many(eventPointEntryParticipant),
+  }),
+);
+
+export const eventPointEntryParticipantRelations = relations(
+  eventPointEntryParticipant,
+  ({ one }) => ({
+    pointEntry: one(eventPointEntry, {
+      fields: [eventPointEntryParticipant.eventPointEntryId],
+      references: [eventPointEntry.id],
+    }),
+    user: one(user, {
+      fields: [eventPointEntryParticipant.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventPointEntryParticipant.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
     }),
   }),
 );
@@ -2185,7 +2249,7 @@ export const eventTournamentRelations = relations(
 
 export const eventTournamentParticipantRelations = relations(
   eventTournamentParticipant,
-  ({ one }) => ({
+  ({ one, many }) => ({
     tournament: one(eventTournament, {
       fields: [eventTournamentParticipant.eventTournamentId],
       references: [eventTournament.id],
@@ -2200,6 +2264,25 @@ export const eventTournamentParticipantRelations = relations(
     }),
     placeholderParticipant: one(eventPlaceholderParticipant, {
       fields: [eventTournamentParticipant.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
+    }),
+    members: many(eventTournamentParticipantMember),
+  }),
+);
+
+export const eventTournamentParticipantMemberRelations = relations(
+  eventTournamentParticipantMember,
+  ({ one }) => ({
+    participant: one(eventTournamentParticipant, {
+      fields: [eventTournamentParticipantMember.eventTournamentParticipantId],
+      references: [eventTournamentParticipant.id],
+    }),
+    user: one(user, {
+      fields: [eventTournamentParticipantMember.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventTournamentParticipantMember.eventPlaceholderParticipantId],
       references: [eventPlaceholderParticipant.id],
     }),
   }),
@@ -2262,4 +2345,10 @@ export const eventDiscretionaryAwardColumns = getTableColumns(
 );
 export const eventTournamentRoundMatchColumns = getTableColumns(
   eventTournamentRoundMatch,
+);
+export const eventTournamentParticipantMemberColumns = getTableColumns(
+  eventTournamentParticipantMember,
+);
+export const eventPointEntryParticipantColumns = getTableColumns(
+  eventPointEntryParticipant,
 );

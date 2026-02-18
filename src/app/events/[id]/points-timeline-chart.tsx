@@ -108,8 +108,8 @@ export function PointsTimelineChart({
                           payload?: CumulativeTimelinePoint;
                         }) => (
                           <ClickableDot
-                            key={props.index}
                             {...props}
+                            key={props.index}
                             onDotClick={handleDotClick}
                           />
                         )
@@ -185,7 +185,7 @@ function PointDetailPopover({
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="border-border/50 bg-background absolute z-50 min-w-[13rem] rounded-lg border px-3 py-2 text-xs shadow-xl"
+        className="border-border/50 bg-background absolute z-50 min-w-52 rounded-lg border px-3 py-2 text-xs shadow-xl"
         style={{
           left: `${x}px`,
           top: `${y}px`,

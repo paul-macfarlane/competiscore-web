@@ -9,7 +9,7 @@ import {
   highScoreConfigSchema,
 } from "@/validators/game-configs";
 
-import { GameCategory } from "./constants";
+import { GameCategory, ParticipantType } from "./constants";
 
 export function parseH2HConfig(configString: string): H2HConfig {
   try {
@@ -97,6 +97,17 @@ export function parseHighScoreConfig(configString: string): HighScoreConfig {
       participantType: "individual" as const,
     };
   }
+}
+
+export function isPartnershipGameType(config: H2HConfig): boolean {
+  return (
+    config.participantType === ParticipantType.INDIVIDUAL &&
+    config.maxPlayersPerSide > 1
+  );
+}
+
+export function getPartnershipSize(config: H2HConfig): number {
+  return config.maxPlayersPerSide;
 }
 
 export function getScoreDescription(

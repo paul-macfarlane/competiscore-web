@@ -18,8 +18,11 @@ import { EventAction, canPerformEventAction } from "@/lib/shared/permissions";
 import { cn } from "@/lib/shared/utils";
 import { getEventMatch } from "@/services/event-leaderboards";
 import { getEvent } from "@/services/events";
+import { Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Image from "next/image";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DeleteEventMatchButton } from "./delete-event-match-button";
@@ -308,6 +311,37 @@ export default async function EventMatchDetailPage({ params }: PageProps) {
               {match.gameType?.name ?? "Unknown"}
             </span>
           </div>
+          {match.tournament && (
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground shrink-0">Tournament</span>
+              <div className="text-right">
+                <Link
+                  href={`/events/${eventId}/tournaments/${match.tournament.tournamentId}`}
+                  className="font-medium underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground inline-flex items-center gap-1"
+                >
+                  {match.tournament.tournamentLogo ? (
+                    <div className="relative h-3 w-3 shrink-0">
+                      <Image
+                        src={match.tournament.tournamentLogo}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <Trophy className="h-3 w-3 shrink-0" />
+                  )}
+                  {match.tournament.tournamentName}
+                </Link>
+                {match.tournament.totalRounds && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Round {match.tournament.round} of{" "}
+                    {match.tournament.totalRounds})
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Played At</span>
             <span className="font-medium">

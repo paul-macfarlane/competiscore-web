@@ -237,84 +237,92 @@ function RankedForm({
             Order from 1st place at the top to last place at the bottom
           </p>
           {participantsArray.fields.map((field, index) => (
-            <div key={field.id} className="flex flex-wrap items-center gap-2">
-              <div className="flex shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => moveUp(index)}
-                  disabled={index === 0}
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => moveDown(index)}
-                  disabled={index === participantsArray.fields.length - 1}
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+            <div key={field.id} className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => moveUp(index)}
+                    disabled={index === 0}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => moveDown(index)}
+                    disabled={index === participantsArray.fields.length - 1}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium shrink-0">
+                  {index + 1}
+                </div>
+                {participantsArray.fields.length > config.minPlayers && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 ml-auto sm:ml-0 sm:order-last"
+                    onClick={() => {
+                      participantsArray.remove(index);
+                      const participants = form.getValues("participants");
+                      participants.forEach((p, i) => {
+                        form.setValue(`participants.${i}.rank`, i + 1);
+                      });
+                    }}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
+                <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedIds(
+                        form.watch("participants"),
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      form.setValue(
+                        `participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                          rank: index + 1,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
               </div>
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium shrink-0">
-                {index + 1}
-              </div>
-              {participantsArray.fields.length > config.minPlayers && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 ml-auto sm:ml-0 sm:order-last"
-                  onClick={() => {
-                    participantsArray.remove(index);
-                    const participants = form.getValues("participants");
-                    participants.forEach((p, i) => {
-                      form.setValue(`participants.${i}.rank`, i + 1);
-                    });
-                  }}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              {!!form.formState.errors.participants?.[index] && (
+                <p className="text-sm font-medium text-destructive pl-20">
+                  Please select a participant
+                </p>
               )}
-              <div className="min-w-0 w-full sm:w-auto sm:flex-1">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedIds(
-                      form.watch("participants"),
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`participants.${index}`),
-                  )}
-                  onChange={(participant) => {
-                    form.setValue(
-                      `participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                        rank: index + 1,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
-                />
-              </div>
             </div>
           ))}
           {form.formState.errors.participants?.message && (
@@ -455,76 +463,84 @@ function ScoreBasedForm({
             )}
           </div>
           {participantsArray.fields.map((field, index) => (
-            <div key={field.id} className="flex flex-wrap items-center gap-2">
-              <div className="min-w-0 w-full sm:w-auto sm:flex-1">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedIds(
-                      form.watch("participants"),
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`participants.${index}`),
+            <div key={field.id} className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedIds(
+                        form.watch("participants"),
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      const currentScore =
+                        form.getValues(`participants.${index}.score`) || 0;
+                      form.setValue(
+                        `participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                          score: currentScore,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name={`participants.${index}.score`}
+                  render={({ field: scoreField }) => (
+                    <FormItem className="w-24 shrink-0">
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder={scoreLabel}
+                          {...scoreField}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            scoreField.onChange(
+                              value === "" ? "" : parseFloat(value),
+                            );
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
                   )}
-                  onChange={(participant) => {
-                    const currentScore =
-                      form.getValues(`participants.${index}.score`) || 0;
-                    form.setValue(
-                      `participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                        score: currentScore,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
                 />
-              </div>
-              <FormField
-                control={form.control}
-                name={`participants.${index}.score`}
-                render={({ field: scoreField }) => (
-                  <FormItem className="w-24 shrink-0">
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="any"
-                        placeholder={scoreLabel}
-                        {...scoreField}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          scoreField.onChange(
-                            value === "" ? "" : parseFloat(value),
-                          );
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
+                {participantsArray.fields.length > config.minPlayers && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => participantsArray.remove(index)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
                 )}
-              />
-              {participantsArray.fields.length > config.minPlayers && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => participantsArray.remove(index)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              </div>
+              {!!form.formState.errors.participants?.[index] && (
+                <p className="text-sm font-medium text-destructive">
+                  Please select a participant
+                </p>
               )}
             </div>
           ))}

@@ -41,6 +41,7 @@ import { z } from "zod";
 
 import { ParticipantData, ParticipantDisplay } from "./participant-display";
 import { ParticipantSelector } from "./participant-selector";
+import { TeamColorBadge } from "./team-color-badge";
 
 function getSelectedParticipantIds(
   side1: Array<{
@@ -78,6 +79,8 @@ export type TournamentMatchProps = {
   side2Participant?: ParticipantData;
   side1TeamName?: string;
   side2TeamName?: string;
+  side1TeamColor?: string | null;
+  side2TeamColor?: string | null;
   onSubmitAction: (
     input: unknown,
   ) => Promise<{ error?: string; data?: unknown }>;
@@ -256,52 +259,60 @@ function WinLossForm({
             )}
           </div>
           {side1Array.fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedParticipantIds(
-                      form.watch("side1Participants"),
-                      form.watch("side2Participants"),
-                      "side1",
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`side1Participants.${index}`),
-                  )}
-                  onChange={(participant) => {
-                    form.setValue(
-                      `side1Participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
-                />
+            <div key={field.id} className="space-y-1">
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedParticipantIds(
+                        form.watch("side1Participants"),
+                        form.watch("side2Participants"),
+                        "side1",
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`side1Participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      form.setValue(
+                        `side1Participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
+                {side1Array.fields.length > config.minPlayersPerSide && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => side1Array.remove(index)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              {side1Array.fields.length > config.minPlayersPerSide && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => side1Array.remove(index)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              {!!form.formState.errors.side1Participants?.[index] && (
+                <p className="text-sm font-medium text-destructive">
+                  Please select a participant
+                </p>
               )}
             </div>
           ))}
@@ -323,52 +334,60 @@ function WinLossForm({
             )}
           </div>
           {side2Array.fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedParticipantIds(
-                      form.watch("side1Participants"),
-                      form.watch("side2Participants"),
-                      "side2",
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`side2Participants.${index}`),
-                  )}
-                  onChange={(participant) => {
-                    form.setValue(
-                      `side2Participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
-                />
+            <div key={field.id} className="space-y-1">
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedParticipantIds(
+                        form.watch("side1Participants"),
+                        form.watch("side2Participants"),
+                        "side2",
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`side2Participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      form.setValue(
+                        `side2Participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
+                {side2Array.fields.length > config.minPlayersPerSide && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => side2Array.remove(index)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              {side2Array.fields.length > config.minPlayersPerSide && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => side2Array.remove(index)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              {!!form.formState.errors.side2Participants?.[index] && (
+                <p className="text-sm font-medium text-destructive">
+                  Please select a participant
+                </p>
               )}
             </div>
           ))}
@@ -556,52 +575,60 @@ function ScoreBasedForm({
             )}
           </div>
           {side1Array.fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedParticipantIds(
-                      form.watch("side1Participants"),
-                      form.watch("side2Participants"),
-                      "side1",
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`side1Participants.${index}`),
-                  )}
-                  onChange={(participant) => {
-                    form.setValue(
-                      `side1Participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
-                />
+            <div key={field.id} className="space-y-1">
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedParticipantIds(
+                        form.watch("side1Participants"),
+                        form.watch("side2Participants"),
+                        "side1",
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`side1Participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      form.setValue(
+                        `side1Participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
+                {side1Array.fields.length > config.minPlayersPerSide && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => side1Array.remove(index)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              {side1Array.fields.length > config.minPlayersPerSide && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => side1Array.remove(index)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              {!!form.formState.errors.side1Participants?.[index] && (
+                <p className="text-sm font-medium text-destructive">
+                  Please select a participant
+                </p>
               )}
             </div>
           ))}
@@ -644,52 +671,60 @@ function ScoreBasedForm({
             )}
           </div>
           {side2Array.fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <ParticipantSelector
-                  options={participantOptions.filter((o) => {
-                    const selected = getSelectedParticipantIds(
-                      form.watch("side1Participants"),
-                      form.watch("side2Participants"),
-                      "side2",
-                      index,
-                    );
-                    return !selected.has(o.id);
-                  })}
-                  value={getParticipantValue(
-                    form.watch(`side2Participants.${index}`),
-                  )}
-                  onChange={(participant) => {
-                    form.setValue(
-                      `side2Participants.${index}`,
-                      {
-                        userId:
-                          participant?.type === MatchParticipantType.USER
-                            ? participant.id
-                            : undefined,
-                        teamId:
-                          participant?.type === MatchParticipantType.TEAM
-                            ? participant.id
-                            : undefined,
-                        placeholderMemberId:
-                          participant?.type === MatchParticipantType.PLACEHOLDER
-                            ? participant.id
-                            : undefined,
-                      },
-                      { shouldValidate: true },
-                    );
-                  }}
-                />
+            <div key={field.id} className="space-y-1">
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <ParticipantSelector
+                    options={participantOptions.filter((o) => {
+                      const selected = getSelectedParticipantIds(
+                        form.watch("side1Participants"),
+                        form.watch("side2Participants"),
+                        "side2",
+                        index,
+                      );
+                      return !selected.has(o.id);
+                    })}
+                    value={getParticipantValue(
+                      form.watch(`side2Participants.${index}`),
+                    )}
+                    onChange={(participant) => {
+                      form.setValue(
+                        `side2Participants.${index}`,
+                        {
+                          userId:
+                            participant?.type === MatchParticipantType.USER
+                              ? participant.id
+                              : undefined,
+                          teamId:
+                            participant?.type === MatchParticipantType.TEAM
+                              ? participant.id
+                              : undefined,
+                          placeholderMemberId:
+                            participant?.type ===
+                            MatchParticipantType.PLACEHOLDER
+                              ? participant.id
+                              : undefined,
+                        },
+                        { shouldValidate: true },
+                      );
+                    }}
+                  />
+                </div>
+                {side2Array.fields.length > config.minPlayersPerSide && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => side2Array.remove(index)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              {side2Array.fields.length > config.minPlayersPerSide && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => side2Array.remove(index)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+              {!!form.formState.errors.side2Participants?.[index] && (
+                <p className="text-sm font-medium text-destructive">
+                  Please select a participant
+                </p>
               )}
             </div>
           ))}
@@ -844,12 +879,21 @@ function TournamentWinLossForm({
                         <ParticipantDisplay
                           participant={tournamentMatch.side1Participant}
                           teamName={tournamentMatch.side1TeamName}
+                          teamColor={tournamentMatch.side1TeamColor}
                           showAvatar
                           showUsername
                           size="sm"
                         />
                       ) : (
-                        <span>{tournamentMatch.side1Name}</span>
+                        <span className="flex flex-col gap-0.5">
+                          <span>{tournamentMatch.side1Name}</span>
+                          {tournamentMatch.side1TeamName && (
+                            <TeamColorBadge
+                              name={tournamentMatch.side1TeamName}
+                              color={tournamentMatch.side1TeamColor ?? null}
+                            />
+                          )}
+                        </span>
                       )}
                       <span className="ml-auto shrink-0">Wins</span>
                     </label>
@@ -867,12 +911,21 @@ function TournamentWinLossForm({
                         <ParticipantDisplay
                           participant={tournamentMatch.side2Participant}
                           teamName={tournamentMatch.side2TeamName}
+                          teamColor={tournamentMatch.side2TeamColor}
                           showAvatar
                           showUsername
                           size="sm"
                         />
                       ) : (
-                        <span>{tournamentMatch.side2Name}</span>
+                        <span className="flex flex-col gap-0.5">
+                          <span>{tournamentMatch.side2Name}</span>
+                          {tournamentMatch.side2TeamName && (
+                            <TeamColorBadge
+                              name={tournamentMatch.side2TeamName}
+                              color={tournamentMatch.side2TeamColor ?? null}
+                            />
+                          )}
+                        </span>
                       )}
                       <span className="ml-auto shrink-0">Wins</span>
                     </label>
@@ -987,14 +1040,23 @@ function TournamentScoreForm({
               <ParticipantDisplay
                 participant={tournamentMatch.side1Participant}
                 teamName={tournamentMatch.side1TeamName}
+                teamColor={tournamentMatch.side1TeamColor}
                 showAvatar
                 showUsername
                 size="sm"
               />
             ) : (
-              <FormLabel className="text-base">
-                {tournamentMatch.side1Name}
-              </FormLabel>
+              <div className="flex flex-col gap-0.5">
+                <FormLabel className="text-base">
+                  {tournamentMatch.side1Name}
+                </FormLabel>
+                {tournamentMatch.side1TeamName && (
+                  <TeamColorBadge
+                    name={tournamentMatch.side1TeamName}
+                    color={tournamentMatch.side1TeamColor ?? null}
+                  />
+                )}
+              </div>
             )}
           </div>
           <FormField
@@ -1026,14 +1088,23 @@ function TournamentScoreForm({
               <ParticipantDisplay
                 participant={tournamentMatch.side2Participant}
                 teamName={tournamentMatch.side2TeamName}
+                teamColor={tournamentMatch.side2TeamColor}
                 showAvatar
                 showUsername
                 size="sm"
               />
             ) : (
-              <FormLabel className="text-base">
-                {tournamentMatch.side2Name}
-              </FormLabel>
+              <div className="flex flex-col gap-0.5">
+                <FormLabel className="text-base">
+                  {tournamentMatch.side2Name}
+                </FormLabel>
+                {tournamentMatch.side2TeamName && (
+                  <TeamColorBadge
+                    name={tournamentMatch.side2TeamName}
+                    color={tournamentMatch.side2TeamColor ?? null}
+                  />
+                )}
+              </div>
             )}
           </div>
           <FormField

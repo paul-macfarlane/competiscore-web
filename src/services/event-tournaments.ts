@@ -3,7 +3,9 @@ import {
   EventTournamentRoundMatchWithDetails,
   EventTournamentWithDetails,
   addEventTournamentParticipant as dbAddParticipant,
+  addEventTournamentParticipantMembers as dbAddParticipantMembers,
   bulkUpdateEventParticipantSeeds as dbBulkUpdateSeeds,
+  checkIndividualInEventTournamentPartnership as dbCheckIndividualInPartnership,
   checkIndividualInEventTournament as dbCheckIndividualInTournament,
   checkEventTournamentNameExists as dbCheckNameExists,
   countEventTournamentParticipants as dbCountParticipants,
@@ -13,6 +15,7 @@ import {
   deleteEventTournament as dbDeleteTournament,
   getEventTournamentBracket as dbGetBracket,
   getEventTournamentParticipantById as dbGetParticipantById,
+  getEventTournamentParticipantMembers as dbGetParticipantMembers,
   getEventTournamentParticipants as dbGetParticipants,
   getEventTournamentRoundMatchById as dbGetRoundMatchById,
   getEventTournamentById as dbGetTournamentById,
@@ -27,6 +30,7 @@ import {
   createEventMatch,
   createEventMatchParticipants,
   createEventPointEntries,
+  createEventPointEntryParticipants,
   deleteEventMatch,
   deleteEventPointEntriesForTournament,
   getEventGameTypeById,
@@ -53,11 +57,16 @@ import {
   TournamentStatus,
   TournamentType,
 } from "@/lib/shared/constants";
-import { parseH2HConfig } from "@/lib/shared/game-config-parser";
+import {
+  getPartnershipSize,
+  isPartnershipGameType,
+  parseH2HConfig,
+} from "@/lib/shared/game-config-parser";
 import { EventAction, canPerformEventAction } from "@/lib/shared/permissions";
 import {
   type PlacementPointConfig,
   addEventTournamentParticipantSchema,
+  addEventTournamentPartnershipSchema,
   createEventTournamentSchema,
   eventTournamentIdSchema,
   forfeitEventTournamentMatchSchema,
@@ -476,6 +485,161 @@ export async function addEventTournamentParticipant(
   return { data: participant };
 }
 
+export async function addEventTournamentPartnership(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<EventTournamentParticipant>> {
+  const parsed = addEventTournamentPartnershipSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const data = parsed.data;
+
+  const tournamentData = await dbGetTournamentById(data.eventTournamentId);
+  if (!tournamentData) {
+    return { error: "Tournament not found" };
+  }
+
+  if (tournamentData.status !== TournamentStatus.DRAFT) {
+    return {
+      error: "Can only add participants to tournaments in draft status",
+    };
+  }
+
+  const participation = await getEventParticipant(
+    tournamentData.eventId,
+    userId,
+  );
+  if (!participation) {
+    return { error: "You are not a participant in this event" };
+  }
+
+  if (
+    !canPerformEventAction(participation.role, EventAction.CREATE_TOURNAMENTS)
+  ) {
+    return { error: "You do not have permission to manage tournaments" };
+  }
+
+  if (tournamentData.participantType !== ParticipantType.INDIVIDUAL) {
+    return { error: "Partnerships are only for individual tournaments" };
+  }
+
+  const gameType = await getEventGameTypeById(tournamentData.eventGameTypeId);
+  if (!gameType) {
+    return { error: "Game type not found" };
+  }
+
+  const h2hConfig = parseH2HConfig(gameType.config);
+  if (!isPartnershipGameType(h2hConfig)) {
+    return {
+      error: "This game type does not support partnerships",
+    };
+  }
+
+  const partnershipSize = getPartnershipSize(h2hConfig);
+  if (data.members.length !== partnershipSize) {
+    return {
+      error: `This game type requires exactly ${partnershipSize} members per partnership`,
+    };
+  }
+
+  // Verify all members are on the same team
+  let teamId: string | null = null;
+  for (const member of data.members) {
+    let memberTeam;
+    if (member.userId) {
+      memberTeam = await getTeamForUser(tournamentData.eventId, member.userId);
+    } else if (member.eventPlaceholderParticipantId) {
+      memberTeam = await getTeamForPlaceholder(
+        tournamentData.eventId,
+        member.eventPlaceholderParticipantId,
+      );
+    }
+
+    if (!memberTeam) {
+      return { error: "All members must be on a team in this event" };
+    }
+
+    if (teamId === null) {
+      teamId = memberTeam.id;
+    } else if (memberTeam.id !== teamId) {
+      return { error: "All partnership members must be on the same team" };
+    }
+  }
+
+  if (!teamId) {
+    return { error: "Could not determine team for partnership" };
+  }
+
+  // Check no member is already in the tournament (either as direct participant or in another partnership)
+  for (const member of data.members) {
+    const inTournament = await dbCheckIndividualInTournament(
+      data.eventTournamentId,
+      {
+        userId: member.userId,
+        eventPlaceholderParticipantId: member.eventPlaceholderParticipantId,
+      },
+    );
+    if (inTournament) {
+      return {
+        error: "One or more members are already in the tournament",
+      };
+    }
+
+    const inPartnership = await dbCheckIndividualInPartnership(
+      data.eventTournamentId,
+      {
+        userId: member.userId,
+        eventPlaceholderParticipantId: member.eventPlaceholderParticipantId,
+      },
+    );
+    if (inPartnership) {
+      return {
+        error:
+          "One or more members are already in a partnership in this tournament",
+      };
+    }
+  }
+
+  const currentCount = await dbCountParticipants(data.eventTournamentId);
+  if (currentCount >= MAX_TOURNAMENT_PARTICIPANTS) {
+    return {
+      error: `Tournament has reached the maximum of ${MAX_TOURNAMENT_PARTICIPANTS} participants`,
+    };
+  }
+
+  return withTransaction(async (tx) => {
+    const participant = await dbAddParticipant(
+      {
+        eventTournamentId: data.eventTournamentId,
+        eventTeamId: teamId,
+        userId: null,
+        eventPlaceholderParticipantId: null,
+        seed: null,
+        isEliminated: false,
+        eliminatedInRound: null,
+        finalPlacement: null,
+      },
+      tx,
+    );
+
+    await dbAddParticipantMembers(
+      data.members.map((m) => ({
+        eventTournamentParticipantId: participant.id,
+        userId: m.userId ?? null,
+        eventPlaceholderParticipantId: m.eventPlaceholderParticipantId ?? null,
+      })),
+      tx,
+    );
+
+    return { data: participant };
+  });
+}
+
 export async function removeEventTournamentParticipant(
   userId: string,
   input: unknown,
@@ -841,30 +1005,86 @@ async function awardTournamentPlacementPoints(
     (p) => p.finalPlacement !== null,
   );
 
-  const pointEntries = placedParticipants
-    .map((p) => {
-      const configEntry = config.find((c) => c.placement === p.finalPlacement);
-      if (!configEntry) return null;
+  const entriesWithInfo: Array<{
+    entry: {
+      eventId: string;
+      category: typeof EventPointCategory.TOURNAMENT;
+      outcome: typeof EventPointOutcome.PLACEMENT;
+      eventTeamId: string | null;
+      eventMatchId: null;
+      eventHighScoreSessionId: null;
+      eventTournamentId: string;
+      points: number;
+    };
+    participantInfo: Array<{
+      userId: string | null;
+      eventPlaceholderParticipantId: string | null;
+    }>;
+  }> = [];
 
-      return {
+  for (const p of placedParticipants) {
+    const configEntry = config.find((c) => c.placement === p.finalPlacement);
+    if (!configEntry) continue;
+
+    const isPartnership = !p.userId && !p.eventPlaceholderParticipantId;
+    let participantInfo: Array<{
+      userId: string | null;
+      eventPlaceholderParticipantId: string | null;
+    }>;
+
+    if (isPartnership) {
+      const members = await dbGetParticipantMembers(p.id, tx);
+      participantInfo = members.map((m) => ({
+        userId: m.user?.id ?? null,
+        eventPlaceholderParticipantId: m.placeholderParticipant?.id ?? null,
+      }));
+    } else {
+      participantInfo = [
+        {
+          userId: p.userId ?? null,
+          eventPlaceholderParticipantId:
+            p.eventPlaceholderParticipantId ?? null,
+        },
+      ];
+    }
+
+    entriesWithInfo.push({
+      entry: {
         eventId: tournament.eventId,
-        category:
-          EventPointCategory.TOURNAMENT as typeof EventPointCategory.TOURNAMENT,
-        outcome:
-          EventPointOutcome.PLACEMENT as typeof EventPointOutcome.PLACEMENT,
+        category: EventPointCategory.TOURNAMENT,
+        outcome: EventPointOutcome.PLACEMENT,
         eventTeamId: p.eventTeamId,
-        userId: p.userId ?? null,
-        eventPlaceholderParticipantId: p.eventPlaceholderParticipantId ?? null,
         eventMatchId: null,
         eventHighScoreSessionId: null,
         eventTournamentId: tournament.id,
         points: configEntry.points,
-      };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+      },
+      participantInfo,
+    });
+  }
 
-  if (pointEntries.length > 0) {
-    await createEventPointEntries(pointEntries, tx);
+  if (entriesWithInfo.length > 0) {
+    const created = await createEventPointEntries(
+      entriesWithInfo.map((e) => e.entry),
+      tx,
+    );
+
+    const participantRows = created.flatMap((entry, i) =>
+      entriesWithInfo[i].participantInfo.flatMap((p) => {
+        if (!p.userId && !p.eventPlaceholderParticipantId) return [];
+        return [
+          {
+            eventPointEntryId: entry.id,
+            userId: p.userId,
+            eventPlaceholderParticipantId: p.eventPlaceholderParticipantId,
+          },
+        ];
+      }),
+    );
+
+    if (participantRows.length > 0) {
+      await createEventPointEntryParticipants(participantRows, tx);
+    }
   }
 }
 
@@ -941,7 +1161,21 @@ export async function recordEventTournamentMatchResult(
     const p2 = roundMatch.participant2Id
       ? await dbGetParticipantById(roundMatch.participant2Id)
       : null;
-    const isInvolved = p1?.userId === userId || p2?.userId === userId;
+    let isInvolved = p1?.userId === userId || p2?.userId === userId;
+    // Also check partnership members
+    if (!isInvolved) {
+      const [p1Members, p2Members] = await Promise.all([
+        roundMatch.participant1Id
+          ? dbGetParticipantMembers(roundMatch.participant1Id)
+          : [],
+        roundMatch.participant2Id
+          ? dbGetParticipantMembers(roundMatch.participant2Id)
+          : [],
+      ]);
+      isInvolved =
+        p1Members.some((m) => m.user?.id === userId) ||
+        p2Members.some((m) => m.user?.id === userId);
+    }
     if (!isInvolved) {
       return {
         error: "You can only record results for matches you're involved in",
@@ -1011,37 +1245,81 @@ export async function recordEventTournamentMatchResult(
       tx,
     );
 
-    await createEventMatchParticipants(
-      [
-        {
+    // Check for partnership members
+    const [winnerMembers, loserMembers] = await Promise.all([
+      dbGetParticipantMembers(gameWinnerId, tx),
+      dbGetParticipantMembers(gameLoserId, tx),
+    ]);
+
+    const matchParticipants: Parameters<
+      typeof createEventMatchParticipants
+    >[0] = [];
+
+    if (winnerMembers.length > 0) {
+      for (const member of winnerMembers) {
+        matchParticipants.push({
           eventMatchId: realMatch.id,
           eventTeamId: winner.eventTeamId,
-          userId: winner.userId ?? null,
+          userId: member.user?.id ?? null,
           eventPlaceholderParticipantId:
-            winner.eventPlaceholderParticipantId ?? null,
+            member.placeholderParticipant?.id ?? null,
           side: gameWinnerIsP1 ? 1 : 2,
           score: gameWinnerIsP1
             ? (data.side1Score ?? null)
             : (data.side2Score ?? null),
           result: MatchResult.WIN,
           rank: null,
-        },
-        {
+        });
+      }
+    } else {
+      matchParticipants.push({
+        eventMatchId: realMatch.id,
+        eventTeamId: winner.eventTeamId,
+        userId: winner.userId ?? null,
+        eventPlaceholderParticipantId:
+          winner.eventPlaceholderParticipantId ?? null,
+        side: gameWinnerIsP1 ? 1 : 2,
+        score: gameWinnerIsP1
+          ? (data.side1Score ?? null)
+          : (data.side2Score ?? null),
+        result: MatchResult.WIN,
+        rank: null,
+      });
+    }
+
+    if (loserMembers.length > 0) {
+      for (const member of loserMembers) {
+        matchParticipants.push({
           eventMatchId: realMatch.id,
           eventTeamId: loser.eventTeamId,
-          userId: loser.userId ?? null,
+          userId: member.user?.id ?? null,
           eventPlaceholderParticipantId:
-            loser.eventPlaceholderParticipantId ?? null,
+            member.placeholderParticipant?.id ?? null,
           side: gameWinnerIsP1 ? 2 : 1,
           score: gameWinnerIsP1
             ? (data.side2Score ?? null)
             : (data.side1Score ?? null),
           result: MatchResult.LOSS,
           rank: null,
-        },
-      ],
-      tx,
-    );
+        });
+      }
+    } else {
+      matchParticipants.push({
+        eventMatchId: realMatch.id,
+        eventTeamId: loser.eventTeamId,
+        userId: loser.userId ?? null,
+        eventPlaceholderParticipantId:
+          loser.eventPlaceholderParticipantId ?? null,
+        side: gameWinnerIsP1 ? 2 : 1,
+        score: gameWinnerIsP1
+          ? (data.side2Score ?? null)
+          : (data.side1Score ?? null),
+        result: MatchResult.LOSS,
+        rank: null,
+      });
+    }
+
+    await createEventMatchParticipants(matchParticipants, tx);
 
     const newP1Wins = roundMatch.participant1Wins + (gameWinnerIsP1 ? 1 : 0);
     const newP2Wins = roundMatch.participant2Wins + (gameWinnerIsP1 ? 0 : 1);

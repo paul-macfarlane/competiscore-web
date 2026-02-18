@@ -9,6 +9,7 @@ import {
   EventTournamentRoundMatch,
   NewEventTournament,
   NewEventTournamentParticipant,
+  NewEventTournamentParticipantMember,
   NewEventTournamentRoundMatch,
   User,
   eventGameType,
@@ -18,6 +19,7 @@ import {
   eventTournamentColumns,
   eventTournamentParticipant,
   eventTournamentParticipantColumns,
+  eventTournamentParticipantMember,
   eventTournamentRoundMatch,
   user,
 } from "./schema";
@@ -259,6 +261,15 @@ export async function removeEventTournamentParticipant(
   return result.length > 0;
 }
 
+export type PartnershipMemberDetail = {
+  id: string;
+  user: Pick<User, "id" | "name" | "username" | "image"> | null;
+  placeholderParticipant: Pick<
+    EventPlaceholderParticipant,
+    "id" | "displayName"
+  > | null;
+};
+
 export type EventTournamentParticipantWithDetails =
   EventTournamentParticipant & {
     team: {
@@ -272,6 +283,7 @@ export type EventTournamentParticipantWithDetails =
       EventPlaceholderParticipant,
       "id" | "displayName"
     > | null;
+    members?: PartnershipMemberDetail[];
   };
 
 export async function getEventTournamentParticipants(
@@ -317,7 +329,60 @@ export async function getEventTournamentParticipants(
       eventTournamentParticipant.createdAt,
     );
 
-  return result;
+  // Fetch partnership members for all participants
+  const participantIds = result.map((p) => p.id);
+  if (participantIds.length === 0) return result;
+
+  const memberRows = await dbOrTx
+    .select({
+      id: eventTournamentParticipantMember.id,
+      eventTournamentParticipantId:
+        eventTournamentParticipantMember.eventTournamentParticipantId,
+      memberUser: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        image: user.image,
+      },
+      memberPlaceholder: {
+        id: eventPlaceholderParticipant.id,
+        displayName: eventPlaceholderParticipant.displayName,
+      },
+    })
+    .from(eventTournamentParticipantMember)
+    .leftJoin(user, eq(eventTournamentParticipantMember.userId, user.id))
+    .leftJoin(
+      eventPlaceholderParticipant,
+      eq(
+        eventTournamentParticipantMember.eventPlaceholderParticipantId,
+        eventPlaceholderParticipant.id,
+      ),
+    )
+    .where(
+      inArray(
+        eventTournamentParticipantMember.eventTournamentParticipantId,
+        participantIds,
+      ),
+    );
+
+  const membersByParticipant = new Map<string, PartnershipMemberDetail[]>();
+  for (const row of memberRows) {
+    const members =
+      membersByParticipant.get(row.eventTournamentParticipantId) ?? [];
+    members.push({
+      id: row.id,
+      user: row.memberUser?.id ? row.memberUser : null,
+      placeholderParticipant: row.memberPlaceholder?.id
+        ? row.memberPlaceholder
+        : null,
+    });
+    membersByParticipant.set(row.eventTournamentParticipantId, members);
+  }
+
+  return result.map((p) => ({
+    ...p,
+    members: membersByParticipant.get(p.id),
+  }));
 }
 
 export async function getEventTournamentParticipantById(
@@ -533,4 +598,131 @@ export async function getEventTournamentRoundMatchByPosition(
     )
     .limit(1);
   return result[0];
+}
+
+export type EventTournamentMatchInfo = {
+  matchId: string;
+  tournamentId: string;
+  tournamentName: string;
+  tournamentLogo: string | null;
+  eventId: string;
+  round: number;
+  totalRounds: number | null;
+};
+
+export async function getTournamentInfoByEventMatchIds(
+  matchIds: string[],
+  dbOrTx: DBOrTx = db,
+): Promise<EventTournamentMatchInfo[]> {
+  if (matchIds.length === 0) return [];
+  const result = await dbOrTx
+    .select({
+      matchId: eventTournamentRoundMatch.eventMatchId,
+      tournamentId: eventTournament.id,
+      tournamentName: eventTournament.name,
+      tournamentLogo: eventTournament.logo,
+      eventId: eventTournament.eventId,
+      round: eventTournamentRoundMatch.round,
+      totalRounds: eventTournament.totalRounds,
+    })
+    .from(eventTournamentRoundMatch)
+    .innerJoin(
+      eventTournament,
+      eq(eventTournamentRoundMatch.eventTournamentId, eventTournament.id),
+    )
+    .where(inArray(eventTournamentRoundMatch.eventMatchId, matchIds));
+  return result as EventTournamentMatchInfo[];
+}
+
+// Partnership member functions
+
+export async function addEventTournamentParticipantMembers(
+  members: Omit<NewEventTournamentParticipantMember, "id" | "createdAt">[],
+  dbOrTx: DBOrTx = db,
+): Promise<void> {
+  if (members.length === 0) return;
+  await dbOrTx.insert(eventTournamentParticipantMember).values(members);
+}
+
+export async function getEventTournamentParticipantMembers(
+  participantId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<PartnershipMemberDetail[]> {
+  const rows = await dbOrTx
+    .select({
+      id: eventTournamentParticipantMember.id,
+      memberUser: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        image: user.image,
+      },
+      memberPlaceholder: {
+        id: eventPlaceholderParticipant.id,
+        displayName: eventPlaceholderParticipant.displayName,
+      },
+    })
+    .from(eventTournamentParticipantMember)
+    .leftJoin(user, eq(eventTournamentParticipantMember.userId, user.id))
+    .leftJoin(
+      eventPlaceholderParticipant,
+      eq(
+        eventTournamentParticipantMember.eventPlaceholderParticipantId,
+        eventPlaceholderParticipant.id,
+      ),
+    )
+    .where(
+      eq(
+        eventTournamentParticipantMember.eventTournamentParticipantId,
+        participantId,
+      ),
+    );
+
+  return rows.map((row) => ({
+    id: row.id,
+    user: row.memberUser?.id ? row.memberUser : null,
+    placeholderParticipant: row.memberPlaceholder?.id
+      ? row.memberPlaceholder
+      : null,
+  }));
+}
+
+export async function checkIndividualInEventTournamentPartnership(
+  tournamentId: string,
+  opts: { userId?: string; eventPlaceholderParticipantId?: string },
+  dbOrTx: DBOrTx = db,
+): Promise<boolean> {
+  const conditions = [
+    eq(eventTournamentParticipant.eventTournamentId, tournamentId),
+  ];
+
+  const memberConditions: ReturnType<typeof eq>[] = [];
+  if (opts.userId) {
+    memberConditions.push(
+      eq(eventTournamentParticipantMember.userId, opts.userId),
+    );
+  } else if (opts.eventPlaceholderParticipantId) {
+    memberConditions.push(
+      eq(
+        eventTournamentParticipantMember.eventPlaceholderParticipantId,
+        opts.eventPlaceholderParticipantId,
+      ),
+    );
+  }
+
+  if (memberConditions.length === 0) return false;
+
+  const result = await dbOrTx
+    .select({ count: count() })
+    .from(eventTournamentParticipantMember)
+    .innerJoin(
+      eventTournamentParticipant,
+      eq(
+        eventTournamentParticipantMember.eventTournamentParticipantId,
+        eventTournamentParticipant.id,
+      ),
+    )
+    .where(and(...conditions, ...memberConditions));
+
+  return result[0].count > 0;
 }

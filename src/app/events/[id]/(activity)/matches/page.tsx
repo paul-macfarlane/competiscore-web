@@ -215,6 +215,18 @@ async function MatchesContent({
                     : undefined
                 }
                 playedAt={match.playedAt}
+                tournament={
+                  match.tournament
+                    ? {
+                        tournamentId: match.tournament.tournamentId,
+                        tournamentName: match.tournament.tournamentName,
+                        tournamentLogo: match.tournament.tournamentLogo,
+                        eventId: match.tournament.eventId,
+                        round: match.tournament.round,
+                        totalRounds: match.tournament.totalRounds,
+                      }
+                    : undefined
+                }
                 participants={match.participants.map((p) => ({
                   id: p.id,
                   side: p.side,

@@ -212,21 +212,24 @@ function buildIndividualContributions(
 
   for (const entry of entries) {
     if (!entry.eventTeamId) continue;
-    const name = entry.userName ?? entry.placeholderDisplayName;
-    if (!name) continue;
 
-    let team = teamMap.get(entry.eventTeamId);
-    if (!team) {
-      team = {
-        teamName: entry.teamName ?? "Unknown",
-        teamColor: entry.teamColor,
-        contributors: new Map(),
-      };
-      teamMap.set(entry.eventTeamId, team);
+    for (const p of entry.participants) {
+      const name = p.userName ?? p.placeholderDisplayName;
+      if (!name) continue;
+
+      let team = teamMap.get(entry.eventTeamId);
+      if (!team) {
+        team = {
+          teamName: entry.teamName ?? "Unknown",
+          teamColor: entry.teamColor,
+          contributors: new Map(),
+        };
+        teamMap.set(entry.eventTeamId, team);
+      }
+
+      const current = team.contributors.get(name) ?? 0;
+      team.contributors.set(name, current + entry.points);
     }
-
-    const current = team.contributors.get(name) ?? 0;
-    team.contributors.set(name, current + entry.points);
   }
 
   return Array.from(teamMap.entries()).map(([teamId, data]) => ({

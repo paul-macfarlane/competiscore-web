@@ -18,6 +18,7 @@ vi.mock("@/db/events", () => ({
   createEventMatch: vi.fn(),
   createEventMatchParticipants: vi.fn(),
   createEventPointEntries: vi.fn(),
+  createEventPointEntryParticipants: vi.fn(),
   getEventById: vi.fn(),
   getEventGameTypeById: vi.fn(),
   getEventParticipant: vi.fn(),
@@ -219,9 +220,10 @@ describe("recordEventH2HMatch", () => {
     vi.mocked(dbEvents.createEventMatchParticipants).mockResolvedValue(
       undefined as never,
     );
-    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue(
-      undefined as never,
-    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "pe-1" },
+      { id: "pe-2" },
+    ] as never);
 
     const result = await recordEventH2HMatch(TEST_IDS.USER_ID, {
       eventId: TEST_IDS.EVENT_ID,
@@ -256,9 +258,10 @@ describe("recordEventH2HMatch", () => {
     vi.mocked(dbEvents.createEventMatchParticipants).mockResolvedValue(
       undefined as never,
     );
-    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue(
-      undefined as never,
-    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "pe-1" },
+      { id: "pe-2" },
+    ] as never);
 
     const result = await recordEventH2HMatch(TEST_IDS.USER_ID, {
       eventId: TEST_IDS.EVENT_ID,
@@ -369,9 +372,10 @@ describe("recordEventFFAMatch", () => {
     vi.mocked(dbEvents.createEventMatchParticipants).mockResolvedValue(
       undefined as never,
     );
-    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue(
-      undefined as never,
-    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "pe-1" },
+      { id: "pe-2" },
+    ] as never);
 
     const result = await recordEventFFAMatch(TEST_IDS.USER_ID, {
       eventId: TEST_IDS.EVENT_ID,

@@ -25,6 +25,7 @@ import {
   NewEventParticipant,
   NewEventPlaceholderParticipant,
   NewEventPointEntry,
+  NewEventPointEntryParticipant,
   NewEventTeam,
   NewEventTeamMember,
   User,
@@ -43,6 +44,7 @@ import {
   eventParticipantColumns,
   eventPlaceholderParticipant,
   eventPointEntry,
+  eventPointEntryParticipant,
   eventTeam,
   eventTeamColumns,
   eventTeamMember,
@@ -1381,9 +1383,6 @@ export async function getPointEntriesForHighScoreSessions(
       category: eventPointEntry.category,
       outcome: eventPointEntry.outcome,
       eventTeamId: eventPointEntry.eventTeamId,
-      userId: eventPointEntry.userId,
-      eventPlaceholderParticipantId:
-        eventPointEntry.eventPlaceholderParticipantId,
       eventMatchId: eventPointEntry.eventMatchId,
       eventHighScoreSessionId: eventPointEntry.eventHighScoreSessionId,
       eventTournamentId: eventPointEntry.eventTournamentId,
@@ -1410,9 +1409,6 @@ export async function getPointEntriesForGameType(
       category: eventPointEntry.category,
       outcome: eventPointEntry.outcome,
       eventTeamId: eventPointEntry.eventTeamId,
-      userId: eventPointEntry.userId,
-      eventPlaceholderParticipantId:
-        eventPointEntry.eventPlaceholderParticipantId,
       eventMatchId: eventPointEntry.eventMatchId,
       eventHighScoreSessionId: eventPointEntry.eventHighScoreSessionId,
       eventTournamentId: eventPointEntry.eventTournamentId,
@@ -1849,23 +1845,33 @@ export type EnrichedPointEntry = {
   eventTeamId: string | null;
   teamName: string | null;
   teamColor: string | null;
-  userId: string | null;
-  userName: string | null;
-  userUsername: string | null;
-  userImage: string | null;
-  eventPlaceholderParticipantId: string | null;
-  placeholderDisplayName: string | null;
   eventMatchId: string | null;
   eventHighScoreSessionId: string | null;
   eventTournamentId: string | null;
   eventDiscretionaryAwardId: string | null;
+  participants: Array<{
+    userId: string | null;
+    userName: string | null;
+    userUsername: string | null;
+    userImage: string | null;
+    eventPlaceholderParticipantId: string | null;
+    placeholderDisplayName: string | null;
+  }>;
 };
+
+export async function createEventPointEntryParticipants(
+  data: Omit<NewEventPointEntryParticipant, "id" | "createdAt">[],
+  dbOrTx: DBOrTx = db,
+): Promise<void> {
+  if (data.length === 0) return;
+  await dbOrTx.insert(eventPointEntryParticipant).values(data);
+}
 
 export async function getEnrichedEventPointEntries(
   eventId: string,
   dbOrTx: DBOrTx = db,
 ): Promise<EnrichedPointEntry[]> {
-  return await dbOrTx
+  const entries = await dbOrTx
     .select({
       id: eventPointEntry.id,
       eventId: eventPointEntry.eventId,
@@ -1876,13 +1882,6 @@ export async function getEnrichedEventPointEntries(
       eventTeamId: eventPointEntry.eventTeamId,
       teamName: eventTeam.name,
       teamColor: eventTeam.color,
-      userId: eventPointEntry.userId,
-      userName: user.name,
-      userUsername: user.username,
-      userImage: user.image,
-      eventPlaceholderParticipantId:
-        eventPointEntry.eventPlaceholderParticipantId,
-      placeholderDisplayName: eventPlaceholderParticipant.displayName,
       eventMatchId: eventPointEntry.eventMatchId,
       eventHighScoreSessionId: eventPointEntry.eventHighScoreSessionId,
       eventTournamentId: eventPointEntry.eventTournamentId,
@@ -1890,16 +1889,55 @@ export async function getEnrichedEventPointEntries(
     })
     .from(eventPointEntry)
     .leftJoin(eventTeam, eq(eventPointEntry.eventTeamId, eventTeam.id))
-    .leftJoin(user, eq(eventPointEntry.userId, user.id))
+    .where(eq(eventPointEntry.eventId, eventId))
+    .orderBy(eventPointEntry.createdAt);
+
+  if (entries.length === 0) return [];
+
+  const entryIds = entries.map((e) => e.id);
+  const participants = await dbOrTx
+    .select({
+      eventPointEntryId: eventPointEntryParticipant.eventPointEntryId,
+      userId: eventPointEntryParticipant.userId,
+      userName: user.name,
+      userUsername: user.username,
+      userImage: user.image,
+      eventPlaceholderParticipantId:
+        eventPointEntryParticipant.eventPlaceholderParticipantId,
+      placeholderDisplayName: eventPlaceholderParticipant.displayName,
+    })
+    .from(eventPointEntryParticipant)
+    .leftJoin(user, eq(eventPointEntryParticipant.userId, user.id))
     .leftJoin(
       eventPlaceholderParticipant,
       eq(
-        eventPointEntry.eventPlaceholderParticipantId,
+        eventPointEntryParticipant.eventPlaceholderParticipantId,
         eventPlaceholderParticipant.id,
       ),
     )
-    .where(eq(eventPointEntry.eventId, eventId))
-    .orderBy(eventPointEntry.createdAt);
+    .where(inArray(eventPointEntryParticipant.eventPointEntryId, entryIds));
+
+  const participantsByEntry = new Map<
+    string,
+    EnrichedPointEntry["participants"]
+  >();
+  for (const p of participants) {
+    const list = participantsByEntry.get(p.eventPointEntryId) ?? [];
+    list.push({
+      userId: p.userId,
+      userName: p.userName,
+      userUsername: p.userUsername,
+      userImage: p.userImage,
+      eventPlaceholderParticipantId: p.eventPlaceholderParticipantId,
+      placeholderDisplayName: p.placeholderDisplayName,
+    });
+    participantsByEntry.set(p.eventPointEntryId, list);
+  }
+
+  return entries.map((e) => ({
+    ...e,
+    participants: participantsByEntry.get(e.id) ?? [],
+  }));
 }
 
 export async function deleteEventPointEntriesForDiscretionaryAward(

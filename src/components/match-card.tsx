@@ -41,7 +41,8 @@ type MatchCardTournament = {
   tournamentId: string;
   tournamentName: string;
   tournamentLogo?: string | null;
-  leagueId: string;
+  leagueId?: string;
+  eventId?: string;
   round: number;
   totalRounds: number | null;
 };
@@ -118,7 +119,11 @@ export function MatchCard({
           <div className="flex items-center gap-1 shrink-0">
             {tournament && (
               <Link
-                href={`/leagues/${tournament.leagueId}/tournaments/${tournament.tournamentId}`}
+                href={
+                  tournament.eventId
+                    ? `/events/${tournament.eventId}/tournaments/${tournament.tournamentId}`
+                    : `/leagues/${tournament.leagueId}/tournaments/${tournament.tournamentId}`
+                }
               >
                 <Badge variant="outline" className="gap-1 hover:bg-accent">
                   {tournament.tournamentLogo ? (

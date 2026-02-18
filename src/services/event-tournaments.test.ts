@@ -1,6 +1,8 @@
 import {
   addEventTournamentParticipant as dbAddParticipant,
+  addEventTournamentParticipantMembers as dbAddParticipantMembers,
   bulkUpdateEventParticipantSeeds as dbBulkUpdateSeeds,
+  checkIndividualInEventTournamentPartnership as dbCheckIndividualInPartnership,
   checkIndividualInEventTournament as dbCheckIndividualInTournament,
   checkEventTournamentNameExists as dbCheckNameExists,
   countEventTournamentParticipants as dbCountParticipants,
@@ -28,12 +30,14 @@ import {
   getEventGameTypeById,
   getEventMatchesByRoundMatchId,
   getEventParticipant,
+  getTeamForPlaceholder,
   getTeamForUser,
 } from "@/db/events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   addEventTournamentParticipant,
+  addEventTournamentPartnership,
   createEventTournament,
   deleteEventTournament,
   forfeitEventTournamentMatch,
@@ -66,6 +70,14 @@ vi.mock("@/db/events", () => ({
   deleteEventPointEntriesForTournament: vi.fn(),
 }));
 
+const PARTNERSHIP_H2H_CONFIG = JSON.stringify({
+  scoringType: "win_loss",
+  drawsAllowed: false,
+  participantType: "individual",
+  minPlayersPerSide: 2,
+  maxPlayersPerSide: 2,
+});
+
 vi.mock("@/db/event-tournaments", () => ({
   createEventTournament: vi.fn(),
   getEventTournamentById: vi.fn(),
@@ -76,13 +88,16 @@ vi.mock("@/db/event-tournaments", () => ({
   checkEventTournamentNameExists: vi.fn(),
   countEventTournamentsByEventId: vi.fn(),
   addEventTournamentParticipant: vi.fn(),
+  addEventTournamentParticipantMembers: vi.fn(),
   removeEventTournamentParticipant: vi.fn(),
   getEventTournamentParticipants: vi.fn(),
   getEventTournamentParticipantById: vi.fn(),
+  getEventTournamentParticipantMembers: vi.fn().mockResolvedValue([]),
   bulkUpdateEventParticipantSeeds: vi.fn(),
   updateEventTournamentParticipant: vi.fn(),
   countEventTournamentParticipants: vi.fn(),
   checkIndividualInEventTournament: vi.fn(),
+  checkIndividualInEventTournamentPartnership: vi.fn(),
   createEventTournamentRoundMatches: vi.fn(),
   getEventTournamentBracket: vi.fn(),
   getEventTournamentRoundMatchById: vi.fn(),
@@ -122,6 +137,7 @@ vi.mock("@/lib/shared/bracket-generator", () => ({
 const H2H_CONFIG = JSON.stringify({
   scoringType: "win_loss",
   drawsAllowed: false,
+  participantType: "individual",
   minPlayersPerSide: 1,
   maxPlayersPerSide: 1,
 });
@@ -1606,5 +1622,290 @@ describe("undoEventTournamentMatchResult", () => {
     });
     expect(result.data?.eventTournamentId).toBe(TEST_IDS.EVENT_TOURNAMENT_ID);
     expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+});
+
+// =================== addEventTournamentPartnership ===================
+
+describe("addEventTournamentPartnership", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const validInput = {
+    eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    members: [{ userId: TEST_IDS.USER_ID_2 }, { userId: TEST_IDS.USER_ID_3 }],
+  };
+
+  function mockPartnershipGameType() {
+    vi.mocked(getEventGameTypeById).mockResolvedValue({
+      id: TEST_IDS.EVENT_GAME_TYPE_ID,
+      eventId: TEST_IDS.EVENT_ID,
+      name: "Doubles Ping Pong",
+      description: null,
+      logo: null,
+      category: "head_to_head",
+      config: PARTNERSHIP_H2H_CONFIG,
+      isArchived: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as ReturnType<typeof getEventGameTypeById> extends Promise<infer T>
+      ? NonNullable<T>
+      : never);
+  }
+
+  function mockTeamForUsers(teamId: string = TEST_IDS.EVENT_TEAM_ID) {
+    vi.mocked(getTeamForUser).mockResolvedValue({
+      id: teamId,
+      eventId: TEST_IDS.EVENT_ID,
+      name: "Team 1",
+      logo: null,
+      createdAt: new Date(),
+    } as ReturnType<typeof getTeamForUser> extends Promise<infer T>
+      ? NonNullable<T>
+      : never);
+  }
+
+  it("returns validation error for invalid input", async () => {
+    const result = await addEventTournamentPartnership(TEST_IDS.USER_ID, {
+      eventTournamentId: "not-a-uuid",
+    });
+    expect(result.error).toBe("Validation failed");
+    expect(result.fieldErrors).toBeDefined();
+  });
+
+  it("returns validation error for fewer than 2 members", async () => {
+    const result = await addEventTournamentPartnership(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+      members: [{ userId: TEST_IDS.USER_ID_2 }],
+    });
+    expect(result.error).toBe("Validation failed");
+  });
+
+  it("returns error when tournament not found", async () => {
+    vi.mocked(dbGetTournamentById).mockResolvedValue(undefined);
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe("Tournament not found");
+  });
+
+  it("returns error when tournament not draft", async () => {
+    mockInProgressTournament();
+    mockOrganizerMember();
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "Can only add participants to tournaments in draft status",
+    );
+  });
+
+  it("returns error when not organizer", async () => {
+    mockTournament();
+    mockParticipantMember();
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "You do not have permission to manage tournaments",
+    );
+  });
+
+  it("returns error when tournament is team type", async () => {
+    mockTournament({ participantType: "team" });
+    mockOrganizerMember();
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "Partnerships are only for individual tournaments",
+    );
+  });
+
+  it("returns error when game type does not support partnerships", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockH2HGameType(); // standard 1v1 config
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe("This game type does not support partnerships");
+  });
+
+  it("returns error when wrong number of members", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType(); // requires 2 members
+    const result = await addEventTournamentPartnership(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+      members: [
+        { userId: TEST_IDS.USER_ID_2 },
+        { userId: TEST_IDS.USER_ID_3 },
+        { userId: TEST_IDS.USER_ID_4 },
+      ],
+    });
+    expect(result.error).toContain("exactly 2 members");
+  });
+
+  it("returns error when members are on different teams", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    vi.mocked(getTeamForUser)
+      .mockResolvedValueOnce({
+        id: TEST_IDS.EVENT_TEAM_ID,
+        eventId: TEST_IDS.EVENT_ID,
+        name: "Team 1",
+        logo: null,
+        createdAt: new Date(),
+      } as ReturnType<typeof getTeamForUser> extends Promise<infer T>
+        ? NonNullable<T>
+        : never)
+      .mockResolvedValueOnce({
+        id: TEST_IDS.EVENT_TEAM_ID_2,
+        eventId: TEST_IDS.EVENT_ID,
+        name: "Team 2",
+        logo: null,
+        createdAt: new Date(),
+      } as ReturnType<typeof getTeamForUser> extends Promise<infer T>
+        ? NonNullable<T>
+        : never);
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(false);
+    vi.mocked(dbCheckIndividualInPartnership).mockResolvedValue(false);
+
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "All partnership members must be on the same team",
+    );
+  });
+
+  it("returns error when member already in tournament", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    mockTeamForUsers();
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(true);
+
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "One or more members are already in the tournament",
+    );
+  });
+
+  it("returns error when member already in another partnership", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    mockTeamForUsers();
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(false);
+    vi.mocked(dbCheckIndividualInPartnership).mockResolvedValue(true);
+
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toBe(
+      "One or more members are already in a partnership in this tournament",
+    );
+  });
+
+  it("returns error at max participants", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    mockTeamForUsers();
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(false);
+    vi.mocked(dbCheckIndividualInPartnership).mockResolvedValue(false);
+    vi.mocked(dbCountParticipants).mockResolvedValue(64);
+
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.error).toContain("maximum");
+  });
+
+  it("creates partnership successfully", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    mockTeamForUsers();
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(false);
+    vi.mocked(dbCheckIndividualInPartnership).mockResolvedValue(false);
+    vi.mocked(dbCountParticipants).mockResolvedValue(2);
+    vi.mocked(dbAddParticipant).mockResolvedValue({
+      id: TEST_IDS.EVENT_TOURNAMENT_PARTICIPANT_ID,
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+      eventTeamId: TEST_IDS.EVENT_TEAM_ID,
+      userId: null,
+      eventPlaceholderParticipantId: null,
+      seed: null,
+      isEliminated: false,
+      eliminatedInRound: null,
+      finalPlacement: null,
+      createdAt: new Date(),
+    } as ReturnType<typeof dbAddParticipant> extends Promise<infer T>
+      ? T
+      : never);
+    vi.mocked(dbAddParticipantMembers).mockResolvedValue([]);
+
+    const result = await addEventTournamentPartnership(
+      TEST_IDS.USER_ID,
+      validInput,
+    );
+    expect(result.data?.id).toBe(TEST_IDS.EVENT_TOURNAMENT_PARTICIPANT_ID);
+    expect(result.data?.userId).toBeNull();
+  });
+
+  it("works with placeholder participants", async () => {
+    mockTournament();
+    mockOrganizerMember();
+    mockPartnershipGameType();
+    vi.mocked(getTeamForPlaceholder).mockResolvedValue({
+      id: TEST_IDS.EVENT_TEAM_ID,
+      eventId: TEST_IDS.EVENT_ID,
+      name: "Team 1",
+      logo: null,
+      createdAt: new Date(),
+    } as ReturnType<typeof getTeamForPlaceholder> extends Promise<infer T>
+      ? NonNullable<T>
+      : never);
+    vi.mocked(dbCheckIndividualInTournament).mockResolvedValue(false);
+    vi.mocked(dbCheckIndividualInPartnership).mockResolvedValue(false);
+    vi.mocked(dbCountParticipants).mockResolvedValue(0);
+    vi.mocked(dbAddParticipant).mockResolvedValue({
+      id: TEST_IDS.EVENT_TOURNAMENT_PARTICIPANT_ID,
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+      eventTeamId: TEST_IDS.EVENT_TEAM_ID,
+      userId: null,
+      eventPlaceholderParticipantId: null,
+      seed: null,
+      isEliminated: false,
+      eliminatedInRound: null,
+      finalPlacement: null,
+      createdAt: new Date(),
+    } as ReturnType<typeof dbAddParticipant> extends Promise<infer T>
+      ? T
+      : never);
+    vi.mocked(dbAddParticipantMembers).mockResolvedValue([]);
+
+    const result = await addEventTournamentPartnership(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+      members: [
+        { eventPlaceholderParticipantId: TEST_IDS.EVENT_PLACEHOLDER_ID },
+        { eventPlaceholderParticipantId: TEST_IDS.PLACEHOLDER_ID },
+      ],
+    });
+    expect(result.data?.id).toBe(TEST_IDS.EVENT_TOURNAMENT_PARTICIPANT_ID);
   });
 });

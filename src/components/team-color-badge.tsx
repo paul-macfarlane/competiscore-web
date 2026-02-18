@@ -20,7 +20,7 @@ export function TeamColorBadge({
     return (
       <span
         className={cn(
-          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+          "inline-flex self-start items-center rounded-full border px-2 py-0.5 text-xs font-medium",
           className,
         )}
       >
@@ -32,7 +32,7 @@ export function TeamColorBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex self-start items-center rounded-full px-2 py-0.5 text-xs font-medium",
         className,
       )}
       style={{ backgroundColor: colorConfig.bg, color: colorConfig.text }}

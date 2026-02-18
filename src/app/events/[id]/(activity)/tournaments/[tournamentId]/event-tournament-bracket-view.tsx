@@ -27,6 +27,17 @@ import {
   undoEventTournamentMatchResultAction,
 } from "../../../actions";
 
+type PartnershipMember = {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    image: string | null;
+  } | null;
+  placeholderParticipant: { id: string; displayName: string } | null;
+};
+
 type BracketParticipant = {
   id: string;
   team: { id: string; name: string; logo: string | null; color: string | null };
@@ -37,6 +48,7 @@ type BracketParticipant = {
     image: string | null;
   } | null;
   placeholderParticipant: { id: string; displayName: string } | null;
+  members?: PartnershipMember[];
 };
 
 type BracketMatch = {
@@ -94,6 +106,16 @@ function getParticipantName(
   participant: BracketParticipant | null | undefined,
 ): string {
   if (!participant) return "TBD";
+  if (participant.members && participant.members.length > 0) {
+    return participant.members
+      .map((m) => {
+        if (m.user?.id) return m.user.name;
+        if (m.placeholderParticipant?.id)
+          return m.placeholderParticipant.displayName;
+        return "Unknown";
+      })
+      .join(" & ");
+  }
   if (participant.user?.id) return participant.user.name;
   if (participant.placeholderParticipant?.id)
     return participant.placeholderParticipant.displayName;
@@ -147,31 +169,41 @@ export function EventTournamentBracketView({
         tournamentMatchId: selectedMatch.id,
         side1Name: getParticipantName(selectedMatch.participant1),
         side2Name: getParticipantName(selectedMatch.participant2),
-        side1Participant: selectedMatch.participant1
-          ? {
-              user: selectedMatch.participant1.user,
-              team: isTeamTournament
-                ? selectedMatch.participant1.team
-                : undefined,
-              placeholderMember:
-                selectedMatch.participant1.placeholderParticipant,
-            }
-          : undefined,
-        side2Participant: selectedMatch.participant2
-          ? {
-              user: selectedMatch.participant2.user,
-              team: isTeamTournament
-                ? selectedMatch.participant2.team
-                : undefined,
-              placeholderMember:
-                selectedMatch.participant2.placeholderParticipant,
-            }
-          : undefined,
+        side1Participant:
+          selectedMatch.participant1 &&
+          !selectedMatch.participant1.members?.length
+            ? {
+                user: selectedMatch.participant1.user,
+                team: isTeamTournament
+                  ? selectedMatch.participant1.team
+                  : undefined,
+                placeholderMember:
+                  selectedMatch.participant1.placeholderParticipant,
+              }
+            : undefined,
+        side2Participant:
+          selectedMatch.participant2 &&
+          !selectedMatch.participant2.members?.length
+            ? {
+                user: selectedMatch.participant2.user,
+                team: isTeamTournament
+                  ? selectedMatch.participant2.team
+                  : undefined,
+                placeholderMember:
+                  selectedMatch.participant2.placeholderParticipant,
+              }
+            : undefined,
         side1TeamName: !isTeamTournament
           ? selectedMatch.participant1?.team.name
           : undefined,
         side2TeamName: !isTeamTournament
           ? selectedMatch.participant2?.team.name
+          : undefined,
+        side1TeamColor: !isTeamTournament
+          ? selectedMatch.participant1?.team.color
+          : undefined,
+        side2TeamColor: !isTeamTournament
+          ? selectedMatch.participant2?.team.color
           : undefined,
         onSubmitAction: recordEventTournamentMatchResultAction,
       }
