@@ -9,7 +9,15 @@ import {
 } from "@/components/ui/chart";
 import type { EventLeaderboardEntry } from "@/db/events";
 import { getTeamColorHex } from "@/services/constants";
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type StandingsBarChartProps = {
   leaderboard: EventLeaderboardEntry[];
@@ -44,7 +52,11 @@ export function StandingsBarChart({ leaderboard }: StandingsBarChartProps) {
           className="aspect-auto"
           style={{ height: `${Math.max(leaderboard.length * 48, 100)}px` }}
         >
-          <BarChart data={data} layout="vertical" margin={{ left: 8 }}>
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 8, right: 60 }}
+          >
             <CartesianGrid horizontal={false} />
             <YAxis
               dataKey="name"
@@ -76,6 +88,13 @@ export function StandingsBarChart({ leaderboard }: StandingsBarChartProps) {
               {data.map((entry, index) => (
                 <Cell key={index} fill={entry.color} />
               ))}
+              <LabelList
+                dataKey="points"
+                position="right"
+                className="fill-foreground"
+                fontSize={12}
+                formatter={(value: number) => `${value} pts`}
+              />
             </Bar>
           </BarChart>
         </ChartContainer>
