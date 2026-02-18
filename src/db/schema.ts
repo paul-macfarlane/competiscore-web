@@ -1039,6 +1039,7 @@ export const tournamentStatusEnum = pgEnum("tournament_status", [
 
 export const tournamentTypeEnum = pgEnum("tournament_type", [
   TournamentType.SINGLE_ELIMINATION,
+  TournamentType.SWISS,
 ]);
 
 export const seedingTypeEnum = pgEnum("seeding_type", [
@@ -1073,6 +1074,7 @@ export const tournament = pgTable(
     totalRounds: integer("total_rounds"),
     startDate: timestamp("start_date"),
     completedAt: timestamp("completed_at"),
+    placementPointConfig: text("placement_point_config"),
     isArchived: boolean("is_archived").default(false).notNull(),
     createdById: text("created_by_id")
       .notNull()
@@ -1159,6 +1161,7 @@ export const tournamentRoundMatch = pgTable(
     }),
     isBye: boolean("is_bye").default(false).notNull(),
     isForfeit: boolean("is_forfeit").default(false).notNull(),
+    isDraw: boolean("is_draw").default(false).notNull(),
     nextMatchId: text("next_match_id"),
     nextMatchSlot: integer("next_match_slot"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1899,6 +1902,7 @@ export const eventTournamentRoundMatch = pgTable(
     }),
     isBye: boolean("is_bye").default(false).notNull(),
     isForfeit: boolean("is_forfeit").default(false).notNull(),
+    isDraw: boolean("is_draw").default(false).notNull(),
     participant1Score: real("participant1_score"),
     participant2Score: real("participant2_score"),
     participant1Wins: integer("participant1_wins").notNull().default(0),

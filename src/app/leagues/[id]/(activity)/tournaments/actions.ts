@@ -9,6 +9,7 @@ import {
   deleteTournament,
   forfeitTournamentMatch,
   generateBracket,
+  generateNextSwissRound,
   recordTournamentMatchResult,
   removeTournamentParticipant,
   setParticipantSeeds,
@@ -127,6 +128,21 @@ export async function forfeitTournamentMatchAction(
   if (!session) return { error: "Unauthorized" };
 
   const result = await forfeitTournamentMatch(session.user.id, input);
+  if (result.data) {
+    revalidatePath(
+      `/leagues/${result.data.leagueId}/tournaments/${result.data.tournamentId}`,
+    );
+  }
+  return result;
+}
+
+export async function generateNextSwissRoundAction(
+  input: unknown,
+): Promise<ServiceResult<{ tournamentId: string; leagueId: string }>> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { error: "Unauthorized" };
+
+  const result = await generateNextSwissRound(session.user.id, input);
   if (result.data) {
     revalidatePath(
       `/leagues/${result.data.leagueId}/tournaments/${result.data.tournamentId}`,

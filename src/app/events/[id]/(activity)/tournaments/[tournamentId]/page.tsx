@@ -19,6 +19,7 @@ import {
   ParticipantType,
   TOURNAMENT_STATUS_LABELS,
   TournamentStatus,
+  TournamentType,
 } from "@/lib/shared/constants";
 import {
   getPartnershipSize,
@@ -41,7 +42,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DeleteEventTournamentDialog } from "./delete-event-tournament-dialog";
 import { DraftEventActions } from "./draft-event-actions";
+import { EventSwissTournamentView } from "./event-swiss-tournament-view";
 import { EventTournamentBracketView } from "./event-tournament-bracket-view";
 import { ManageEventTournamentParticipants } from "./manage-event-tournament-participants";
 
@@ -115,6 +118,7 @@ export default async function EventTournamentDetailPage({ params }: Props) {
   const tournament = tournamentResult.data;
   const { participants, bracket } = tournament;
   const isTeamTournament = tournament.participantType === ParticipantType.TEAM;
+  const isSwiss = tournament.tournamentType === TournamentType.SWISS;
   const h2hConfig =
     tournament.gameType.category === GameCategory.HEAD_TO_HEAD
       ? parseH2HConfig(tournament.gameType.config)
@@ -173,14 +177,25 @@ export default async function EventTournamentDetailPage({ params }: Props) {
             ] ?? tournament.status}
           </Badge>
           {canManage && (
-            <Button variant="outline" size="sm" asChild>
-              <Link
-                href={`/events/${eventId}/tournaments/${tournamentId}/edit`}
-              >
-                <Pencil className="mr-1 h-3 w-3" />
-                Edit
-              </Link>
-            </Button>
+            <>
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={`/events/${eventId}/tournaments/${tournamentId}/edit`}
+                >
+                  <Pencil className="mr-1 h-3 w-3" />
+                  Edit
+                </Link>
+              </Button>
+              <DeleteEventTournamentDialog
+                tournamentId={tournamentId}
+                eventId={eventId}
+                tournamentName={tournament.name}
+                hasPlacementPoints={
+                  tournament.status === TournamentStatus.COMPLETED &&
+                  tournament.placementPointConfig !== null
+                }
+              />
+            </>
           )}
         </div>
       </div>
@@ -195,34 +210,43 @@ export default async function EventTournamentDetailPage({ params }: Props) {
               <dt className="text-muted-foreground">Game Type</dt>
               <dd className="font-medium">{tournament.gameType.name}</dd>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Best Of</dt>
-              <dd className="font-medium">
-                {(() => {
-                  if (!tournament.roundBestOf) return tournament.bestOf;
-                  const config = JSON.parse(tournament.roundBestOf) as Record<
-                    string,
-                    number
-                  >;
-                  const entries = Object.entries(config).sort(
-                    ([a], [b]) => Number(a) - Number(b),
-                  );
-                  if (entries.length === 0) return tournament.bestOf;
-                  return (
-                    <span>
-                      {entries.map(([round, bo]) => (
-                        <span key={round} className="mr-2">
-                          R{round}: Bo{bo}
+            {isSwiss ? (
+              <div>
+                <dt className="text-muted-foreground">Rounds</dt>
+                <dd className="font-medium">
+                  {tournament.totalRounds ?? "Auto-calculated"}
+                </dd>
+              </div>
+            ) : (
+              <div>
+                <dt className="text-muted-foreground">Best Of</dt>
+                <dd className="font-medium">
+                  {(() => {
+                    if (!tournament.roundBestOf) return tournament.bestOf;
+                    const config = JSON.parse(tournament.roundBestOf) as Record<
+                      string,
+                      number
+                    >;
+                    const entries = Object.entries(config).sort(
+                      ([a], [b]) => Number(a) - Number(b),
+                    );
+                    if (entries.length === 0) return tournament.bestOf;
+                    return (
+                      <span>
+                        {entries.map(([round, bo]) => (
+                          <span key={round} className="mr-2">
+                            R{round}: Bo{bo}
+                          </span>
+                        ))}
+                        <span className="text-muted-foreground">
+                          (default: Bo{tournament.bestOf})
                         </span>
-                      ))}
-                      <span className="text-muted-foreground">
-                        (default: Bo{tournament.bestOf})
                       </span>
-                    </span>
-                  );
-                })()}
-              </dd>
-            </div>
+                    );
+                  })()}
+                </dd>
+              </div>
+            )}
             <div>
               <dt className="text-muted-foreground">Participants</dt>
               <dd className="font-medium">{participants.length}</dd>
@@ -448,7 +472,6 @@ export default async function EventTournamentDetailPage({ params }: Props) {
           {canManage && (
             <DraftEventActions
               tournamentId={tournamentId}
-              eventId={eventId}
               participantCount={participants.length}
             />
           )}
@@ -458,7 +481,19 @@ export default async function EventTournamentDetailPage({ params }: Props) {
       {(tournament.status === TournamentStatus.IN_PROGRESS ||
         tournament.status === TournamentStatus.COMPLETED) &&
         bracket &&
-        bracket.length > 0 && (
+        bracket.length > 0 &&
+        (isSwiss ? (
+          <EventSwissTournamentView
+            bracket={bracket}
+            participants={participants}
+            totalRounds={tournament.totalRounds ?? 0}
+            canManage={canManage}
+            eventId={eventId}
+            isTeamTournament={isTeamTournament}
+            isCompleted={tournament.status === TournamentStatus.COMPLETED}
+            config={h2hConfig!}
+          />
+        ) : (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Bracket</CardTitle>
@@ -481,7 +516,7 @@ export default async function EventTournamentDetailPage({ params }: Props) {
               />
             </CardContent>
           </Card>
-        )}
+        ))}
     </div>
   );
 }

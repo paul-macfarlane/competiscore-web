@@ -1,12 +1,15 @@
 import { ICON_PATHS, TOURNAMENT_ICONS } from "@/lib/shared/constants";
 import {
+  MAX_SWISS_ROUNDS,
   MAX_TOURNAMENT_PARTICIPANTS,
+  MIN_SWISS_ROUNDS,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
   TOURNAMENT_NAME_MAX_LENGTH,
 } from "@/services/constants";
 import { z } from "zod";
 
 import { uuidSchema } from "./common";
+import { placementPointConfigSchema } from "./events";
 
 const VALID_TOURNAMENT_ICON_PATHS = TOURNAMENT_ICONS.map(
   (icon) => `${ICON_PATHS.TOURNAMENT_ICONS}/${icon}.svg`,
@@ -43,8 +46,18 @@ export const createTournamentSchema = z.object({
     )
     .optional(),
   logo: tournamentLogoSchema,
+  tournamentType: z
+    .enum(["single_elimination", "swiss"])
+    .default("single_elimination"),
   participantType: z.enum(["individual", "team"]),
-  seedingType: z.enum(["manual", "random"]),
+  seedingType: z.enum(["manual", "random"]).optional(),
+  swissRounds: z
+    .number()
+    .int()
+    .min(MIN_SWISS_ROUNDS, `Minimum ${MIN_SWISS_ROUNDS} rounds`)
+    .max(MAX_SWISS_ROUNDS, `Maximum ${MAX_SWISS_ROUNDS} rounds`)
+    .optional(),
+  placementPointConfig: placementPointConfigSchema.optional(),
   startDate: z.union([z.string(), z.date()]).pipe(z.coerce.date()).optional(),
 });
 
@@ -68,6 +81,7 @@ export const updateTournamentSchema = z.object({
     .optional(),
   logo: tournamentLogoSchema,
   seedingType: z.enum(["manual", "random"]).optional(),
+  placementPointConfig: placementPointConfigSchema.optional(),
   startDate: z
     .union([z.string(), z.date()])
     .pipe(z.coerce.date())
@@ -135,7 +149,7 @@ export type GenerateBracketInput = z.infer<typeof generateBracketSchema>;
 
 export const recordTournamentMatchResultSchema = z.object({
   tournamentMatchId: uuidSchema,
-  winningSide: z.enum(["side1", "side2"]).optional(),
+  winningSide: z.enum(["side1", "side2", "draw"]).optional(),
   side1Score: z.number("A number is required").optional(),
   side2Score: z.number("A number is required").optional(),
   playedAt: z
@@ -148,6 +162,14 @@ export const recordTournamentMatchResultSchema = z.object({
 
 export type RecordTournamentMatchResultInput = z.infer<
   typeof recordTournamentMatchResultSchema
+>;
+
+export const generateNextSwissRoundSchema = z.object({
+  tournamentId: uuidSchema,
+});
+
+export type GenerateNextSwissRoundInput = z.infer<
+  typeof generateNextSwissRoundSchema
 >;
 
 export const forfeitTournamentMatchSchema = z.object({

@@ -50,6 +50,7 @@ import {
   eventTeamMember,
   eventTeamMemberColumns,
   eventTournament,
+  eventTournamentRoundMatch,
   user,
 } from "./schema";
 
@@ -997,6 +998,20 @@ export async function deleteEventPointEntriesForTournament(
   await dbOrTx
     .delete(eventPointEntry)
     .where(eq(eventPointEntry.eventTournamentId, tournamentId));
+}
+
+export async function deleteEventMatchesForTournament(
+  tournamentId: string,
+  dbOrTx: DBOrTx = db,
+): Promise<void> {
+  const roundMatchIds = dbOrTx
+    .select({ id: eventTournamentRoundMatch.id })
+    .from(eventTournamentRoundMatch)
+    .where(eq(eventTournamentRoundMatch.eventTournamentId, tournamentId));
+
+  await dbOrTx
+    .delete(eventMatch)
+    .where(inArray(eventMatch.eventTournamentRoundMatchId, roundMatchIds));
 }
 
 async function getEventMatchParticipants(

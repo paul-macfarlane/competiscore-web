@@ -2,22 +2,25 @@
 
 import { Button } from "@/components/ui/button";
 import { MIN_TOURNAMENT_PARTICIPANTS } from "@/services/constants";
-import { Loader2, Play, Trash2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { deleteTournamentAction, generateBracketAction } from "../actions";
+import { generateBracketAction } from "../actions";
+import { DeleteTournamentDialog } from "./delete-tournament-dialog";
 
 type DraftActionsProps = {
   tournamentId: string;
   leagueId: string;
+  tournamentName: string;
   participantCount: number;
 };
 
 export function DraftActions({
   tournamentId,
   leagueId,
+  tournamentName,
   participantCount,
 }: DraftActionsProps) {
   const router = useRouter();
@@ -33,19 +36,6 @@ export function DraftActions({
       } else {
         toast.success("Bracket generated! Tournament is now in progress.");
         router.refresh();
-      }
-    });
-  };
-
-  const handleDelete = () => {
-    if (!confirm("Are you sure you want to delete this tournament?")) return;
-    startTransition(async () => {
-      const result = await deleteTournamentAction({ tournamentId });
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Tournament deleted");
-        router.push(`/leagues/${leagueId}/tournaments`);
       }
     });
   };
@@ -68,14 +58,11 @@ export function DraftActions({
         )}
         Start Tournament
       </Button>
-      <Button
-        variant="destructive"
-        onClick={handleDelete}
-        disabled={isPending}
-        size="icon"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <DeleteTournamentDialog
+        tournamentId={tournamentId}
+        leagueId={leagueId}
+        tournamentName={tournamentName}
+      />
     </div>
   );
 }

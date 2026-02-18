@@ -27,6 +27,7 @@ import {
   createEventMatchParticipants,
   createEventPointEntries,
   deleteEventMatch,
+  deleteEventMatchesForTournament,
   getEventGameTypeById,
   getEventMatchesByRoundMatchId,
   getEventParticipant,
@@ -67,6 +68,7 @@ vi.mock("@/db/events", () => ({
   createEventPointEntries: vi.fn(),
   getEventMatchesByRoundMatchId: vi.fn(),
   deleteEventMatch: vi.fn(),
+  deleteEventMatchesForTournament: vi.fn(),
   deleteEventPointEntriesForTournament: vi.fn(),
 }));
 
@@ -469,15 +471,6 @@ describe("updateEventTournament", () => {
 describe("deleteEventTournament", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns error when not draft", async () => {
-    mockTournament({ status: "in_progress" });
-    mockOrganizerMember();
-    const result = await deleteEventTournament(TEST_IDS.USER_ID, {
-      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
-    });
-    expect(result.error).toBe("Only draft tournaments can be deleted");
-  });
-
   it("returns error when not organizer", async () => {
     mockTournament({ status: "draft" });
     mockParticipantMember();
@@ -489,9 +482,38 @@ describe("deleteEventTournament", () => {
     );
   });
 
-  it("deletes successfully", async () => {
+  it("deletes draft tournament successfully", async () => {
     mockTournament({ status: "draft" });
     mockOrganizerMember();
+    vi.mocked(deleteEventMatchesForTournament).mockResolvedValue(undefined);
+    vi.mocked(dbDeleteTournament).mockResolvedValue(true);
+    const result = await deleteEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+
+  it("deletes in-progress tournament successfully", async () => {
+    mockTournament({ status: "in_progress" });
+    mockOrganizerMember();
+    vi.mocked(deleteEventMatchesForTournament).mockResolvedValue(undefined);
+    vi.mocked(dbDeleteTournament).mockResolvedValue(true);
+    const result = await deleteEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+
+  it("deletes completed tournament with placement points successfully", async () => {
+    mockTournament({
+      status: "completed",
+      placementPointConfig: JSON.stringify([
+        { placement: 1, points: 10 },
+        { placement: 2, points: 5 },
+      ]),
+    });
+    mockOrganizerMember();
+    vi.mocked(deleteEventMatchesForTournament).mockResolvedValue(undefined);
     vi.mocked(dbDeleteTournament).mockResolvedValue(true);
     const result = await deleteEventTournament(TEST_IDS.USER_ID, {
       eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
@@ -910,7 +932,7 @@ describe("recordEventTournamentMatchResult", () => {
       winningSide: "side1",
       playedAt: new Date(),
     });
-    expect(result.error).toBe("This series is already decided");
+    expect(result.error).toBe("This match already has a result");
   });
 
   it("returns error when both participants not set", async () => {
@@ -1213,7 +1235,7 @@ describe("forfeitEventTournamentMatch", () => {
       tournamentMatchId: TEST_IDS.EVENT_TOURNAMENT_ROUND_MATCH_ID,
       forfeitParticipantId: TEST_IDS.EVENT_TOURNAMENT_PARTICIPANT_ID_2,
     });
-    expect(result.error).toBe("This series already has a result");
+    expect(result.error).toBe("This match already has a result");
   });
 
   it("returns error when forfeit participant not in match", async () => {

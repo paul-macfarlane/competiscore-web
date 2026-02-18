@@ -81,6 +81,7 @@ export type TournamentMatchProps = {
   side2TeamName?: string;
   side1TeamColor?: string | null;
   side2TeamColor?: string | null;
+  allowDraw?: boolean;
   onSubmitAction: (
     input: unknown,
   ) => Promise<{ error?: string; data?: unknown }>;
@@ -784,28 +785,29 @@ type TournamentFormProps = {
   onCancel?: () => void;
 };
 
-const tournamentWinLossSchema = z.object({
+const tournamentWinLossWithDrawSchema = z.object({
   playedAt: z
     .union([z.string(), z.date()])
     .pipe(z.coerce.date())
     .refine((date) => date <= new Date(), {
       message: "Match date cannot be in the future",
     }),
-  winningSide: z.enum(["side1", "side2"]),
+  winningSide: z.enum(["side1", "side2", "draw"]),
 });
 
-type TournamentWinLossValues = z.input<typeof tournamentWinLossSchema>;
+type TournamentWinLossValues = z.input<typeof tournamentWinLossWithDrawSchema>;
 
 function TournamentWinLossForm({
   tournamentMatch,
   onSuccess,
   onCancel,
 }: TournamentFormProps) {
+  const allowDraw = tournamentMatch.allowDraw ?? false;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<TournamentWinLossValues>({
-    resolver: zodResolver(tournamentWinLossSchema),
+    resolver: zodResolver(tournamentWinLossWithDrawSchema),
     defaultValues: {
       playedAt: formatLocalDateTime(new Date()),
       winningSide: H2HWinningSide.SIDE1,
@@ -930,6 +932,14 @@ function TournamentWinLossForm({
                       <span className="ml-auto shrink-0">Wins</span>
                     </label>
                   </div>
+                  {allowDraw && (
+                    <div className="flex items-center space-x-2 rounded-lg border p-3">
+                      <RadioGroupItem value={H2HWinningSide.DRAW} id="t_draw" />
+                      <label htmlFor="t_draw" className="flex-1 cursor-pointer">
+                        Draw
+                      </label>
+                    </div>
+                  )}
                 </RadioGroup>
               </FormControl>
               <FormMessage />

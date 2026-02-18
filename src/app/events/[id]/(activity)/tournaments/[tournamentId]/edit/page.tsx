@@ -69,6 +69,7 @@ export default async function EditEventTournamentPage({ params }: PageProps) {
           description={tournament.description}
           logo={tournament.logo}
           status={tournament.status}
+          tournamentType={tournament.tournamentType}
           bestOf={tournament.bestOf}
           roundBestOf={tournament.roundBestOf}
         />

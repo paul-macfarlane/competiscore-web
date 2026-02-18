@@ -25,6 +25,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { DraftActions } from "./draft-actions";
 import { ManageParticipants } from "./manage-participants";
+import { SwissTournamentView } from "./swiss-tournament-view";
 import { TournamentBracketView } from "./tournament-bracket-view";
 
 type PageProps = {
@@ -182,6 +183,7 @@ export default async function TournamentDetailPage({ params }: PageProps) {
           <DraftActions
             tournamentId={tournament.id}
             leagueId={leagueId}
+            tournamentName={tournament.name}
             participantCount={tournament.participants.length}
           />
         )}
@@ -250,23 +252,40 @@ export default async function TournamentDetailPage({ params }: PageProps) {
         </Card>
       )}
 
-      {(isInProgress || isCompleted) && tournament.totalRounds && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Bracket</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TournamentBracketView
-              bracket={tournament.bracket}
-              totalRounds={tournament.totalRounds}
-              canManage={canRecordMatches}
-              config={h2hConfig}
-              leagueId={leagueId}
-              gameTypeId={tournament.gameType.id}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {(isInProgress || isCompleted) &&
+        tournament.totalRounds &&
+        tournament.tournamentType === TournamentType.SWISS && (
+          <SwissTournamentView
+            bracket={tournament.bracket}
+            participants={tournament.participants}
+            totalRounds={tournament.totalRounds}
+            canManage={canRecordMatches}
+            config={h2hConfig}
+            leagueId={leagueId}
+            gameTypeId={tournament.gameType.id}
+            isCompleted={isCompleted}
+          />
+        )}
+
+      {(isInProgress || isCompleted) &&
+        tournament.totalRounds &&
+        tournament.tournamentType !== TournamentType.SWISS && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bracket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TournamentBracketView
+                bracket={tournament.bracket}
+                totalRounds={tournament.totalRounds}
+                canManage={canRecordMatches}
+                config={h2hConfig}
+                leagueId={leagueId}
+                gameTypeId={tournament.gameType.id}
+              />
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }

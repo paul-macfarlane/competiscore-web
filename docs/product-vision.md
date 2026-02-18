@@ -330,15 +330,16 @@ Tournaments are structured bracket competitions using any game type as the match
 ### 7.2 Tournament Types
 
 - **Single Elimination:** Standard bracket where losers are eliminated. Supports bye handling for non-power-of-2 participant counts.
+- **Swiss:** Non-elimination format where participants play a fixed number of rounds against opponents with similar scores. Standings based on Swiss points (Win=1, Draw=0.5, Loss=0) with Buchholz tiebreaking. Round 1 paired alphabetically; subsequent rounds paired by standings. Round count defaults to ⌈log₂(N)⌉ but can be overridden by the organizer.
 - **Group Play → Single Elimination:** Participants are divided into groups for a round-robin phase. Top finishers from each group advance to a single elimination bracket. _(Future)_
 - **Series:** A best-of-X series between two participants (individuals or teams), such as best of 3, best of 5, or best of 7. The first participant to win the majority of games wins the series. _(Future)_
 
-_Future: Round Robin (standalone), Swiss, Double Elimination_
+_Future: Round Robin (standalone), Double Elimination_
 
 ### 7.3 Tournament Configuration
 
 - Name and optional logo
-- Tournament type: Single Elimination (MVP), Group Play → Single Elimination _(Future)_, Series _(Future)_
+- Tournament type: Single Elimination, Swiss, Group Play → Single Elimination _(Future)_, Series _(Future)_
 - Match format: Default best-of-X for all rounds (e.g., best of 1, best of 3, best of 5), with optional per-round overrides (e.g., Round 1 = Bo1, Semifinals = Bo3, Finals = Bo5) — applies to Single Elimination and Group Play types. Best-of values must be odd numbers (1, 3, 5, 7, 9).
 - Variation: Single game type for all rounds, or different game types per round
 - Participant type: Individuals or Teams
@@ -347,9 +348,9 @@ _Future: Round Robin (standalone), Swiss, Double Elimination_
 
 _Future: ELO-based seeding_
 
-### 7.4 Tournament Formats (MVP)
+### 7.4 Tournament Formats
 
-**Single Elimination** is the only format supported for initial implementation. Standard bracket where losers are eliminated. Supports bye handling for non-power-of-2 participant counts.
+**Single Elimination** and **Swiss** are the currently supported formats. Single elimination uses a standard bracket where losers are eliminated, with bye handling for non-power-of-2 participant counts. Swiss is a non-elimination format where all participants play every round, paired against opponents with similar records.
 
 ### 7.5 Tournament Operations
 
@@ -357,7 +358,7 @@ _Future: ELO-based seeding_
 - Matches can be scheduled within the tournament
 - No-shows are recorded as losses (forfeit)
 - Tournaments can span any period of time (no time limits per round)
-- Only draft tournaments can be deleted; started and completed tournaments are preserved for history
+- Tournaments can be deleted regardless of status (draft, in progress, or completed). Deleting a tournament also removes all related matches and scores. For completed tournaments that awarded placement points, those points are reverted.
 
 ### 7.6 ELO Impact
 
@@ -787,7 +788,11 @@ When `/dashboard` returns, it should show cross-league personal data:
 1. ~~Single Elimination tournaments (MVP tournament type)~~
 2. ~~Bracket management and bye handling~~
 3. ~~Tournament history~~
-4. _Future: Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination_
+4. ~~Per-round best-of configuration (e.g., Round 1 = Bo1, Finals = Bo5)~~
+5. ~~Team-based tournament support (individuals on teams for multi-player game types)~~
+6. ~~Swiss-style tournaments (non-elimination, points-based standings with Buchholz tiebreaking)~~
+7. ~~Tournament deletion regardless of status with match/score cleanup~~
+8. _Future: Group Play → Single Elimination, Series, Round Robin, Double Elimination, optional 3rd place match_
 
 ### Phase 4: Enhanced Stats & Records
 
@@ -821,7 +826,7 @@ When `/dashboard` returns, it should show cross-league personal data:
 
 ### Post-MVP Features
 
-- Additional tournament types (Group Play → Single Elimination, Series, Round Robin, Swiss, Double Elimination)
+- Additional tournament types (Group Play → Single Elimination, Series, Round Robin, Double Elimination)
 - ELO-based tournament seeding
 - Match dispute/confirmation system
 - Match result notifications

@@ -18,6 +18,8 @@ List of miscellaneous TODOs for the project.
 ### Tournaments
 
 - DEFER: In general, we could use a better UI for the bracket view. Its satisfactory for now, but could be improved. Need to think about this more.
+- DEFER: We can remove tournament icons entirely, they don't add much to the app in my opinion. Let's clea up any icon related code for tournaments. This applies to both events and leagues.
+- DEFER: Allow for an optional 3rd place match/set of matches. Set up at tournament configuration. This is actually not needed in the short term so we can defer this. Rounds with multiple numbers of games is needed short term.
 
 #### Game Types
 
@@ -25,6 +27,7 @@ List of miscellaneous TODOs for the project.
 - DEFER: Need to investigate storage options for game type configuration. The JSON is a bit hard to manage as we keep adjusting it.
 - DEFER: There should be some visibility of game type settings and rules for normal members of leagues and events so that they know how to play. Need to think more about how to incorporate this into the app.
 - DEFER: Technically, score label should be able to be adjusted on a game type even after being created, there is no harm in changing that. Very low priority though, so this can be deferred.
+- DEFER: The ability to duplicate a game type, in both leageus and events, would be a nice and neat little feature.
 
 #### Best Scores
 
@@ -46,9 +49,6 @@ List of miscellaneous TODOs for the project.
 - DEFER: Perform analysis on existing service and db functions and evaluate areas for improvement in terms of performance.
 
 ## In progress
-
-- Tournament improvements (see [tournaments.md](./tournaments.md))
-- Metrics/Visualization (see [metrics.md](./metrics.md))
 
 ## Needs testing
 

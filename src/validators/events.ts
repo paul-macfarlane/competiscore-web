@@ -3,6 +3,7 @@ import {
   GameCategory,
   ICON_PATHS,
   ParticipantType,
+  TournamentType,
 } from "@/lib/shared/constants";
 import {
   DISCRETIONARY_AWARD_DESCRIPTION_MAX_LENGTH,
@@ -17,7 +18,9 @@ import {
   MAX_BEST_OF,
   MAX_DISCRETIONARY_AWARD_RECIPIENTS,
   MAX_EVENT_TEAM_NAME_MAX_LENGTH,
+  MAX_SWISS_ROUNDS,
   MAX_TOURNAMENT_PARTICIPANTS,
+  MIN_SWISS_ROUNDS,
   NAME_MAX_LENGTH,
   RULES_MAX_LENGTH,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
@@ -612,12 +615,21 @@ export const createEventTournamentSchema = z.object({
     )
     .optional(),
   logo: z.string().optional(),
+  tournamentType: z
+    .enum([TournamentType.SINGLE_ELIMINATION, TournamentType.SWISS])
+    .default(TournamentType.SINGLE_ELIMINATION),
   participantType: z
     .enum([ParticipantType.INDIVIDUAL, ParticipantType.TEAM])
     .default(ParticipantType.INDIVIDUAL),
-  seedingType: z.enum(["manual", "random"]),
-  bestOf: bestOfValueSchema.default(1),
+  seedingType: z.enum(["manual", "random"]).optional(),
+  bestOf: bestOfValueSchema.optional().default(1),
   roundBestOf: roundBestOfSchema,
+  swissRounds: z
+    .number()
+    .int()
+    .min(MIN_SWISS_ROUNDS)
+    .max(MAX_SWISS_ROUNDS)
+    .optional(),
   placementPointConfig: placementPointConfigSchema.optional(),
 });
 
@@ -746,7 +758,7 @@ export const generateEventBracketSchema = z.object({
 
 export const recordEventTournamentMatchResultSchema = z.object({
   tournamentMatchId: uuidSchema,
-  winningSide: z.enum(["side1", "side2"]).optional(),
+  winningSide: z.enum(["side1", "side2", "draw"]).optional(),
   side1Score: z.number().optional(),
   side2Score: z.number().optional(),
   playedAt: z

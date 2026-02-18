@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import { SimpleIconSelector } from "@/components/icon-selector";
@@ -28,8 +29,12 @@ import {
   SEEDING_TYPE_LABELS,
   SeedingType,
   TOURNAMENT_ICON_OPTIONS,
+  TOURNAMENT_TYPE_LABELS,
+  TournamentType,
 } from "@/lib/shared/constants";
 import {
+  MAX_SWISS_ROUNDS,
+  MIN_SWISS_ROUNDS,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
   TOURNAMENT_NAME_MAX_LENGTH,
 } from "@/services/constants";
@@ -71,11 +76,15 @@ export function CreateTournamentForm({
       name: "",
       description: "",
       logo: undefined,
+      tournamentType: TournamentType.SINGLE_ELIMINATION,
       participantType: ParticipantType.INDIVIDUAL,
       seedingType: SeedingType.RANDOM,
     },
     mode: "onChange",
   });
+
+  const selectedTournamentType = form.watch("tournamentType");
+  const isSwiss = selectedTournamentType === TournamentType.SWISS;
 
   const onSubmit = (values: CreateTournamentFormValues) => {
     startTransition(async () => {
@@ -224,6 +233,49 @@ export function CreateTournamentForm({
 
         <FormField
           control={form.control}
+          name="tournamentType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tournament Format</FormLabel>
+              <Select
+                onValueChange={(val) => {
+                  field.onChange(val);
+                  if (val === TournamentType.SWISS) {
+                    form.setValue("seedingType", undefined);
+                  } else {
+                    form.setValue("seedingType", SeedingType.RANDOM);
+                    form.setValue("swissRounds", undefined);
+                  }
+                }}
+                value={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.entries(TOURNAMENT_TYPE_LABELS).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                {isSwiss
+                  ? "Participants play a fixed number of rounds against opponents with similar scores. No one is eliminated."
+                  : "Lose and you're out. Last one standing wins."}
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="participantType"
           render={({ field }) => (
             <FormItem>
@@ -242,42 +294,82 @@ export function CreateTournamentForm({
                 </SelectContent>
               </Select>
               <FormDescription>
-                Whether individuals or teams compete in the bracket.
+                Whether individuals or teams compete in the tournament.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="seedingType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Seeding</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+        {!isSwiss && (
+          <FormField
+            control={form.control}
+            name="seedingType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Seeding</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? SeedingType.RANDOM}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(SEEDING_TYPE_LABELS).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {field.value === SeedingType.RANDOM
+                    ? "Participants will be randomly placed in the bracket."
+                    : "You assign seed numbers to control bracket placement."}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {isSwiss && (
+          <FormField
+            control={form.control}
+            name="swissRounds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Number of Rounds (Optional)</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <Input
+                    type="number"
+                    min={MIN_SWISS_ROUNDS}
+                    max={MAX_SWISS_ROUNDS}
+                    placeholder="Auto-calculated"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(
+                        value === "" ? undefined : parseInt(value, 10),
+                      );
+                    }}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {Object.entries(SEEDING_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                {field.value === SeedingType.RANDOM
-                  ? "Participants will be randomly placed in the bracket."
-                  : "You assign seed numbers to control bracket placement."}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormDescription>
+                  Leave blank to auto-calculate based on participant count
+                  (log2). Typically 3-7 rounds.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
           <Button

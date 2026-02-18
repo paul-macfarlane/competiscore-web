@@ -1,0 +1,1 @@
+ALTER TABLE "event_tournament_round_match" ADD COLUMN "is_draw" boolean DEFAULT false NOT NULL;

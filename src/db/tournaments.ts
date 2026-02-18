@@ -187,6 +187,7 @@ export async function updateTournament(
       | "status"
       | "totalRounds"
       | "completedAt"
+      | "placementPointConfig"
     >
   >,
   dbOrTx: DBOrTx = db,
@@ -486,6 +487,7 @@ export async function updateTournamentRoundMatch(
       | "matchId"
       | "isBye"
       | "isForfeit"
+      | "isDraw"
       | "nextMatchId"
       | "nextMatchSlot"
     >
@@ -518,6 +520,23 @@ export async function getTournamentRoundMatchByPosition(
     )
     .limit(1);
   return result[0];
+}
+
+export async function getTournamentRoundMatchesByRound(
+  tournamentId: string,
+  round: number,
+  dbOrTx: DBOrTx = db,
+): Promise<TournamentRoundMatch[]> {
+  return await dbOrTx
+    .select()
+    .from(tournamentRoundMatch)
+    .where(
+      and(
+        eq(tournamentRoundMatch.tournamentId, tournamentId),
+        eq(tournamentRoundMatch.round, round),
+      ),
+    )
+    .orderBy(tournamentRoundMatch.position);
 }
 
 export type TournamentMatchInfo = {

@@ -18,6 +18,7 @@ import {
   getEventTournamentParticipantMembers as dbGetParticipantMembers,
   getEventTournamentParticipants as dbGetParticipants,
   getEventTournamentRoundMatchById as dbGetRoundMatchById,
+  getEventTournamentRoundMatchesByRound as dbGetRoundMatchesByRound,
   getEventTournamentById as dbGetTournamentById,
   getEventTournamentWithDetails as dbGetTournamentWithDetails,
   getEventTournamentsByEventId as dbGetTournamentsByEventId,
@@ -32,6 +33,7 @@ import {
   createEventPointEntries,
   createEventPointEntryParticipants,
   deleteEventMatch,
+  deleteEventMatchesForTournament,
   deleteEventPointEntriesForTournament,
   getEventGameTypeById,
   getEventMatchesByRoundMatchId,
@@ -39,7 +41,7 @@ import {
   getTeamForPlaceholder,
   getTeamForUser,
 } from "@/db/events";
-import { withTransaction } from "@/db/index";
+import { DBOrTx, withTransaction } from "@/db/index";
 import {
   EventTournament,
   EventTournamentParticipant,
@@ -63,6 +65,13 @@ import {
   parseH2HConfig,
 } from "@/lib/shared/game-config-parser";
 import { EventAction, canPerformEventAction } from "@/lib/shared/permissions";
+import {
+  SwissMatchRecord,
+  computeSwissStandings,
+  generateSwissNextRound,
+  generateSwissRound1,
+  getSwissRanking,
+} from "@/lib/shared/swiss-pairing";
 import {
   type PlacementPointConfig,
   addEventTournamentParticipantSchema,
@@ -161,21 +170,30 @@ export async function createEventTournament(
     };
   }
 
+  const isSwiss = data.tournamentType === TournamentType.SWISS;
+
   const newTournament = await dbCreateTournament({
     eventId: data.eventId,
     eventGameTypeId: data.gameTypeId,
     name: data.name,
     description: data.description ?? null,
     logo: data.logo ?? null,
-    tournamentType: TournamentType.SINGLE_ELIMINATION,
+    tournamentType: data.tournamentType,
     status: TournamentStatus.DRAFT,
     participantType: data.participantType,
-    seedingType: data.seedingType,
-    bestOf: data.bestOf,
-    roundBestOf: data.roundBestOf ? JSON.stringify(data.roundBestOf) : null,
+    seedingType: isSwiss
+      ? SeedingType.RANDOM
+      : (data.seedingType ?? SeedingType.RANDOM),
+    bestOf: isSwiss ? 1 : (data.bestOf ?? 1),
+    roundBestOf: isSwiss
+      ? null
+      : data.roundBestOf
+        ? JSON.stringify(data.roundBestOf)
+        : null,
     placementPointConfig: data.placementPointConfig
       ? JSON.stringify(data.placementPointConfig)
       : null,
+    totalRounds: isSwiss ? (data.swissRounds ?? null) : null,
     startDate: null,
     createdById: userId,
   });
@@ -294,10 +312,6 @@ export async function deleteEventTournament(
     return { error: "Tournament not found" };
   }
 
-  if (tournamentData.status !== TournamentStatus.DRAFT) {
-    return { error: "Only draft tournaments can be deleted" };
-  }
-
   const participation = await getEventParticipant(
     tournamentData.eventId,
     userId,
@@ -312,7 +326,10 @@ export async function deleteEventTournament(
     return { error: "You do not have permission to delete tournaments" };
   }
 
-  await dbDeleteTournament(eventTournamentId);
+  await withTransaction(async (tx) => {
+    await deleteEventMatchesForTournament(eventTournamentId, tx);
+    await dbDeleteTournament(eventTournamentId, tx);
+  });
 
   return { data: { eventId: tournamentData.eventId } };
 }
@@ -816,11 +833,21 @@ export async function generateEventBracket(
     };
   }
 
-  if (tournamentData.seedingType === SeedingType.MANUAL) {
+  const isSwiss = tournamentData.tournamentType === TournamentType.SWISS;
+
+  if (!isSwiss && tournamentData.seedingType === SeedingType.MANUAL) {
     const allSeeded = participants.every((p) => p.seed !== null);
     if (!allSeeded) {
       return { error: "All participants must have seeds assigned" };
     }
+  }
+
+  if (isSwiss) {
+    return generateEventSwissBracket(
+      eventTournamentId,
+      tournamentData,
+      participants,
+    );
   }
 
   return withTransaction(async (tx) => {
@@ -985,9 +1012,233 @@ async function advanceWinner(
   positionToMatch.set(`${nextMatch.round}-${nextMatch.position}`, nextMatch);
 }
 
+function getEventParticipantName(
+  p: EventTournamentParticipantWithDetails,
+): string {
+  if (p.user) return p.user.name;
+  if (p.placeholderParticipant) return p.placeholderParticipant.displayName;
+  if (p.members && p.members.length > 0) {
+    return p.members
+      .map(
+        (m) =>
+          m.user?.name ?? m.placeholderParticipant?.displayName ?? "Unknown",
+      )
+      .join(" & ");
+  }
+  return p.team.name;
+}
+
+async function generateEventSwissBracket(
+  eventTournamentId: string,
+  tournamentData: EventTournament,
+  participants: EventTournamentParticipantWithDetails[],
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  return withTransaction(async (tx) => {
+    const participantNames = participants.map((p) => ({
+      id: p.id,
+      name: getEventParticipantName(p),
+    }));
+
+    const round1 = generateSwissRound1(participantNames);
+
+    const totalRounds =
+      tournamentData.totalRounds ?? Math.ceil(Math.log2(participants.length));
+
+    const roundMatchData = round1.pairings.map((pairing, i) => ({
+      eventTournamentId,
+      round: 1,
+      position: i + 1,
+      participant1Id: pairing.participant1Id,
+      participant2Id: pairing.participant2Id as string | null,
+      winnerId: null as string | null,
+      eventMatchId: null as string | null,
+      isBye: false,
+      isForfeit: false,
+      participant1Score: null as number | null,
+      participant2Score: null as number | null,
+      nextMatchId: null as string | null,
+      nextMatchSlot: null as number | null,
+    }));
+
+    if (round1.byeParticipantId) {
+      roundMatchData.push({
+        eventTournamentId,
+        round: 1,
+        position: roundMatchData.length + 1,
+        participant1Id: round1.byeParticipantId,
+        participant2Id: null,
+        winnerId: round1.byeParticipantId,
+        eventMatchId: null as string | null,
+        isBye: true,
+        isForfeit: false,
+        participant1Score: null as number | null,
+        participant2Score: null as number | null,
+        nextMatchId: null as string | null,
+        nextMatchSlot: null as number | null,
+      });
+    }
+
+    await dbCreateRoundMatches(roundMatchData, tx);
+
+    await dbUpdateTournament(
+      eventTournamentId,
+      {
+        status: TournamentStatus.IN_PROGRESS,
+        totalRounds,
+      },
+      tx,
+    );
+
+    return {
+      data: {
+        eventTournamentId,
+        eventId: tournamentData.eventId,
+      },
+    };
+  });
+}
+
+async function handleEventSwissRoundCompletion(
+  tournamentData: EventTournament,
+  currentRound: number,
+  tx: DBOrTx,
+): Promise<void> {
+  const roundMatches = await dbGetRoundMatchesByRound(
+    tournamentData.id,
+    currentRound,
+    tx,
+  );
+
+  const allResolved = roundMatches.every(
+    (m) => m.winnerId !== null || m.isDraw || m.isBye,
+  );
+
+  if (!allResolved) return;
+
+  const isFinalRound =
+    tournamentData.totalRounds !== null &&
+    currentRound >= tournamentData.totalRounds;
+
+  if (isFinalRound) {
+    await completeEventSwissTournament(tournamentData, tx);
+  } else {
+    await generateNextEventSwissRoundInternal(tournamentData, currentRound, tx);
+  }
+}
+
+async function completeEventSwissTournament(
+  tournamentData: EventTournament,
+  tx: DBOrTx,
+): Promise<void> {
+  const participants = await dbGetParticipants(tournamentData.id, tx);
+  const bracket = await dbGetBracket(tournamentData.id, tx);
+
+  const participantNames = participants.map((p) => ({
+    id: p.id,
+    name: getEventParticipantName(p),
+  }));
+
+  const matchRecords: SwissMatchRecord[] = bracket.map((m) => ({
+    participant1Id: m.participant1Id,
+    participant2Id: m.participant2Id,
+    winnerId: m.winnerId,
+    isDraw: m.isDraw,
+    isBye: m.isBye,
+    isForfeit: m.isForfeit,
+  }));
+
+  const standings = computeSwissStandings(participantNames, matchRecords);
+  const ranking = getSwissRanking(standings);
+
+  for (let i = 0; i < ranking.length; i++) {
+    await dbUpdateParticipant(
+      ranking[i].participantId,
+      { finalPlacement: i + 1 },
+      tx,
+    );
+  }
+
+  await dbUpdateTournament(
+    tournamentData.id,
+    {
+      status: TournamentStatus.COMPLETED,
+      completedAt: new Date(),
+    },
+    tx,
+  );
+
+  const completedTournament = await dbGetTournamentById(tournamentData.id, tx);
+  if (completedTournament) {
+    await awardTournamentPlacementPoints(completedTournament, tx);
+  }
+}
+
+async function generateNextEventSwissRoundInternal(
+  tournamentData: EventTournament,
+  currentRound: number,
+  tx: DBOrTx,
+): Promise<void> {
+  const participants = await dbGetParticipants(tournamentData.id, tx);
+  const bracket = await dbGetBracket(tournamentData.id, tx);
+
+  const participantNames = participants.map((p) => ({
+    id: p.id,
+    name: getEventParticipantName(p),
+  }));
+
+  const matchRecords: SwissMatchRecord[] = bracket.map((m) => ({
+    participant1Id: m.participant1Id,
+    participant2Id: m.participant2Id,
+    winnerId: m.winnerId,
+    isDraw: m.isDraw,
+    isBye: m.isBye,
+    isForfeit: m.isForfeit,
+  }));
+
+  const standings = computeSwissStandings(participantNames, matchRecords);
+  const nextRound = generateSwissNextRound(standings);
+  const newRoundNumber = currentRound + 1;
+
+  const roundMatchData = nextRound.pairings.map((pairing, i) => ({
+    eventTournamentId: tournamentData.id,
+    round: newRoundNumber,
+    position: i + 1,
+    participant1Id: pairing.participant1Id,
+    participant2Id: pairing.participant2Id as string | null,
+    winnerId: null as string | null,
+    eventMatchId: null as string | null,
+    isBye: false,
+    isForfeit: false,
+    participant1Score: null as number | null,
+    participant2Score: null as number | null,
+    nextMatchId: null as string | null,
+    nextMatchSlot: null as number | null,
+  }));
+
+  if (nextRound.byeParticipantId) {
+    roundMatchData.push({
+      eventTournamentId: tournamentData.id,
+      round: newRoundNumber,
+      position: roundMatchData.length + 1,
+      participant1Id: nextRound.byeParticipantId,
+      participant2Id: null,
+      winnerId: nextRound.byeParticipantId,
+      eventMatchId: null as string | null,
+      isBye: true,
+      isForfeit: false,
+      participant1Score: null as number | null,
+      participant2Score: null as number | null,
+      nextMatchId: null as string | null,
+      nextMatchSlot: null as number | null,
+    });
+  }
+
+  await dbCreateRoundMatches(roundMatchData, tx);
+}
+
 async function awardTournamentPlacementPoints(
   tournament: EventTournament,
-  tx: Parameters<Parameters<typeof withTransaction>[0]>[0],
+  tx: DBOrTx,
 ): Promise<void> {
   if (!tournament.placementPointConfig) return;
 
@@ -1183,8 +1434,8 @@ export async function recordEventTournamentMatchResult(
     }
   }
 
-  if (roundMatch.winnerId) {
-    return { error: "This series is already decided" };
+  if (roundMatch.winnerId || roundMatch.isDraw) {
+    return { error: "This match already has a result" };
   }
 
   if (!roundMatch.participant1Id || !roundMatch.participant2Id) {
@@ -1193,6 +1444,7 @@ export async function recordEventTournamentMatchResult(
 
   const participant1Id = roundMatch.participant1Id;
   const participant2Id = roundMatch.participant2Id;
+  const isSwiss = tournamentData.tournamentType === TournamentType.SWISS;
 
   return withTransaction(async (tx) => {
     const gameType = await getEventGameTypeById(
@@ -1205,32 +1457,41 @@ export async function recordEventTournamentMatchResult(
 
     const h2hConfig = parseH2HConfig(gameType.config);
 
-    let gameWinnerId: string;
+    let winnerId: string | null = null;
+    let isDraw = false;
+
     if (h2hConfig.scoringType === ScoringType.SCORE_BASED) {
       if (data.side1Score == null || data.side2Score == null) {
         return { error: "Scores are required for this game type" };
       }
       if (data.side1Score === data.side2Score) {
-        return { error: "Tournament matches cannot end in a draw" };
+        if (!isSwiss) {
+          return { error: "Tournament matches cannot end in a draw" };
+        }
+        isDraw = true;
+      } else {
+        winnerId =
+          data.side1Score > data.side2Score ? participant1Id : participant2Id;
       }
-      gameWinnerId =
-        data.side1Score > data.side2Score ? participant1Id : participant2Id;
     } else {
       if (!data.winningSide) {
         return { error: "Winner selection is required" };
       }
-      gameWinnerId =
-        data.winningSide === "side1" ? participant1Id : participant2Id;
+      if (data.winningSide === "draw") {
+        if (!isSwiss) {
+          return { error: "Draws are not allowed in this tournament type" };
+        }
+        isDraw = true;
+      } else {
+        winnerId =
+          data.winningSide === "side1" ? participant1Id : participant2Id;
+      }
     }
 
-    const gameWinnerIsP1 = gameWinnerId === participant1Id;
-    const gameLoserId =
-      gameWinnerId === participant1Id ? participant2Id : participant1Id;
+    const p1 = await dbGetParticipantById(participant1Id, tx);
+    const p2 = await dbGetParticipantById(participant2Id, tx);
 
-    const winner = await dbGetParticipantById(gameWinnerId, tx);
-    const loser = await dbGetParticipantById(gameLoserId, tx);
-
-    if (!winner || !loser) {
+    if (!p1 || !p2) {
       return { error: "Participant not found" };
     }
 
@@ -1245,15 +1506,93 @@ export async function recordEventTournamentMatchResult(
       tx,
     );
 
-    // Check for partnership members
-    const [winnerMembers, loserMembers] = await Promise.all([
-      dbGetParticipantMembers(gameWinnerId, tx),
-      dbGetParticipantMembers(gameLoserId, tx),
+    const [p1Members, p2Members] = await Promise.all([
+      dbGetParticipantMembers(participant1Id, tx),
+      dbGetParticipantMembers(participant2Id, tx),
     ]);
 
     const matchParticipants: Parameters<
       typeof createEventMatchParticipants
     >[0] = [];
+
+    if (isDraw) {
+      // Draw: both sides get DRAW result
+      const addDrawParticipants = (
+        participant: EventTournamentParticipant,
+        members: Awaited<ReturnType<typeof dbGetParticipantMembers>>,
+        side: number,
+        score: number | null,
+      ) => {
+        if (members.length > 0) {
+          for (const member of members) {
+            matchParticipants.push({
+              eventMatchId: realMatch.id,
+              eventTeamId: participant.eventTeamId,
+              userId: member.user?.id ?? null,
+              eventPlaceholderParticipantId:
+                member.placeholderParticipant?.id ?? null,
+              side,
+              score,
+              result: MatchResult.DRAW,
+              rank: null,
+            });
+          }
+        } else {
+          matchParticipants.push({
+            eventMatchId: realMatch.id,
+            eventTeamId: participant.eventTeamId,
+            userId: participant.userId ?? null,
+            eventPlaceholderParticipantId:
+              participant.eventPlaceholderParticipantId ?? null,
+            side,
+            score,
+            result: MatchResult.DRAW,
+            rank: null,
+          });
+        }
+      };
+
+      addDrawParticipants(p1, p1Members, 1, data.side1Score ?? null);
+      addDrawParticipants(p2, p2Members, 2, data.side2Score ?? null);
+
+      await createEventMatchParticipants(matchParticipants, tx);
+
+      await dbUpdateRoundMatch(
+        roundMatch.id,
+        {
+          isDraw: true,
+          eventMatchId: realMatch.id,
+          participant1Score: data.side1Score ?? null,
+          participant2Score: data.side2Score ?? null,
+        },
+        tx,
+      );
+
+      await handleEventSwissRoundCompletion(
+        tournamentData,
+        roundMatch.round,
+        tx,
+      );
+
+      return {
+        data: {
+          eventMatchId: realMatch.id,
+          eventTournamentId: tournamentData.id,
+          eventId: tournamentData.eventId,
+          seriesComplete: true,
+          participant1Wins: 0,
+          participant2Wins: 0,
+        },
+      };
+    }
+
+    // Non-draw: there is a winner
+    const gameWinnerId = winnerId!;
+    const gameWinnerIsP1 = gameWinnerId === participant1Id;
+    const winner = gameWinnerIsP1 ? p1 : p2;
+    const loser = gameWinnerIsP1 ? p2 : p1;
+    const winnerMembers = gameWinnerIsP1 ? p1Members : p2Members;
+    const loserMembers = gameWinnerIsP1 ? p2Members : p1Members;
 
     if (winnerMembers.length > 0) {
       for (const member of winnerMembers) {
@@ -1321,6 +1660,38 @@ export async function recordEventTournamentMatchResult(
 
     await createEventMatchParticipants(matchParticipants, tx);
 
+    if (isSwiss) {
+      // Swiss: single game per match, immediately resolves
+      await dbUpdateRoundMatch(
+        roundMatch.id,
+        {
+          winnerId: gameWinnerId,
+          eventMatchId: realMatch.id,
+          participant1Score: data.side1Score ?? null,
+          participant2Score: data.side2Score ?? null,
+        },
+        tx,
+      );
+
+      await handleEventSwissRoundCompletion(
+        tournamentData,
+        roundMatch.round,
+        tx,
+      );
+
+      return {
+        data: {
+          eventMatchId: realMatch.id,
+          eventTournamentId: tournamentData.id,
+          eventId: tournamentData.eventId,
+          seriesComplete: true,
+          participant1Wins: gameWinnerIsP1 ? 1 : 0,
+          participant2Wins: gameWinnerIsP1 ? 0 : 1,
+        },
+      };
+    }
+
+    // Single elimination: best-of series logic
     const newP1Wins = roundMatch.participant1Wins + (gameWinnerIsP1 ? 1 : 0);
     const newP2Wins = roundMatch.participant2Wins + (gameWinnerIsP1 ? 0 : 1);
 
@@ -1475,8 +1846,8 @@ export async function forfeitEventTournamentMatch(
     };
   }
 
-  if (roundMatch.winnerId) {
-    return { error: "This series already has a result" };
+  if (roundMatch.winnerId || roundMatch.isDraw) {
+    return { error: "This match already has a result" };
   }
 
   if (
@@ -1497,78 +1868,91 @@ export async function forfeitEventTournamentMatch(
     return { error: "Cannot forfeit when the other participant slot is empty" };
   }
 
-  const bestOf = getRoundBestOf(tournamentData, roundMatch.round);
-  const winsNeeded = Math.ceil(bestOf / 2);
-
-  const winnerIsP1 = winnerId === roundMatch.participant1Id;
+  const isSwiss = tournamentData.tournamentType === TournamentType.SWISS;
 
   return withTransaction(async (tx) => {
-    await dbUpdateRoundMatch(
-      roundMatch.id,
-      {
-        winnerId,
-        isForfeit: true,
-        participant1Wins: winnerIsP1 ? winsNeeded : roundMatch.participant1Wins,
-        participant2Wins: winnerIsP1 ? roundMatch.participant2Wins : winsNeeded,
-      },
-      tx,
-    );
+    await dbUpdateRoundMatch(roundMatch.id, { winnerId, isForfeit: true }, tx);
 
-    await dbUpdateParticipant(
-      data.forfeitParticipantId,
-      {
-        isEliminated: true,
-        eliminatedInRound: roundMatch.round,
-      },
-      tx,
-    );
-
-    const isFinal = !roundMatch.nextMatchId;
-    if (isFinal) {
-      await dbUpdateParticipant(winnerId, { finalPlacement: 1 }, tx);
-      await dbUpdateParticipant(
-        data.forfeitParticipantId,
-        { finalPlacement: 2 },
+    if (isSwiss) {
+      await handleEventSwissRoundCompletion(
+        tournamentData,
+        roundMatch.round,
         tx,
       );
+    } else {
+      const bestOf = getRoundBestOf(tournamentData, roundMatch.round);
+      const winsNeeded = Math.ceil(bestOf / 2);
+      const winnerIsP1 = winnerId === roundMatch.participant1Id;
 
-      await dbUpdateTournament(
-        tournamentData.id,
+      await dbUpdateRoundMatch(
+        roundMatch.id,
         {
-          status: TournamentStatus.COMPLETED,
-          completedAt: new Date(),
+          participant1Wins: winnerIsP1
+            ? winsNeeded
+            : roundMatch.participant1Wins,
+          participant2Wins: winnerIsP1
+            ? roundMatch.participant2Wins
+            : winsNeeded,
         },
         tx,
       );
 
-      const completedTournament = await dbGetTournamentById(
-        tournamentData.id,
+      await dbUpdateParticipant(
+        data.forfeitParticipantId,
+        {
+          isEliminated: true,
+          eliminatedInRound: roundMatch.round,
+        },
         tx,
       );
-      if (completedTournament) {
-        await awardTournamentPlacementPoints(completedTournament, tx);
-      }
-    } else {
-      const updatedRoundMatch = await dbGetRoundMatchById(roundMatch.id, tx);
-      if (updatedRoundMatch?.nextMatchId) {
-        const nextMatch = await dbGetRoundMatchById(
-          updatedRoundMatch.nextMatchId,
+
+      const isFinal = !roundMatch.nextMatchId;
+      if (isFinal) {
+        await dbUpdateParticipant(winnerId, { finalPlacement: 1 }, tx);
+        await dbUpdateParticipant(
+          data.forfeitParticipantId,
+          { finalPlacement: 2 },
           tx,
         );
-        if (nextMatch) {
-          const slot = updatedRoundMatch.nextMatchSlot;
-          if (slot === 1) {
-            await dbUpdateRoundMatch(
-              nextMatch.id,
-              { participant1Id: winnerId },
-              tx,
-            );
-          } else if (slot === 2) {
-            await dbUpdateRoundMatch(
-              nextMatch.id,
-              { participant2Id: winnerId },
-              tx,
-            );
+
+        await dbUpdateTournament(
+          tournamentData.id,
+          {
+            status: TournamentStatus.COMPLETED,
+            completedAt: new Date(),
+          },
+          tx,
+        );
+
+        const completedTournament = await dbGetTournamentById(
+          tournamentData.id,
+          tx,
+        );
+        if (completedTournament) {
+          await awardTournamentPlacementPoints(completedTournament, tx);
+        }
+      } else {
+        const updatedRoundMatch = await dbGetRoundMatchById(roundMatch.id, tx);
+        if (updatedRoundMatch?.nextMatchId) {
+          const nextMatch = await dbGetRoundMatchById(
+            updatedRoundMatch.nextMatchId,
+            tx,
+          );
+          if (nextMatch) {
+            const slot = updatedRoundMatch.nextMatchSlot;
+            if (slot === 1) {
+              await dbUpdateRoundMatch(
+                nextMatch.id,
+                { participant1Id: winnerId },
+                tx,
+              );
+            } else if (slot === 2) {
+              await dbUpdateRoundMatch(
+                nextMatch.id,
+                { participant2Id: winnerId },
+                tx,
+              );
+            }
           }
         }
       }
@@ -1625,16 +2009,29 @@ export async function undoEventTournamentMatchResult(
     };
   }
 
-  const seriesDecided = !!roundMatch.winnerId;
+  const isSwiss = tournamentData.tournamentType === TournamentType.SWISS;
+  const hasResult = !!roundMatch.winnerId || roundMatch.isDraw;
   const hasGames =
     roundMatch.participant1Wins > 0 || roundMatch.participant2Wins > 0;
 
-  if (!seriesDecided && !hasGames) {
+  if (!hasResult && !hasGames) {
     return { error: "This match does not have a result to undo" };
   }
 
-  // Downstream check: if the series was decided and the winner advanced and played, we can't undo
-  if (seriesDecided && roundMatch.nextMatchId) {
+  if (isSwiss && hasResult) {
+    // For Swiss, block undo if a later round has already been generated
+    const bracket = await dbGetBracket(roundMatch.eventTournamentId);
+    const maxRound = Math.max(...bracket.map((m) => m.round), 0);
+    if (maxRound > roundMatch.round) {
+      return {
+        error:
+          "Cannot undo this match because a later round has already been generated",
+      };
+    }
+  }
+
+  // Downstream check for SE: if the series was decided and the winner advanced and played, we can't undo
+  if (!isSwiss && hasResult && roundMatch.nextMatchId) {
     const nextMatch = await dbGetRoundMatchById(roundMatch.nextMatchId);
     if (nextMatch?.winnerId) {
       return {
@@ -1649,21 +2046,17 @@ export async function undoEventTournamentMatchResult(
     const seriesGames = await getEventMatchesByRoundMatchId(roundMatch.id, tx);
     const latestGame = seriesGames[0];
 
-    if (seriesDecided) {
-      const winnerId = roundMatch.winnerId!;
-      const loserId =
-        winnerId === roundMatch.participant1Id
-          ? roundMatch.participant2Id
-          : roundMatch.participant1Id;
-
-      const wasFinal = !roundMatch.nextMatchId;
+    if (isSwiss) {
+      // Swiss undo: simpler — just reset the round match
       const wasCompleted = tournamentData.status === TournamentStatus.COMPLETED;
-
-      if (wasFinal && wasCompleted) {
+      if (wasCompleted) {
+        // Un-complete the tournament, clear all placements
         await deleteEventPointEntriesForTournament(tournamentData.id, tx);
-        await dbUpdateParticipant(winnerId, { finalPlacement: null }, tx);
-        if (loserId) {
-          await dbUpdateParticipant(loserId, { finalPlacement: null }, tx);
+        const participants = await dbGetParticipants(tournamentData.id, tx);
+        for (const p of participants) {
+          if (p.finalPlacement !== null) {
+            await dbUpdateParticipant(p.id, { finalPlacement: null }, tx);
+          }
         }
         await dbUpdateTournament(
           tournamentData.id,
@@ -1675,123 +2068,215 @@ export async function undoEventTournamentMatchResult(
         );
       }
 
-      if (loserId) {
-        await dbUpdateParticipant(
-          loserId,
-          {
-            isEliminated: false,
-            eliminatedInRound: null,
-          },
-          tx,
-        );
+      if (latestGame) {
+        await deleteEventMatch(latestGame.id, tx);
       }
 
-      if (roundMatch.nextMatchId) {
-        const slot = roundMatch.nextMatchSlot;
-        if (slot === 1) {
-          await dbUpdateRoundMatch(
-            roundMatch.nextMatchId,
-            { participant1Id: null },
-            tx,
-          );
-        } else if (slot === 2) {
-          await dbUpdateRoundMatch(
-            roundMatch.nextMatchId,
-            { participant2Id: null },
+      await dbUpdateRoundMatch(
+        roundMatch.id,
+        {
+          winnerId: null,
+          isDraw: false,
+          eventMatchId: null,
+          participant1Score: null,
+          participant2Score: null,
+          isForfeit: false,
+        },
+        tx,
+      );
+    } else {
+      // Single elimination undo
+      if (hasResult) {
+        const winnerId = roundMatch.winnerId!;
+        const loserId =
+          winnerId === roundMatch.participant1Id
+            ? roundMatch.participant2Id
+            : roundMatch.participant1Id;
+
+        const wasFinal = !roundMatch.nextMatchId;
+        const wasCompleted =
+          tournamentData.status === TournamentStatus.COMPLETED;
+
+        if (wasFinal && wasCompleted) {
+          await deleteEventPointEntriesForTournament(tournamentData.id, tx);
+          await dbUpdateParticipant(winnerId, { finalPlacement: null }, tx);
+          if (loserId) {
+            await dbUpdateParticipant(loserId, { finalPlacement: null }, tx);
+          }
+          await dbUpdateTournament(
+            tournamentData.id,
+            {
+              status: TournamentStatus.IN_PROGRESS,
+              completedAt: null,
+            },
             tx,
           );
         }
-      }
-    }
 
-    // Delete the latest game
-    if (latestGame) {
-      await deleteEventMatch(latestGame.id, tx);
-    }
-
-    // Determine which side won the deleted game to decrement the correct counter
-    let newP1Wins = roundMatch.participant1Wins;
-    let newP2Wins = roundMatch.participant2Wins;
-
-    if (latestGame) {
-      // Figure out who won this game from the match participants
-      // The game winner had participant1 of roundMatch or participant2
-      // We can check by looking at the eventMatchParticipants, but since we
-      // know who won the game from the win counters and series state:
-      // If series was decided, the last game winner = series winner's side
-      // If series was not decided, we need to figure out from the last increment
-      // The simplest approach: check if the latest game corresponds to a p1 or p2 win
-      // by looking at the round match's eventMatchId
-      if (seriesDecided) {
-        // The deciding game winner = roundMatch.winnerId side
-        if (roundMatch.winnerId === roundMatch.participant1Id) {
-          newP1Wins = Math.max(0, newP1Wins - 1);
-        } else {
-          newP2Wins = Math.max(0, newP2Wins - 1);
+        if (loserId) {
+          await dbUpdateParticipant(
+            loserId,
+            {
+              isEliminated: false,
+              eliminatedInRound: null,
+            },
+            tx,
+          );
         }
-      } else {
-        // Mid-series: we need to check who won the latest game
-        // Since games are ordered by createdAt desc, and we increment wins
-        // for the game winner, we need to check the match participants
-        // The most reliable way: the most recent increment is the one that
-        // brought us to current counts. We look at the latest game's participants.
-        // However, since we've already deleted the match, we need another approach.
-        // Actually, let's NOT delete yet - let's figure out first, then delete.
-        // But we already deleted above. Let's use a different approach:
-        // Query the remaining games to recount.
-        const remainingGames = await getEventMatchesByRoundMatchId(
-          roundMatch.id,
-          tx,
-        );
-        // Recount wins from remaining games by checking match participants
-        // Actually this is complex. Let's use a simpler approach:
-        // Since we're in a transaction and know the total, just decrement 1
-        // from whichever side's total is higher (if equal, it could be either,
-        // but that shouldn't happen in a valid series)
-        // Better approach: check if participant1Wins + participant2Wins matches
-        // remaining game count + 1 (the deleted one)
-        const totalWins = newP1Wins + newP2Wins;
-        const remainingCount = remainingGames.length;
-        if (totalWins === remainingCount + 1) {
-          // We need to figure out which side won the deleted game
-          // Use a heuristic: if p1Wins > remaining p1 wins, decrement p1
-          // For simplicity and correctness, just recount from scratch
-          // Actually, we already deleted the game, so just count remaining
-          // But we don't have participant info on remaining games easily.
-          // The simplest reliable approach: try p1 first - if decrementing p1
-          // makes total match remaining count, that's correct
-          if (newP1Wins > 0 && newP1Wins - 1 + newP2Wins === remainingCount) {
-            newP1Wins -= 1;
-          } else if (newP2Wins > 0) {
-            newP2Wins -= 1;
+
+        if (roundMatch.nextMatchId) {
+          const slot = roundMatch.nextMatchSlot;
+          if (slot === 1) {
+            await dbUpdateRoundMatch(
+              roundMatch.nextMatchId,
+              { participant1Id: null },
+              tx,
+            );
+          } else if (slot === 2) {
+            await dbUpdateRoundMatch(
+              roundMatch.nextMatchId,
+              { participant2Id: null },
+              tx,
+            );
           }
         }
       }
+
+      // Delete the latest game
+      if (latestGame) {
+        await deleteEventMatch(latestGame.id, tx);
+      }
+
+      // Determine which side won the deleted game to decrement the correct counter
+      let newP1Wins = roundMatch.participant1Wins;
+      let newP2Wins = roundMatch.participant2Wins;
+
+      if (latestGame) {
+        if (hasResult) {
+          if (roundMatch.winnerId === roundMatch.participant1Id) {
+            newP1Wins = Math.max(0, newP1Wins - 1);
+          } else {
+            newP2Wins = Math.max(0, newP2Wins - 1);
+          }
+        } else {
+          const remainingGames = await getEventMatchesByRoundMatchId(
+            roundMatch.id,
+            tx,
+          );
+          const totalWins = newP1Wins + newP2Wins;
+          const remainingCount = remainingGames.length;
+          if (totalWins === remainingCount + 1) {
+            if (newP1Wins > 0 && newP1Wins - 1 + newP2Wins === remainingCount) {
+              newP1Wins -= 1;
+            } else if (newP2Wins > 0) {
+              newP2Wins -= 1;
+            }
+          }
+        }
+      }
+
+      // Find the new latest game (for eventMatchId on round match)
+      const remainingGamesAfterDelete = await getEventMatchesByRoundMatchId(
+        roundMatch.id,
+        tx,
+      );
+      const newLatestGameId =
+        remainingGamesAfterDelete.length > 0
+          ? remainingGamesAfterDelete[0].id
+          : null;
+
+      await dbUpdateRoundMatch(
+        roundMatch.id,
+        {
+          winnerId: null,
+          eventMatchId: newLatestGameId,
+          participant1Score: null,
+          participant2Score: null,
+          participant1Wins: newP1Wins,
+          participant2Wins: newP2Wins,
+          isForfeit: false,
+        },
+        tx,
+      );
     }
 
-    // Find the new latest game (for eventMatchId on round match)
-    const remainingGamesAfterDelete = await getEventMatchesByRoundMatchId(
-      roundMatch.id,
-      tx,
-    );
-    const newLatestGameId =
-      remainingGamesAfterDelete.length > 0
-        ? remainingGamesAfterDelete[0].id
-        : null;
-
-    await dbUpdateRoundMatch(
-      roundMatch.id,
-      {
-        winnerId: null,
-        eventMatchId: newLatestGameId,
-        participant1Score: null,
-        participant2Score: null,
-        participant1Wins: newP1Wins,
-        participant2Wins: newP2Wins,
-        isForfeit: false,
+    return {
+      data: {
+        eventTournamentId: tournamentData.id,
+        eventId: tournamentData.eventId,
       },
-      tx,
-    );
+    };
+  });
+}
+
+export async function generateNextEventSwissRound(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  const parsed = eventTournamentIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { eventTournamentId } = parsed.data;
+
+  const tournamentData = await dbGetTournamentById(eventTournamentId);
+  if (!tournamentData) {
+    return { error: "Tournament not found" };
+  }
+
+  if (tournamentData.tournamentType !== TournamentType.SWISS) {
+    return { error: "This action is only for Swiss tournaments" };
+  }
+
+  if (tournamentData.status !== TournamentStatus.IN_PROGRESS) {
+    return { error: "Tournament is not in progress" };
+  }
+
+  const participation = await getEventParticipant(
+    tournamentData.eventId,
+    userId,
+  );
+  if (!participation) {
+    return { error: "You are not a participant in this event" };
+  }
+
+  if (
+    !canPerformEventAction(participation.role, EventAction.CREATE_TOURNAMENTS)
+  ) {
+    return { error: "You do not have permission to manage tournaments" };
+  }
+
+  const bracket = await dbGetBracket(eventTournamentId);
+  if (bracket.length === 0) {
+    return { error: "No rounds exist yet" };
+  }
+
+  const currentRound = Math.max(...bracket.map((m) => m.round));
+
+  const roundMatches = bracket.filter((m) => m.round === currentRound);
+  const allResolved = roundMatches.every(
+    (m) => m.winnerId !== null || m.isDraw || m.isBye,
+  );
+
+  if (!allResolved) {
+    return {
+      error: "All matches in the current round must be completed first",
+    };
+  }
+
+  if (
+    tournamentData.totalRounds !== null &&
+    currentRound >= tournamentData.totalRounds
+  ) {
+    return { error: "All rounds have been completed" };
+  }
+
+  return withTransaction(async (tx) => {
+    await generateNextEventSwissRoundInternal(tournamentData, currentRound, tx);
 
     return {
       data: {

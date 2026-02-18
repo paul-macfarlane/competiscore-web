@@ -64,6 +64,7 @@ import {
   deleteEventTournament,
   forfeitEventTournamentMatch,
   generateEventBracket,
+  generateNextEventSwissRound,
   recordEventTournamentMatchResult,
   removeEventTournamentParticipant,
   setEventParticipantSeeds,
@@ -723,6 +724,19 @@ export async function undoEventTournamentMatchResultAction(
   if (!userId) return { error: "Unauthorized" };
 
   const result = await undoEventTournamentMatchResult(userId, input);
+  if (result.data) {
+    revalidatePath(`/events/${result.data.eventId}`);
+  }
+  return result;
+}
+
+export async function generateNextEventSwissRoundAction(
+  input: unknown,
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  const userId = await getSessionUserId();
+  if (!userId) return { error: "Unauthorized" };
+
+  const result = await generateNextEventSwissRound(userId, input);
   if (result.data) {
     revalidatePath(`/events/${result.data.eventId}`);
   }

@@ -564,6 +564,7 @@ export async function updateEventTournamentRoundMatch(
       | "isForfeit"
       | "participant1Score"
       | "participant2Score"
+      | "isDraw"
       | "participant1Wins"
       | "participant2Wins"
       | "nextMatchId"
@@ -598,6 +599,23 @@ export async function getEventTournamentRoundMatchByPosition(
     )
     .limit(1);
   return result[0];
+}
+
+export async function getEventTournamentRoundMatchesByRound(
+  eventTournamentId: string,
+  round: number,
+  dbOrTx: DBOrTx = db,
+): Promise<EventTournamentRoundMatch[]> {
+  return dbOrTx
+    .select()
+    .from(eventTournamentRoundMatch)
+    .where(
+      and(
+        eq(eventTournamentRoundMatch.eventTournamentId, eventTournamentId),
+        eq(eventTournamentRoundMatch.round, round),
+      ),
+    )
+    .orderBy(eventTournamentRoundMatch.position);
 }
 
 export type EventTournamentMatchInfo = {

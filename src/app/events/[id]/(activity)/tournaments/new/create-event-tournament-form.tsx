@@ -26,7 +26,10 @@ import {
   GameCategory,
   ParticipantType,
   SEEDING_TYPE_LABELS,
+  SeedingType,
   TOURNAMENT_ICON_OPTIONS,
+  TOURNAMENT_TYPE_LABELS,
+  TournamentType,
 } from "@/lib/shared/constants";
 import {
   getPartnershipSize,
@@ -34,10 +37,12 @@ import {
   parseH2HConfig,
 } from "@/lib/shared/game-config-parser";
 import {
+  MAX_BEST_OF,
+  MAX_SWISS_ROUNDS,
+  MIN_SWISS_ROUNDS,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
   TOURNAMENT_NAME_MAX_LENGTH,
 } from "@/services/constants";
-import { MAX_BEST_OF } from "@/services/constants";
 import { createEventTournamentSchema } from "@/validators/events";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Info, Plus, Trash2, Trophy } from "lucide-react";
@@ -244,8 +249,9 @@ export function CreateEventTournamentForm({ eventId, gameTypes }: Props) {
       name: "",
       description: "",
       logo: "",
+      tournamentType: TournamentType.SINGLE_ELIMINATION,
       participantType: ParticipantType.INDIVIDUAL,
-      seedingType: "random",
+      seedingType: SeedingType.RANDOM,
       bestOf: 1,
       placementPointConfig: [
         { placement: 1, points: 10 },
@@ -450,33 +456,118 @@ export function CreateEventTournamentForm({ eventId, gameTypes }: Props) {
 
         <FormField
           control={form.control}
-          name="seedingType"
+          name="tournamentType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Seeding Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormLabel>Tournament Format</FormLabel>
+              <Select
+                onValueChange={(val) => {
+                  field.onChange(val);
+                  if (val === TournamentType.SWISS) {
+                    form.setValue("seedingType", undefined);
+                  } else {
+                    form.setValue("seedingType", SeedingType.RANDOM);
+                    form.setValue("swissRounds", undefined);
+                  }
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select seeding type" />
+                    <SelectValue />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {Object.entries(SEEDING_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(TOURNAMENT_TYPE_LABELS).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
               <FormDescription>
-                How participants are seeded in the bracket
+                {field.value === TournamentType.SWISS
+                  ? "Participants play a fixed number of rounds against opponents with similar scores. No one is eliminated."
+                  : "Lose and you're out. Last one standing wins."}
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <BestOfSection form={form} />
+        {form.watch("tournamentType") !== TournamentType.SWISS && (
+          <FormField
+            control={form.control}
+            name="seedingType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Seeding Type</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? SeedingType.RANDOM}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select seeding type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(SEEDING_TYPE_LABELS).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  How participants are seeded in the bracket
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {form.watch("tournamentType") === TournamentType.SWISS && (
+          <FormField
+            control={form.control}
+            name="swissRounds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Number of Rounds (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={MIN_SWISS_ROUNDS}
+                    max={MAX_SWISS_ROUNDS}
+                    placeholder="Auto-calculated"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(
+                        value === "" ? undefined : parseInt(value, 10),
+                      );
+                    }}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Leave blank to auto-calculate based on participant count
+                  (log2). Typically 3-7 rounds.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {form.watch("tournamentType") !== TournamentType.SWISS && (
+          <BestOfSection form={form} />
+        )}
 
         <div className="space-y-4">
           <div>

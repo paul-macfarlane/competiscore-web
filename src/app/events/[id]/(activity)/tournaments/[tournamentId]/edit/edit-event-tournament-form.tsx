@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   TOURNAMENT_ICON_OPTIONS,
   TournamentStatus,
+  TournamentType,
 } from "@/lib/shared/constants";
 import {
   MAX_BEST_OF,
@@ -58,6 +59,7 @@ type EditEventTournamentFormProps = {
   description: string | null;
   logo: string | null;
   status: string;
+  tournamentType: string;
   bestOf: number;
   roundBestOf: string | null;
 };
@@ -69,6 +71,7 @@ export function EditEventTournamentForm({
   description,
   logo,
   status,
+  tournamentType,
   bestOf,
   roundBestOf,
 }: EditEventTournamentFormProps) {
@@ -229,7 +232,7 @@ export function EditEventTournamentForm({
           )}
         />
 
-        {isDraft && (
+        {isDraft && tournamentType !== TournamentType.SWISS && (
           <div className="space-y-4">
             <FormField
               control={form.control}

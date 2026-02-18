@@ -260,6 +260,20 @@
       "when": 1771375597610,
       "tag": "0036_glossy_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1771390552649,
+      "tag": "0037_messy_weapon_omega",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1771391874683,
+      "tag": "0038_spotty_roughhouse",
+      "breakpoints": true
     }
   ]
 }
