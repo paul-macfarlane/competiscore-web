@@ -56,45 +56,6 @@ export function MobileNav({ leagues, events }: MobileNavProps) {
         </DrawerHeader>
         <nav className="flex flex-col gap-1 px-4 pb-4">
           <p className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <Trophy className="h-3.5 w-3.5" />
-            Your Leagues
-          </p>
-          {leagues.length > 0 ? (
-            leagues.map((league) => {
-              const isActive = pathname.startsWith(`/leagues/${league.id}`);
-              return (
-                <DrawerClose key={league.id} asChild>
-                  <Link
-                    href={`/leagues/${league.id}`}
-                    className={cn(
-                      "rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "hover:bg-accent hover:text-accent-foreground",
-                    )}
-                  >
-                    {league.name}
-                  </Link>
-                </DrawerClose>
-              );
-            })
-          ) : (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              No leagues yet
-            </p>
-          )}
-          <div className="border-t my-1" />
-          <DrawerClose asChild>
-            <Link
-              href="/leagues"
-              className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              View all your leagues
-            </Link>
-          </DrawerClose>
-
-          <div className="mt-4" />
-          <p className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <CalendarDays className="h-3.5 w-3.5" />
             Your Events
           </p>
@@ -129,6 +90,45 @@ export function MobileNav({ leagues, events }: MobileNavProps) {
               className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               View all your events
+            </Link>
+          </DrawerClose>
+
+          <div className="mt-4" />
+          <p className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Trophy className="h-3.5 w-3.5" />
+            Your Leagues
+          </p>
+          {leagues.length > 0 ? (
+            leagues.map((league) => {
+              const isActive = pathname.startsWith(`/leagues/${league.id}`);
+              return (
+                <DrawerClose key={league.id} asChild>
+                  <Link
+                    href={`/leagues/${league.id}`}
+                    className={cn(
+                      "rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    {league.name}
+                  </Link>
+                </DrawerClose>
+              );
+            })
+          ) : (
+            <p className="px-3 py-2 text-sm text-muted-foreground">
+              No leagues yet
+            </p>
+          )}
+          <div className="border-t my-1" />
+          <DrawerClose asChild>
+            <Link
+              href="/leagues"
+              className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              View all your leagues
             </Link>
           </DrawerClose>
         </nav>

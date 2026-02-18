@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -18,6 +20,9 @@ type ContributorsPieChartProps = {
   individualContributions: IndividualContributionData[];
 };
 
+const MAX_CONTRIBUTORS = 10;
+const OTHER_COLOR = "#94a3b8";
+
 const CONTRIBUTOR_COLORS = [
   "#3b82f6",
   "#ef4444",
@@ -29,22 +34,39 @@ const CONTRIBUTOR_COLORS = [
   "#f97316",
   "#06b6d4",
   "#84cc16",
-  "#e11d48",
-  "#7c3aed",
 ];
 
 export function ContributorsPieChart({
   individualContributions,
 }: ContributorsPieChartProps) {
-  let colorIndex = 0;
-  const data = individualContributions.flatMap((team) =>
+  const allContributors = individualContributions.flatMap((team) =>
     team.contributors.map((c) => ({
       name: c.name,
       value: c.points,
-      fill: CONTRIBUTOR_COLORS[colorIndex++ % CONTRIBUTOR_COLORS.length],
       teamName: team.teamName,
     })),
   );
+
+  allContributors.sort(
+    (a, b) => b.value - a.value || a.name.localeCompare(b.name),
+  );
+
+  const top = allContributors.slice(0, MAX_CONTRIBUTORS);
+  const rest = allContributors.slice(MAX_CONTRIBUTORS);
+
+  const data = top.map((c, i) => ({
+    ...c,
+    fill: CONTRIBUTOR_COLORS[i % CONTRIBUTOR_COLORS.length],
+  }));
+
+  if (rest.length > 0) {
+    data.push({
+      name: "Other",
+      value: rest.reduce((sum, c) => sum + c.value, 0),
+      teamName: "",
+      fill: OTHER_COLOR,
+    });
+  }
 
   if (data.length === 0) return null;
 
@@ -60,9 +82,12 @@ export function ContributorsPieChart({
       <CardContent>
         <ChartContainer
           config={config}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[300px]"
         >
           <PieChart>
+            <ChartLegend
+              content={<ChartLegendContent className="flex-wrap" />}
+            />
             <ChartTooltip
               content={
                 <ChartTooltipContent
@@ -74,10 +99,13 @@ export function ContributorsPieChart({
                         style={{ backgroundColor: item.payload.fill }}
                       />
                       <span>
-                        {item.payload.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({item.payload.teamName})
-                        </span>
+                        {item.payload.name}
+                        {item.payload.teamName && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            ({item.payload.teamName})
+                          </span>
+                        )}
                       </span>
                       <span className="font-mono font-bold tabular-nums">
                         {value} pts
@@ -166,9 +194,12 @@ export function CategoryBreakdownChart({
         <CardContent>
           <ChartContainer
             config={teamConfig}
-            className="mx-auto aspect-square max-h-[250px]"
+            className="mx-auto aspect-square max-h-[300px]"
           >
             <PieChart>
+              <ChartLegend
+                content={<ChartLegendContent className="flex-wrap" />}
+              />
               <ChartTooltip
                 content={
                   <ChartTooltipContent
@@ -218,9 +249,10 @@ export function CategoryBreakdownChart({
       <CardContent>
         <ChartContainer
           config={config}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[300px]"
         >
           <PieChart>
+            <ChartLegend content={<ChartLegendContent />} />
             <ChartTooltip
               content={
                 <ChartTooltipContent

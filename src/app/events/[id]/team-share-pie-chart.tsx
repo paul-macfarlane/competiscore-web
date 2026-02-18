@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -51,9 +53,12 @@ export function TeamSharePieChart({
       <CardContent>
         <ChartContainer
           config={config}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[300px]"
         >
           <PieChart>
+            <ChartLegend
+              content={<ChartLegendContent className="flex-wrap" />}
+            />
             <ChartTooltip
               content={
                 <ChartTooltipContent
