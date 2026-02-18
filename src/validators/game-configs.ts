@@ -39,6 +39,7 @@ export const highScoreConfigSchema = z.object({
   scoreOrder: z.enum([ScoreOrder.HIGHEST_WINS, ScoreOrder.LOWEST_WINS]),
   scoreDescription: z.string().min(1).max(50),
   participantType: z.enum([ParticipantType.INDIVIDUAL, ParticipantType.TEAM]),
+  groupSize: z.number().int().min(1).max(10).optional(),
   rules: rulesSchema,
 });
 

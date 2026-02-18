@@ -13,6 +13,7 @@ List of miscellaneous TODOs for the project.
 
 ### Events
 
+- DEFER: Add group/pair support to league high score game types (currently events only). The `groupSize` field and `isHighScorePartnership()` helper are ready; DB schema and service layer need to be extended for the league context.
 - DEFER: Event scoring for best scores should factor in a participant having multiple submissions. For example, if a person has the top 2, they only get awarded points for first, and then 3rd gets points for their placement in 2nd, and so on. This obviously applies to both participant types of individuals and teams. OR, is this no longer needed now that we'd be limiting the amonut of submissions that are valid for scoring?
 
 ### Tournaments
@@ -28,11 +29,16 @@ List of miscellaneous TODOs for the project.
 - DEFER: There should be some visibility of game type settings and rules for normal members of leagues and events so that they know how to play. Need to think more about how to incorporate this into the app.
 - DEFER: Technically, score label should be able to be adjusted on a game type even after being created, there is no harm in changing that. Very low priority though, so this can be deferred.
 - DEFER: The ability to duplicate a game type, in both leageus and events, would be a nice and neat little feature.
+- DEFER: For H2H and Free for all game types we should display the score labels on the settings page for that game type. This applies to both leagues and events
 
 #### Best Scores
 
 - DEFER: Small tech debt, but "name" field for best score sessions should be required in the database schema. as well, not just on the form for creating one.
 - DEFER: Best score matches could be configurable such that you can say only allow X submissions per user. This applies to both events and leagues.
+
+### Discretionary Points
+
+- DEFER: It would be nice to set a date and time for awarding discretionary points.
 
 #### Leagues
 

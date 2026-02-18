@@ -24,7 +24,9 @@ vi.mock("@/db/index", () => ({
 vi.mock("@/db/events", () => ({
   closeHighScoreSession: vi.fn(),
   createEventHighScoreEntry: vi.fn(),
+  createEventHighScoreEntryMembers: vi.fn(),
   createEventPointEntries: vi.fn(),
+  createEventPointEntryParticipants: vi.fn(),
   createHighScoreSession: vi.fn(),
   deleteEventPointEntriesForHighScoreSession: vi.fn(),
   deleteHighScoreSession: vi.fn(),
@@ -539,5 +541,364 @@ describe("deleteHighScoreSession", () => {
     });
 
     expect(result.error).toBe("Failed to delete session");
+  });
+});
+
+const mockPairGameType = {
+  ...mockHighScoreGameType,
+  config: JSON.stringify({
+    scoreOrder: "highest_wins",
+    scoreDescription: "Points",
+    participantType: "individual",
+    groupSize: 2,
+  }),
+};
+
+const mockPairEntry = {
+  ...mockHighScoreEntry,
+  userId: null,
+  eventPlaceholderParticipantId: null,
+  eventTeamId: TEST_IDS.EVENT_TEAM_ID,
+};
+
+const mockTeamAlpha = {
+  id: TEST_IDS.EVENT_TEAM_ID,
+  eventId: TEST_IDS.EVENT_ID,
+  name: "Team Alpha",
+  color: null,
+  logo: null,
+  createdAt: new Date(),
+};
+
+describe("submitEventHighScore - pair mode", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(dbEvents.getHighScoreSessionById).mockResolvedValue(
+      mockSession as never,
+    );
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockOrganizerMember as never,
+    );
+    vi.mocked(dbEvents.getEventGameTypeById).mockResolvedValue(
+      mockPairGameType as never,
+    );
+  });
+
+  it("returns validation error when members array is missing", async () => {
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      // members missing
+    });
+
+    expect(result.error).toBe("Validation failed");
+    expect(result.fieldErrors).toBeDefined();
+  });
+
+  it("returns error when member count does not match groupSize", async () => {
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      // 3 members when groupSize is 2 — passes schema min(2) but fails groupSize check
+      members: [
+        { userId: TEST_IDS.USER_ID },
+        { userId: TEST_IDS.USER_ID_2 },
+        { userId: TEST_IDS.USER_ID_3 },
+      ],
+    });
+
+    expect(result.error).toBe(
+      "This game type requires exactly 2 members per entry",
+    );
+  });
+
+  it("returns error when duplicate members are submitted", async () => {
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue(
+      mockTeamAlpha as never,
+    );
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [
+        { userId: TEST_IDS.USER_ID },
+        { userId: TEST_IDS.USER_ID }, // duplicate
+      ],
+    });
+
+    expect(result.error).toBe(
+      "Duplicate members are not allowed in a group entry",
+    );
+  });
+
+  it("returns error when members are on different teams", async () => {
+    vi.mocked(dbEvents.getTeamForUser)
+      .mockResolvedValueOnce(mockTeamAlpha as never)
+      .mockResolvedValueOnce({
+        ...mockTeamAlpha,
+        id: TEST_IDS.EVENT_TEAM_ID_2,
+        name: "Team Beta",
+      } as never);
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [{ userId: TEST_IDS.USER_ID }, { userId: TEST_IDS.USER_ID_2 }],
+    });
+
+    expect(result.error).toBe("All members must be on the same team");
+  });
+
+  it("returns error when a member is not on any team", async () => {
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue(undefined);
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [{ userId: TEST_IDS.USER_ID }, { userId: TEST_IDS.USER_ID_2 }],
+    });
+
+    expect(result.error).toBe(
+      "All members must be on a team to submit a group entry",
+    );
+  });
+
+  it("returns error when participant submits a pair they are not in", async () => {
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockParticipantMember as never,
+    );
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue(
+      mockTeamAlpha as never,
+    );
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [
+        { userId: TEST_IDS.USER_ID_2 }, // USER_ID not in pair
+        { userId: TEST_IDS.USER_ID_3 },
+      ],
+    });
+
+    expect(result.error).toBe(
+      "You can only submit group entries that include yourself",
+    );
+  });
+
+  it("returns success when organizer submits a pair for others", async () => {
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue(
+      mockTeamAlpha as never,
+    );
+    vi.mocked(dbEvents.createEventHighScoreEntry).mockResolvedValue(
+      mockPairEntry as never,
+    );
+    vi.mocked(dbEvents.createEventHighScoreEntryMembers).mockResolvedValue(
+      [] as never,
+    );
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [{ userId: TEST_IDS.USER_ID_2 }, { userId: TEST_IDS.USER_ID_3 }],
+    });
+
+    expect(result.data?.score).toBe(100);
+    expect(result.data?.userId).toBeNull();
+    expect(result.data?.eventTeamId).toBe(TEST_IDS.EVENT_TEAM_ID);
+  });
+
+  it("returns success when participant submits a pair that includes themselves", async () => {
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockParticipantMember as never,
+    );
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue(
+      mockTeamAlpha as never,
+    );
+    vi.mocked(dbEvents.createEventHighScoreEntry).mockResolvedValue(
+      mockPairEntry as never,
+    );
+    vi.mocked(dbEvents.createEventHighScoreEntryMembers).mockResolvedValue(
+      [] as never,
+    );
+
+    const result = await submitEventHighScore(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+      score: 100,
+      achievedAt: new Date(Date.now() - 1000),
+      members: [
+        { userId: TEST_IDS.USER_ID }, // includes submitter
+        { userId: TEST_IDS.USER_ID_2 },
+      ],
+    });
+
+    expect(result.data?.score).toBe(100);
+  });
+});
+
+describe("closeHighScoreSession - with pair entries", () => {
+  const mockPairSession = {
+    ...mockSession,
+    placementPointConfig: JSON.stringify([
+      { placement: 1, points: 10 },
+      { placement: 2, points: 5 },
+    ]),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(dbEvents.getHighScoreSessionById).mockResolvedValue(
+      mockPairSession as never,
+    );
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockOrganizerMember as never,
+    );
+    vi.mocked(dbEvents.getEventGameTypeById).mockResolvedValue(
+      mockPairGameType as never,
+    );
+  });
+
+  it("closes session with pair entries and awards points to the correct team", async () => {
+    const pairEntries = [
+      {
+        id: "entry-1",
+        sessionId: TEST_IDS.EVENT_SESSION_ID,
+        eventId: TEST_IDS.EVENT_ID,
+        eventGameTypeId: TEST_IDS.EVENT_GAME_TYPE_ID_2,
+        userId: null,
+        eventPlaceholderParticipantId: null,
+        eventTeamId: TEST_IDS.EVENT_TEAM_ID,
+        score: 200,
+        recorderId: TEST_IDS.USER_ID,
+        achievedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        members: [
+          {
+            id: "member-1",
+            user: {
+              id: TEST_IDS.USER_ID,
+              name: "Paul",
+              username: "paul",
+              image: null,
+            },
+            placeholderParticipant: null,
+          },
+          {
+            id: "member-2",
+            user: {
+              id: TEST_IDS.USER_ID_2,
+              name: "Medha",
+              username: "medha",
+              image: null,
+            },
+            placeholderParticipant: null,
+          },
+        ],
+      },
+    ];
+
+    vi.mocked(dbEvents.getSessionHighScoreEntries).mockResolvedValue(
+      pairEntries as never,
+    );
+    vi.mocked(dbEvents.closeHighScoreSession).mockResolvedValue(
+      undefined as never,
+    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "point-entry-1" },
+    ] as never);
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "point-entry-1" },
+    ] as never);
+
+    const result = await closeHighScoreSession(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+    });
+
+    expect(result.data?.closed).toBe(true);
+    expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+
+  it("closes session with mixed pair and individual entries", async () => {
+    const mixedEntries = [
+      {
+        id: "entry-pair",
+        sessionId: TEST_IDS.EVENT_SESSION_ID,
+        eventId: TEST_IDS.EVENT_ID,
+        eventGameTypeId: TEST_IDS.EVENT_GAME_TYPE_ID_2,
+        userId: null,
+        eventPlaceholderParticipantId: null,
+        eventTeamId: TEST_IDS.EVENT_TEAM_ID,
+        score: 300,
+        recorderId: TEST_IDS.USER_ID,
+        achievedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        members: [
+          {
+            id: "member-1",
+            user: {
+              id: TEST_IDS.USER_ID,
+              name: "Paul",
+              username: "paul",
+              image: null,
+            },
+            placeholderParticipant: null,
+          },
+          {
+            id: "member-2",
+            user: {
+              id: TEST_IDS.USER_ID_2,
+              name: "Medha",
+              username: "medha",
+              image: null,
+            },
+            placeholderParticipant: null,
+          },
+        ],
+      },
+      {
+        id: "entry-individual",
+        sessionId: TEST_IDS.EVENT_SESSION_ID,
+        eventId: TEST_IDS.EVENT_ID,
+        eventGameTypeId: TEST_IDS.EVENT_GAME_TYPE_ID_2,
+        userId: TEST_IDS.USER_ID_3,
+        eventPlaceholderParticipantId: null,
+        eventTeamId: null,
+        score: 100,
+        recorderId: TEST_IDS.USER_ID,
+        achievedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        members: [],
+      },
+    ];
+
+    vi.mocked(dbEvents.getSessionHighScoreEntries).mockResolvedValue(
+      mixedEntries as never,
+    );
+    vi.mocked(dbEvents.getTeamForUser).mockResolvedValue({
+      ...mockTeamAlpha,
+      id: TEST_IDS.EVENT_TEAM_ID_2,
+    } as never);
+    vi.mocked(dbEvents.closeHighScoreSession).mockResolvedValue(
+      undefined as never,
+    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([
+      { id: "point-entry-1" },
+      { id: "point-entry-2" },
+    ] as never);
+
+    const result = await closeHighScoreSession(TEST_IDS.USER_ID, {
+      sessionId: TEST_IDS.EVENT_SESSION_ID,
+    });
+
+    expect(result.data?.closed).toBe(true);
   });
 });

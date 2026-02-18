@@ -7,8 +7,11 @@ import {
   ParticipantType,
 } from "@/lib/shared/constants";
 import {
+  getHighScoreGroupSize,
   getScoreDescription,
+  isHighScorePartnership,
   parseGameConfig,
+  parseHighScoreConfig,
 } from "@/lib/shared/game-config-parser";
 import {
   buildEventParticipantOptions,
@@ -141,10 +144,16 @@ async function SubmitScoreContent({
   const config = gameType
     ? parseGameConfig(gameType.config, gameType.category as GameCategory)
     : null;
+  const hsConfig =
+    gameType?.category === GameCategory.HIGH_SCORE
+      ? parseHighScoreConfig(gameType.config)
+      : null;
   const isTeamParticipant =
     config && "participantType" in config
       ? config.participantType === ParticipantType.TEAM
       : false;
+  const isPairMode = hsConfig ? isHighScorePartnership(hsConfig) : false;
+  const groupSize = hsConfig ? getHighScoreGroupSize(hsConfig) : 1;
 
   const participantOptions = isTeamParticipant
     ? buildEventTeamOptions(teamsResult.data ?? [])
@@ -170,6 +179,8 @@ async function SubmitScoreContent({
             ? getScoreDescription(gameType.config, gameType.category) || "Score"
             : "Score"
         }
+        isPairMode={isPairMode}
+        groupSize={groupSize}
       />
     </>
   );

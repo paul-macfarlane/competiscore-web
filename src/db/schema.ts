@@ -1664,6 +1664,37 @@ export type NewEventHighScoreEntry = InferInsertModel<
   typeof eventHighScoreEntry
 >;
 
+export const eventHighScoreEntryMember = pgTable(
+  "event_high_score_entry_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventHighScoreEntryId: text("event_high_score_entry_id")
+      .notNull()
+      .references(() => eventHighScoreEntry.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    eventPlaceholderParticipantId: text(
+      "event_placeholder_participant_id",
+    ).references(() => eventPlaceholderParticipant.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("event_hs_entry_member_entry_idx").on(table.eventHighScoreEntryId),
+    index("event_hs_entry_member_user_idx").on(table.userId),
+    index("event_hs_entry_member_placeholder_idx").on(
+      table.eventPlaceholderParticipantId,
+    ),
+  ],
+);
+
+export type EventHighScoreEntryMember = InferSelectModel<
+  typeof eventHighScoreEntryMember
+>;
+export type NewEventHighScoreEntryMember = InferInsertModel<
+  typeof eventHighScoreEntryMember
+>;
+
 export const eventPointCategoryEnum = pgEnum("event_point_category", [
   EventPointCategory.H2H_MATCH,
   EventPointCategory.FFA_MATCH,
@@ -2134,7 +2165,7 @@ export const eventHighScoreSessionRelations = relations(
 
 export const eventHighScoreEntryRelations = relations(
   eventHighScoreEntry,
-  ({ one }) => ({
+  ({ one, many }) => ({
     session: one(eventHighScoreSession, {
       fields: [eventHighScoreEntry.sessionId],
       references: [eventHighScoreSession.id],
@@ -2163,6 +2194,25 @@ export const eventHighScoreEntryRelations = relations(
       fields: [eventHighScoreEntry.recorderId],
       references: [user.id],
       relationName: "recordedEventHighScores",
+    }),
+    members: many(eventHighScoreEntryMember),
+  }),
+);
+
+export const eventHighScoreEntryMemberRelations = relations(
+  eventHighScoreEntryMember,
+  ({ one }) => ({
+    entry: one(eventHighScoreEntry, {
+      fields: [eventHighScoreEntryMember.eventHighScoreEntryId],
+      references: [eventHighScoreEntry.id],
+    }),
+    user: one(user, {
+      fields: [eventHighScoreEntryMember.userId],
+      references: [user.id],
+    }),
+    placeholderParticipant: one(eventPlaceholderParticipant, {
+      fields: [eventHighScoreEntryMember.eventPlaceholderParticipantId],
+      references: [eventPlaceholderParticipant.id],
     }),
   }),
 );
@@ -2339,6 +2389,9 @@ export const eventHighScoreSessionColumns = getTableColumns(
   eventHighScoreSession,
 );
 export const eventHighScoreEntryColumns = getTableColumns(eventHighScoreEntry);
+export const eventHighScoreEntryMemberColumns = getTableColumns(
+  eventHighScoreEntryMember,
+);
 export const eventPointEntryColumns = getTableColumns(eventPointEntry);
 export const eventTournamentColumns = getTableColumns(eventTournament);
 export const eventTournamentParticipantColumns = getTableColumns(

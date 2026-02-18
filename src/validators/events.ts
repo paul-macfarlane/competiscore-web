@@ -530,6 +530,39 @@ export type SubmitEventHighScoreInput = z.infer<
   typeof submitEventHighScoreSchema
 >;
 
+const highScorePairMemberSchema = z
+  .object({
+    userId: z.string().optional(),
+    eventPlaceholderParticipantId: uuidSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      (data.userId ? 1 : 0) + (data.eventPlaceholderParticipantId ? 1 : 0) ===
+      1,
+    {
+      message:
+        "Exactly one of userId or eventPlaceholderParticipantId must be provided for each member",
+    },
+  );
+
+export const submitEventHighScorePairSchema = z.object({
+  sessionId: uuidSchema,
+  members: z
+    .array(highScorePairMemberSchema)
+    .min(2, "At least 2 members are required for a group entry"),
+  score: z.number("A number is required"),
+  achievedAt: z
+    .union([z.string(), z.date()])
+    .pipe(z.coerce.date())
+    .refine((date) => date <= new Date(), {
+      message: "Achievement date cannot be in the future",
+    }),
+});
+
+export type SubmitEventHighScorePairInput = z.infer<
+  typeof submitEventHighScorePairSchema
+>;
+
 export const closeHighScoreSessionSchema = z.object({
   sessionId: uuidSchema,
 });

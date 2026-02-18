@@ -27,7 +27,10 @@ import {
   GameCategory,
   ScoreOrder,
 } from "@/lib/shared/constants";
-import { parseHighScoreConfig } from "@/lib/shared/game-config-parser";
+import {
+  isHighScorePartnership,
+  parseHighScoreConfig,
+} from "@/lib/shared/game-config-parser";
 import { uuidSchema } from "@/validators/common";
 import { z } from "zod";
 
@@ -231,10 +234,12 @@ export async function getEventHighScoreLeaderboard(
 
   const { limit = 10, offset = 0 } = options;
 
+  const isPair = isHighScorePartnership(hsConfig);
+
   const result = await dbGetEventHighScoreIndividualLeaderboard(
     eventId,
     gameTypeId,
-    { limit, offset, scoreOrder },
+    { limit, offset, scoreOrder, isPair },
   );
   return { data: result };
 }

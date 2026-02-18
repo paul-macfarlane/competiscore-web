@@ -31,6 +31,7 @@ export type HighScoreConfig = {
   scoreOrder: ScoreOrder;
   scoreDescription: string;
   participantType: ParticipantType;
+  groupSize?: number;
   rules?: string;
 };
 

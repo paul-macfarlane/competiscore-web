@@ -9,7 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
 import { GameCategory } from "@/lib/shared/constants";
-import { parseHighScoreConfig } from "@/lib/shared/game-config-parser";
+import {
+  isHighScorePartnership,
+  parseHighScoreConfig,
+} from "@/lib/shared/game-config-parser";
 import { cn } from "@/lib/shared/utils";
 import { getEventGameType } from "@/services/event-game-types";
 import { getGameTypePointEntries } from "@/services/event-high-scores";
@@ -124,6 +127,7 @@ async function LeaderboardContent({
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const hsConfig = parseHighScoreConfig(gameType.config);
+  const isPairMode = isHighScorePartnership(hsConfig);
   const pointEntries = pointEntriesResult.data ?? [];
 
   // Build a map of teamName → total points for inline display
@@ -160,13 +164,16 @@ async function LeaderboardContent({
       <div>
         <h2 className="text-2xl font-bold">{gameType.name}</h2>
         <p className="text-sm text-muted-foreground">
-          Individual Leaderboard &middot; {hsConfig.scoreDescription}
+          {isPairMode ? "Pair Leaderboard" : "Individual Leaderboard"} &middot;{" "}
+          {hsConfig.scoreDescription}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Individual Standings</CardTitle>
+          <CardTitle>
+            {isPairMode ? "Pair Standings" : "Individual Standings"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {entries.length === 0 ? (
@@ -187,9 +194,13 @@ async function LeaderboardContent({
                   teamPoints !== undefined &&
                   entries.findIndex((e) => e.teamName === entry.teamName) ===
                     index;
+                const isPairEntry = entry.members && entry.members.length > 0;
+                const entryKey =
+                  entry.entryId ??
+                  `${entry.user?.id ?? entry.placeholderParticipant?.id}-${index}`;
                 return (
                   <div
-                    key={`${entry.user?.id ?? entry.placeholderParticipant?.id}-${index}`}
+                    key={entryKey}
                     className="flex items-center justify-between rounded-md border px-3 py-2"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -208,17 +219,30 @@ async function LeaderboardContent({
                         {entry.rank}
                       </span>
                       <div className="min-w-0">
-                        <ParticipantDisplay
-                          participant={
-                            {
-                              user: entry.user,
-                              placeholderMember: entry.placeholderParticipant,
-                            } as ParticipantData
-                          }
-                          showAvatar
-                          showUsername
-                          size="sm"
-                        />
+                        {isPairEntry ? (
+                          <p className="text-sm font-medium truncate">
+                            {entry
+                              .members!.map(
+                                (m) =>
+                                  m.user?.name ??
+                                  m.placeholderParticipant?.displayName ??
+                                  "?",
+                              )
+                              .join(" & ")}
+                          </p>
+                        ) : (
+                          <ParticipantDisplay
+                            participant={
+                              {
+                                user: entry.user,
+                                placeholderMember: entry.placeholderParticipant,
+                              } as ParticipantData
+                            }
+                            showAvatar
+                            showUsername
+                            size="sm"
+                          />
+                        )}
                         {entry.teamName &&
                           (entry.teamColor ? (
                             <TeamColorBadge

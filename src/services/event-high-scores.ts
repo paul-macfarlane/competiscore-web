@@ -1,8 +1,10 @@
 import {
   EventHighScoreEntryWithDetails,
+  HighScoreEntryMemberDetail,
   PointEntryWithTeam,
   closeHighScoreSession as dbCloseHighScoreSession,
   createEventHighScoreEntry as dbCreateEventHighScoreEntry,
+  createEventHighScoreEntryMembers as dbCreateEventHighScoreEntryMembers,
   createEventPointEntries as dbCreateEventPointEntries,
   createEventPointEntryParticipants as dbCreateEventPointEntryParticipants,
   createHighScoreSession as dbCreateHighScoreSession,
@@ -36,7 +38,11 @@ import {
   ParticipantType,
   ScoreOrder,
 } from "@/lib/shared/constants";
-import { parseGameConfig } from "@/lib/shared/game-config-parser";
+import {
+  getHighScoreGroupSize,
+  isHighScorePartnership,
+  parseGameConfig,
+} from "@/lib/shared/game-config-parser";
 import { HighScoreConfig } from "@/lib/shared/game-templates";
 import { EventAction, canPerformEventAction } from "@/lib/shared/permissions";
 import {
@@ -45,6 +51,7 @@ import {
   deleteHighScoreSessionSchema,
   openHighScoreSessionSchema,
   reopenHighScoreSessionSchema,
+  submitEventHighScorePairSchema,
   submitEventHighScoreSchema,
   updateHighScoreSessionSchema,
 } from "@/validators/events";
@@ -112,6 +119,70 @@ export async function submitEventHighScore(
   userId: string,
   input: unknown,
 ): Promise<ServiceResult<EventHighScoreEntry>> {
+  const session_check = await _parseSessionForSubmit(userId, input);
+  if ("error" in session_check) return { error: session_check.error };
+  const { session, config, participation } = session_check;
+
+  if (isHighScorePartnership(config)) {
+    return _submitHighScorePair(userId, input, session, config, participation);
+  }
+  return _submitHighScoreIndividual(
+    userId,
+    input,
+    session,
+    config,
+    participation,
+  );
+}
+
+async function _parseSessionForSubmit(
+  userId: string,
+  input: unknown,
+): Promise<
+  | {
+      session: Awaited<ReturnType<typeof dbGetHighScoreSessionById>> & object;
+      config: HighScoreConfig;
+      participation: Awaited<ReturnType<typeof dbGetEventParticipant>> & object;
+    }
+  | { error: string }
+> {
+  // Extract sessionId loosely — full validation happens in sub-functions
+  const rawInput = input as Record<string, unknown>;
+  const sessionId =
+    typeof rawInput?.sessionId === "string" ? rawInput.sessionId : null;
+  if (!sessionId) {
+    return { error: "Session ID is required" };
+  }
+
+  const session = await dbGetHighScoreSessionById(sessionId);
+  if (!session) return { error: "Session not found" };
+  if (session.status !== HighScoreSessionStatus.OPEN)
+    return { error: "Session is not open for submissions" };
+
+  const participation = await dbGetEventParticipant(session.eventId, userId);
+  if (!participation)
+    return { error: "You are not a participant in this event" };
+  if (!canPerformEventAction(participation.role, EventAction.SUBMIT_SCORES))
+    return { error: "You don't have permission to submit scores" };
+
+  const gameType = await dbGetEventGameTypeById(session.eventGameTypeId);
+  if (!gameType) return { error: "Game type not found" };
+
+  const config = parseGameConfig(
+    gameType.config,
+    gameType.category as GameCategory,
+  ) as HighScoreConfig;
+
+  return { session, config, participation };
+}
+
+async function _submitHighScoreIndividual(
+  userId: string,
+  input: unknown,
+  session: NonNullable<Awaited<ReturnType<typeof dbGetHighScoreSessionById>>>,
+  config: HighScoreConfig,
+  participation: NonNullable<Awaited<ReturnType<typeof dbGetEventParticipant>>>,
+): Promise<ServiceResult<EventHighScoreEntry>> {
   const parsed = submitEventHighScoreSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -129,35 +200,6 @@ export async function submitEventHighScore(
     achievedAt,
   } = parsed.data;
 
-  const session = await dbGetHighScoreSessionById(sessionId);
-  if (!session) {
-    return { error: "Session not found" };
-  }
-
-  if (session.status !== HighScoreSessionStatus.OPEN) {
-    return { error: "Session is not open for submissions" };
-  }
-
-  const participation = await dbGetEventParticipant(session.eventId, userId);
-  if (!participation) {
-    return { error: "You are not a participant in this event" };
-  }
-
-  if (!canPerformEventAction(participation.role, EventAction.SUBMIT_SCORES)) {
-    return { error: "You don't have permission to submit scores" };
-  }
-
-  // Check game type's participantType
-  const gameType = await dbGetEventGameTypeById(session.eventGameTypeId);
-  if (!gameType) {
-    return { error: "Game type not found" };
-  }
-
-  const config = parseGameConfig(
-    gameType.config,
-    gameType.category as GameCategory,
-  ) as HighScoreConfig;
-
   const isTeamHighScore = config.participantType === ParticipantType.TEAM;
 
   if (isTeamHighScore && !eventTeamId) {
@@ -167,7 +209,6 @@ export async function submitEventHighScore(
     return { error: "Team ID is not allowed for individual high score games" };
   }
 
-  // Participants can only submit scores for themselves (individual) or need organizer role (team)
   if (
     !canPerformEventAction(
       participation.role,
@@ -185,7 +226,6 @@ export async function submitEventHighScore(
     }
   }
 
-  // For individual participants, verify they're on a team
   if (!isTeamHighScore) {
     let team;
     if (targetUserId) {
@@ -196,7 +236,6 @@ export async function submitEventHighScore(
         eventPlaceholderParticipantId,
       );
     }
-
     if (!team) {
       return { error: "Participant is not on a team" };
     }
@@ -214,6 +253,108 @@ export async function submitEventHighScore(
     score,
     recorderId: userId,
     achievedAt,
+  });
+
+  return { data: entry };
+}
+
+async function _submitHighScorePair(
+  userId: string,
+  input: unknown,
+  session: NonNullable<Awaited<ReturnType<typeof dbGetHighScoreSessionById>>>,
+  config: HighScoreConfig,
+  participation: NonNullable<Awaited<ReturnType<typeof dbGetEventParticipant>>>,
+): Promise<ServiceResult<EventHighScoreEntry>> {
+  const parsed = submitEventHighScorePairSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { sessionId, members, score, achievedAt } = parsed.data;
+  const groupSize = getHighScoreGroupSize(config);
+
+  if (members.length !== groupSize) {
+    return {
+      error: `This game type requires exactly ${groupSize} members per entry`,
+    };
+  }
+
+  // Check for duplicate members
+  const memberKeys = members.map(
+    (m) => m.userId ?? m.eventPlaceholderParticipantId,
+  );
+  if (new Set(memberKeys).size !== memberKeys.length) {
+    return { error: "Duplicate members are not allowed in a group entry" };
+  }
+
+  // Verify all members are on the same team
+  const teamIds: string[] = [];
+  for (const member of members) {
+    let team;
+    if (member.userId) {
+      team = await dbGetTeamForUser(session.eventId, member.userId);
+    } else if (member.eventPlaceholderParticipantId) {
+      team = await dbGetTeamForPlaceholder(
+        session.eventId,
+        member.eventPlaceholderParticipantId,
+      );
+    }
+    if (!team) {
+      return { error: "All members must be on a team to submit a group entry" };
+    }
+    teamIds.push(team.id);
+  }
+
+  if (new Set(teamIds).size > 1) {
+    return { error: "All members must be on the same team" };
+  }
+
+  const teamId = teamIds[0];
+
+  // Permission check: participants can only submit if they are one of the members
+  if (
+    !canPerformEventAction(
+      participation.role,
+      EventAction.RECORD_MATCHES_FOR_OTHERS,
+    )
+  ) {
+    const isInvolved = members.some((m) => m.userId === userId);
+    if (!isInvolved) {
+      return {
+        error: "You can only submit group entries that include yourself",
+      };
+    }
+  }
+
+  const entry = await withTransaction(async (tx) => {
+    const created = await dbCreateEventHighScoreEntry(
+      {
+        sessionId,
+        eventId: session.eventId,
+        eventGameTypeId: session.eventGameTypeId,
+        userId: null,
+        eventPlaceholderParticipantId: null,
+        eventTeamId: teamId,
+        score,
+        recorderId: userId,
+        achievedAt,
+      },
+      tx,
+    );
+
+    await dbCreateEventHighScoreEntryMembers(
+      members.map((m) => ({
+        eventHighScoreEntryId: created.id,
+        userId: m.userId ?? null,
+        eventPlaceholderParticipantId: m.eventPlaceholderParticipantId ?? null,
+      })),
+      tx,
+    );
+
+    return created;
   });
 
   return { data: entry };
@@ -279,7 +420,7 @@ export async function closeHighScoreSession(
       return a.score - b.score;
     });
 
-    // Build a map of teamId -> { best placement, individual who achieved it }
+    // Build a map of teamId -> { best placement, individual(s) who achieved it }
     // Each entry's submitter belongs to a team; if same team has multiple entries,
     // only their best placement counts.
     const teamBestPlacement = new Map<
@@ -288,6 +429,7 @@ export async function closeHighScoreSession(
         placement: number;
         userId: string | null;
         eventPlaceholderParticipantId: string | null;
+        pairMembers?: HighScoreEntryMemberDetail[];
       }
     >();
 
@@ -297,7 +439,7 @@ export async function closeHighScoreSession(
 
       let teamId: string | undefined;
 
-      // For team-based high scores, eventTeamId is set directly on the entry
+      // For team-based high scores and pair entries, eventTeamId is set directly on the entry
       if (entry.eventTeamId) {
         teamId = entry.eventTeamId;
       } else if (entry.userId) {
@@ -318,6 +460,7 @@ export async function closeHighScoreSession(
             placement,
             userId: entry.userId,
             eventPlaceholderParticipantId: entry.eventPlaceholderParticipantId,
+            pairMembers: entry.members,
           });
         }
       }
@@ -345,6 +488,7 @@ export async function closeHighScoreSession(
         participantInfo: {
           userId: string | null;
           eventPlaceholderParticipantId: string | null;
+          pairMembers?: HighScoreEntryMemberDetail[];
         };
       }> = [];
 
@@ -365,6 +509,7 @@ export async function closeHighScoreSession(
             participantInfo: {
               userId: best.userId,
               eventPlaceholderParticipantId: best.eventPlaceholderParticipantId,
+              pairMembers: best.pairMembers,
             },
           });
         }
@@ -378,8 +523,16 @@ export async function closeHighScoreSession(
 
         const participantRows = created.flatMap((entry, i) => {
           const info = entriesWithInfo[i].participantInfo;
-          if (!info || (!info.userId && !info.eventPlaceholderParticipantId))
-            return [];
+          // For pair entries, create a participant row for each member
+          if (info.pairMembers && info.pairMembers.length > 0) {
+            return info.pairMembers.map((member) => ({
+              eventPointEntryId: entry.id,
+              userId: member.user?.id ?? null,
+              eventPlaceholderParticipantId:
+                member.placeholderParticipant?.id ?? null,
+            }));
+          }
+          if (!info.userId && !info.eventPlaceholderParticipantId) return [];
           return [
             {
               eventPointEntryId: entry.id,
@@ -414,6 +567,7 @@ export async function getOpenSessions(
 export type SessionEntryWithTeam = EventHighScoreEntryWithDetails & {
   teamName: string | null;
   teamColor: string | null;
+  members?: HighScoreEntryMemberDetail[];
 };
 
 export async function getSessionEntries(
@@ -450,6 +604,7 @@ export async function getSessionEntries(
     let teamName: string | null = null;
     let teamColor: string | null = null;
     if (entry.team) {
+      // Team-based or pair entries have eventTeamId set directly
       teamName = entry.team.name;
       teamColor = entry.team.color;
     } else if (entry.userId) {
@@ -463,7 +618,7 @@ export async function getSessionEntries(
       teamName = info?.name ?? null;
       teamColor = info?.color ?? null;
     }
-    return { ...entry, teamName, teamColor };
+    return { ...entry, teamName, teamColor, members: entry.members };
   });
 
   return { data: entriesWithTeam };

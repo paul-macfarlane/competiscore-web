@@ -164,6 +164,8 @@ Asynchronous competition where players submit scores over time against an eterna
 - Individual or Team: Who can submit scores
 - Rules: Optional markdown-formatted rules text
 
+**Group/Pair Support (Events only):** Individual High Score game types in events can set a `groupSize` (Players per Entry) greater than 1. When groupSize > 1, scores must be submitted as a group (e.g., a relay race team of 2). All members must be on the same event team. The group appears as a single unit on the leaderboard (e.g., "Paul & Medha"). _Future: Group/pair support for league high score game types._
+
 **Leaderboard Display:** Shows all individual score submissions (arcade-style), not just best scores per participant. If a player has multiple top scores, they can occupy multiple positions on the leaderboard (e.g., ranks 1, 3, and 7). This creates the classic arcade game high score experience where dedication is rewarded with board dominance.
 
 **Score Flexibility:** Scores support both decimal values (e.g., 98.5 for Bowling) and negative values (e.g., -5 for golf relative to par) to accommodate diverse game types.
@@ -461,6 +463,8 @@ High scores in events work through a session-based flow:
 2. **Participants submit their own scores** to the open session. Organizers can submit scores on behalf of any participant.
 3. **Organizer closes the session** — scores are ranked and placement points (if configured) are awarded to the submitters' teams
 
+**Group/Pair Entries:** When the game type has `groupSize > 1`, scores must be submitted as a group. All members must be on the same team. Group entries display as "Name1 & Name2" on the session view and leaderboard. When placement points are awarded, each member of the group receives individual attribution in the point entry.
+
 **Deletion:** Individual high score entries can be deleted. Participants can only delete their own entries; organizers can delete any entry.
 
 _Future: High score entry editing (modify scores after submission)._
@@ -478,7 +482,7 @@ Team-based scoring only (for now):
 - Point entries store individual participant info (userId or placeholder participant) where applicable, enabling individual attribution in analytics:
   - **H2H matches:** Individual stored when exactly one participant per team on a side; null for multi-participant teams
   - **FFA matches:** Individual stored per participant (entries are per-participant)
-  - **High scores:** Individual who achieved the best placement for their team is stored
+  - **High scores:** Individual who achieved the best placement for their team is stored; for group entries, all members are stored
   - **Tournaments:** Individual tournament participant is stored
   - **Discretionary:** Team-level only (recipients schema only has team IDs)
 
@@ -823,6 +827,7 @@ When `/dashboard` returns, it should show cross-league personal data:
 16. ~~Discretionary points — organizers can award ad-hoc bonus/penalty points to teams~~
 17. ~~Event metrics dashboard — standings bar chart, points over time (clickable), team share pie chart, top contributors/category breakdown pie chart, scoring history log with detail links~~
 18. ~~Individual participant tracking on point entries for analytics attribution~~
+19. ~~Group/pair score submissions for event high score game types (`groupSize` > 1) — paired leaderboard display ("Name1 & Name2"), same-team enforcement, per-member point attribution~~
 
 ### Post-MVP Features
 
@@ -849,6 +854,7 @@ When `/dashboard` returns, it should show cross-league personal data:
 - Public events (discoverable and open to join)
 - Individual scoring mode for events (no teams required)
 - Event templates for common formats
+- Group/pair score submissions for league high score game types (currently events-only)
 
 ---
 

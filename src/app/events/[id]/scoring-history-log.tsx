@@ -26,6 +26,9 @@ function getEntryHref(entry: EnrichedPointEntry): string | null {
   if (entry.eventMatchId) {
     return `/events/${entry.eventId}/matches/${entry.eventMatchId}`;
   }
+  if (entry.eventHighScoreSessionId && entry.eventHighScoreGameTypeId) {
+    return `/events/${entry.eventId}/high-scores/leaderboard/${entry.eventHighScoreGameTypeId}`;
+  }
   if (entry.eventTournamentId) {
     return `/events/${entry.eventId}/tournaments/${entry.eventTournamentId}`;
   }

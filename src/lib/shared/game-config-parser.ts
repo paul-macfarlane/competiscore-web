@@ -88,6 +88,7 @@ export function parseHighScoreConfig(configString: string): HighScoreConfig {
       scoreOrder: "highest_wins" as const,
       scoreDescription: "Points",
       participantType: "individual" as const,
+      groupSize: 1,
     };
   } catch (error) {
     console.error("Failed to JSON.parse HighScore config:", error);
@@ -95,8 +96,20 @@ export function parseHighScoreConfig(configString: string): HighScoreConfig {
       scoreOrder: "highest_wins" as const,
       scoreDescription: "Points",
       participantType: "individual" as const,
+      groupSize: 1,
     };
   }
+}
+
+export function isHighScorePartnership(config: HighScoreConfig): boolean {
+  return (
+    config.participantType === ParticipantType.INDIVIDUAL &&
+    (config.groupSize ?? 1) > 1
+  );
+}
+
+export function getHighScoreGroupSize(config: HighScoreConfig): number {
+  return config.groupSize ?? 1;
 }
 
 export function isPartnershipGameType(config: H2HConfig): boolean {

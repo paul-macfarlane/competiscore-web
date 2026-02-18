@@ -7,6 +7,7 @@ import {
   EventDiscretionaryAward,
   EventGameType,
   EventHighScoreEntry,
+  EventHighScoreEntryMember,
   EventHighScoreSession,
   EventMatch,
   EventMatchParticipant,
@@ -19,6 +20,7 @@ import {
   NewEventDiscretionaryAward,
   NewEventGameType,
   NewEventHighScoreEntry,
+  NewEventHighScoreEntryMember,
   NewEventHighScoreSession,
   NewEventMatch,
   NewEventMatchParticipant,
@@ -35,6 +37,8 @@ import {
   eventGameType,
   eventHighScoreEntry,
   eventHighScoreEntryColumns,
+  eventHighScoreEntryMember,
+  eventHighScoreEntryMemberColumns,
   eventHighScoreSession,
   eventMatch,
   eventMatchColumns,
@@ -115,6 +119,17 @@ export type EventMatchWithParticipantsAndPoints = EventMatchWithParticipants & {
   pointEntries: EventPointEntry[];
 };
 
+export type HighScoreEntryMemberDetail = Pick<
+  EventHighScoreEntryMember,
+  "id"
+> & {
+  user: Pick<User, "id" | "name" | "username" | "image"> | null;
+  placeholderParticipant: Pick<
+    EventPlaceholderParticipant,
+    "id" | "displayName"
+  > | null;
+};
+
 export type EventHighScoreEntryWithDetails = EventHighScoreEntry & {
   user: Pick<User, "id" | "name" | "username" | "image"> | null;
   placeholderParticipant: Pick<
@@ -122,6 +137,7 @@ export type EventHighScoreEntryWithDetails = EventHighScoreEntry & {
     "id" | "displayName"
   > | null;
   team: Pick<EventTeam, "id" | "name" | "logo" | "color"> | null;
+  members?: HighScoreEntryMemberDetail[];
 };
 
 export type EventLeaderboardEntry = {
@@ -134,6 +150,7 @@ export type EventLeaderboardEntry = {
 };
 
 export type EventIndividualHighScoreEntry = {
+  entryId?: string;
   rank: number;
   user: Pick<User, "id" | "name" | "username" | "image"> | null;
   placeholderParticipant: Pick<
@@ -143,6 +160,7 @@ export type EventIndividualHighScoreEntry = {
   teamName: string | null;
   teamColor: string | null;
   bestScore: number;
+  members?: HighScoreEntryMemberDetail[];
 };
 
 export type EventActivityItem = {
@@ -1334,7 +1352,77 @@ export async function getSessionHighScoreEntries(
     .where(eq(eventHighScoreEntry.sessionId, sessionId))
     .orderBy(desc(eventHighScoreEntry.score));
 
-  return result;
+  // Fetch members for pair entries (entries with no userId or placeholderParticipantId)
+  const pairEntryIds = result
+    .filter((e) => !e.userId && !e.eventPlaceholderParticipantId)
+    .map((e) => e.id);
+
+  if (pairEntryIds.length === 0) return result;
+
+  const membersByEntryId = await getHighScoreEntryMembersByEntryIds(
+    pairEntryIds,
+    dbOrTx,
+  );
+
+  return result.map((entry) => ({
+    ...entry,
+    members: membersByEntryId.get(entry.id),
+  }));
+}
+
+export async function createEventHighScoreEntryMembers(
+  members: Omit<NewEventHighScoreEntryMember, "id" | "createdAt">[],
+  dbOrTx: DBOrTx = db,
+): Promise<EventHighScoreEntryMember[]> {
+  if (members.length === 0) return [];
+  return dbOrTx.insert(eventHighScoreEntryMember).values(members).returning();
+}
+
+export async function getHighScoreEntryMembersByEntryIds(
+  entryIds: string[],
+  dbOrTx: DBOrTx = db,
+): Promise<Map<string, HighScoreEntryMemberDetail[]>> {
+  if (entryIds.length === 0) return new Map();
+
+  const alias1 = user;
+  const rows = await dbOrTx
+    .select({
+      ...eventHighScoreEntryMemberColumns,
+      memberUser: {
+        id: alias1.id,
+        name: alias1.name,
+        username: alias1.username,
+        image: alias1.image,
+      },
+      memberPlaceholder: {
+        id: eventPlaceholderParticipant.id,
+        displayName: eventPlaceholderParticipant.displayName,
+      },
+    })
+    .from(eventHighScoreEntryMember)
+    .leftJoin(alias1, eq(eventHighScoreEntryMember.userId, alias1.id))
+    .leftJoin(
+      eventPlaceholderParticipant,
+      eq(
+        eventHighScoreEntryMember.eventPlaceholderParticipantId,
+        eventPlaceholderParticipant.id,
+      ),
+    )
+    .where(inArray(eventHighScoreEntryMember.eventHighScoreEntryId, entryIds));
+
+  const map = new Map<string, HighScoreEntryMemberDetail[]>();
+  for (const row of rows) {
+    const members = map.get(row.eventHighScoreEntryId) ?? [];
+    members.push({
+      id: row.id,
+      user: row.memberUser?.id ? row.memberUser : null,
+      placeholderParticipant: row.memberPlaceholder?.id
+        ? row.memberPlaceholder
+        : null,
+    });
+    map.set(row.eventHighScoreEntryId, members);
+  }
+  return map;
 }
 
 // ============================================================
@@ -1536,10 +1624,25 @@ export async function getEventHighScoreIndividualLeaderboard(
     limit: number;
     offset: number;
     scoreOrder?: "highest_wins" | "lowest_wins";
+    isPair?: boolean;
   },
   dbOrTx: DBOrTx = db,
 ): Promise<{ entries: EventIndividualHighScoreEntry[]; total: number }> {
-  const { limit, offset, scoreOrder = "highest_wins" } = options;
+  const {
+    limit,
+    offset,
+    scoreOrder = "highest_wins",
+    isPair = false,
+  } = options;
+
+  if (isPair) {
+    return _getPairHighScoreLeaderboard(
+      eventId,
+      gameTypeId,
+      { limit, offset, scoreOrder },
+      dbOrTx,
+    );
+  }
 
   const orderFn =
     scoreOrder === "lowest_wins"
@@ -1649,6 +1752,76 @@ export async function getEventHighScoreIndividualLeaderboard(
       teamName: row.teamName ?? null,
       teamColor: row.teamColor ?? null,
       bestScore: Number(row.bestScore),
+    }),
+  );
+
+  return { entries, total };
+}
+
+async function _getPairHighScoreLeaderboard(
+  eventId: string,
+  gameTypeId: string,
+  options: {
+    limit: number;
+    offset: number;
+    scoreOrder: "highest_wins" | "lowest_wins";
+  },
+  dbOrTx: DBOrTx,
+): Promise<{ entries: EventIndividualHighScoreEntry[]; total: number }> {
+  const { limit, offset, scoreOrder } = options;
+
+  // Pair entries have no userId or eventPlaceholderParticipantId set
+  const baseConditions = and(
+    eq(eventHighScoreEntry.eventGameTypeId, gameTypeId),
+    sql`${eventHighScoreEntry.eventId} = ${eventId}`,
+    isNull(eventHighScoreEntry.userId),
+    isNull(eventHighScoreEntry.eventPlaceholderParticipantId),
+  );
+
+  const countResult = await dbOrTx
+    .select({ total: sql<number>`count(*)` })
+    .from(eventHighScoreEntry)
+    .where(baseConditions);
+
+  const total = Number(countResult[0]?.total ?? 0);
+  if (total === 0) return { entries: [], total: 0 };
+
+  const orderDirection =
+    scoreOrder === "lowest_wins"
+      ? sql`${eventHighScoreEntry.score} ASC`
+      : sql`${eventHighScoreEntry.score} DESC`;
+
+  const results = await dbOrTx
+    .select({
+      entryId: eventHighScoreEntry.id,
+      score: eventHighScoreEntry.score,
+      teamName: eventTeam.name,
+      teamColor: eventTeam.color,
+    })
+    .from(eventHighScoreEntry)
+    .leftJoin(eventTeam, eq(eventHighScoreEntry.eventTeamId, eventTeam.id))
+    .where(baseConditions)
+    .orderBy(orderDirection)
+    .limit(limit)
+    .offset(offset);
+
+  // Batch-fetch members for all pair entries
+  const entryIds = results.map((r) => r.entryId);
+  const membersByEntryId = await getHighScoreEntryMembersByEntryIds(
+    entryIds,
+    dbOrTx,
+  );
+
+  const entries: EventIndividualHighScoreEntry[] = results.map(
+    (row, index) => ({
+      entryId: row.entryId,
+      rank: offset + index + 1,
+      user: null,
+      placeholderParticipant: null,
+      teamName: row.teamName ?? null,
+      teamColor: row.teamColor ?? null,
+      bestScore: Number(row.score),
+      members: membersByEntryId.get(row.entryId) ?? [],
     }),
   );
 
@@ -1862,6 +2035,7 @@ export type EnrichedPointEntry = {
   teamColor: string | null;
   eventMatchId: string | null;
   eventHighScoreSessionId: string | null;
+  eventHighScoreGameTypeId: string | null;
   eventTournamentId: string | null;
   eventDiscretionaryAwardId: string | null;
   participants: Array<{
@@ -1899,11 +2073,16 @@ export async function getEnrichedEventPointEntries(
       teamColor: eventTeam.color,
       eventMatchId: eventPointEntry.eventMatchId,
       eventHighScoreSessionId: eventPointEntry.eventHighScoreSessionId,
+      eventHighScoreGameTypeId: eventHighScoreSession.eventGameTypeId,
       eventTournamentId: eventPointEntry.eventTournamentId,
       eventDiscretionaryAwardId: eventPointEntry.eventDiscretionaryAwardId,
     })
     .from(eventPointEntry)
     .leftJoin(eventTeam, eq(eventPointEntry.eventTeamId, eventTeam.id))
+    .leftJoin(
+      eventHighScoreSession,
+      eq(eventPointEntry.eventHighScoreSessionId, eventHighScoreSession.id),
+    )
     .where(eq(eventPointEntry.eventId, eventId))
     .orderBy(eventPointEntry.createdAt);
 

@@ -352,22 +352,39 @@ function OpenSessionCard({
             </h4>
             {displayEntries.map((entry) => {
               const canDelete = isOrganizer || entry.userId === userId;
+              const isPairEntry = entry.members && entry.members.length > 0;
+              const pairLabel = isPairEntry
+                ? entry
+                    .members!.map(
+                      (m) =>
+                        m.user?.name ??
+                        m.placeholderParticipant?.displayName ??
+                        "?",
+                    )
+                    .join(" & ")
+                : null;
               return (
                 <div
                   key={entry.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <ParticipantDisplay
-                      participant={
-                        {
-                          user: entry.user,
-                          placeholderMember: entry.placeholderParticipant,
-                        } as ParticipantData
-                      }
-                      showAvatar
-                      size="sm"
-                    />
+                    {isPairEntry ? (
+                      <span className="text-sm font-medium truncate">
+                        {pairLabel}
+                      </span>
+                    ) : (
+                      <ParticipantDisplay
+                        participant={
+                          {
+                            user: entry.user,
+                            placeholderMember: entry.placeholderParticipant,
+                          } as ParticipantData
+                        }
+                        showAvatar
+                        size="sm"
+                      />
+                    )}
                     {entry.teamName &&
                       (entry.teamColor ? (
                         <TeamColorBadge
@@ -528,18 +545,32 @@ function ClosedSessionCard({
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
                       {index + 1}
                     </div>
-                    {!isTeamParticipant && bestEntry && (
-                      <ParticipantDisplay
-                        participant={
-                          {
-                            user: bestEntry.user,
-                            placeholderMember: bestEntry.placeholderParticipant,
-                          } as ParticipantData
-                        }
-                        showAvatar
-                        size="sm"
-                      />
-                    )}
+                    {!isTeamParticipant &&
+                      bestEntry &&
+                      (bestEntry.members && bestEntry.members.length > 0 ? (
+                        <span className="text-sm font-medium truncate">
+                          {bestEntry.members
+                            .map(
+                              (m) =>
+                                m.user?.name ??
+                                m.placeholderParticipant?.displayName ??
+                                "?",
+                            )
+                            .join(" & ")}
+                        </span>
+                      ) : (
+                        <ParticipantDisplay
+                          participant={
+                            {
+                              user: bestEntry.user,
+                              placeholderMember:
+                                bestEntry.placeholderParticipant,
+                            } as ParticipantData
+                          }
+                          showAvatar
+                          size="sm"
+                        />
+                      ))}
                     {pe.teamColor ? (
                       <TeamColorBadge
                         name={pe.teamName ?? "Unknown Team"}

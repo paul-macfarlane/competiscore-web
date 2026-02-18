@@ -908,7 +908,9 @@ export function CreateEventGameTypeForm({
                   <FormLabel>Participant Type</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                      }}
                       value={field.value}
                       className="grid gap-2"
                     >
@@ -936,6 +938,40 @@ export function CreateEventGameTypeForm({
                 </FormItem>
               )}
             />
+
+            {form.watch("config.participantType") ===
+              ParticipantType.INDIVIDUAL && (
+              <FormField
+                control={form.control}
+                name="config.groupSize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Players per Entry</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        step={1}
+                        placeholder="1"
+                        value={(field.value as number | undefined) ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          field.onChange(
+                            val === "" ? undefined : parseInt(val, 10),
+                          );
+                        }}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Set to 1 for individual scores, or higher for pairs /
+                      groups (e.g., 2 for a relay race pair).
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
