@@ -42,6 +42,7 @@ import {
   addEventTournamentPartnership,
   createEventTournament,
   deleteEventTournament,
+  deleteSwissCurrentRound,
   forfeitEventTournamentMatch,
   generateEventBracket,
   generateNextEventSwissRound,
@@ -2389,6 +2390,165 @@ describe("updateSwissRoundPairings", () => {
           isBye: false,
         },
       ],
+    });
+    expect(result.data?.eventTournamentId).toBe(TEST_IDS.EVENT_TOURNAMENT_ID);
+    expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+});
+
+describe("deleteSwissCurrentRound", () => {
+  const P1_ID = "b53e4567-e89b-12d3-a456-426614174000";
+  const P2_ID = "b53e4567-e89b-12d3-a456-426614174001";
+  const MATCH1_ID = "c53e4567-e89b-12d3-a456-426614174000";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns validation error for invalid input", async () => {
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {});
+    expect(result.error).toBe("Validation failed");
+  });
+
+  it("returns error for non-swiss tournament", async () => {
+    mockTournament({
+      status: "in_progress",
+      tournamentType: "single_elimination",
+    });
+    mockOrganizerMember();
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("This action is only for Swiss tournaments");
+  });
+
+  it("returns error for non-in-progress tournament", async () => {
+    mockTournament({ status: "draft", tournamentType: "swiss" });
+    mockOrganizerMember();
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Tournament is not in progress");
+  });
+
+  it("returns error for non-organizer", async () => {
+    mockTournament({ status: "in_progress", tournamentType: "swiss" });
+    mockParticipantMember();
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe(
+      "You do not have permission to manage tournaments",
+    );
+  });
+
+  it("returns error when trying to delete round 1", async () => {
+    mockTournament({ status: "in_progress", tournamentType: "swiss" });
+    mockOrganizerMember();
+    vi.mocked(dbGetBracket).mockResolvedValue([
+      {
+        id: MATCH1_ID,
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as ReturnType<typeof dbGetBracket> extends Promise<infer T> ? T : never);
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Cannot delete the first round");
+  });
+
+  it("returns error when matches have been recorded", async () => {
+    mockTournament({ status: "in_progress", tournamentType: "swiss" });
+    mockOrganizerMember();
+    vi.mocked(dbGetBracket).mockResolvedValue([
+      {
+        id: MATCH1_ID,
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 2,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: P1_ID,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as ReturnType<typeof dbGetBracket> extends Promise<infer T> ? T : never);
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Cannot delete round with recorded matches");
+  });
+
+  it("successfully deletes the current round", async () => {
+    mockTournament({ status: "in_progress", tournamentType: "swiss" });
+    mockOrganizerMember();
+    vi.mocked(dbGetBracket).mockResolvedValue([
+      {
+        id: "c53e4567-e89b-12d3-a456-426614174010",
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: P1_ID,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: MATCH1_ID,
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 2,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as ReturnType<typeof dbGetBracket> extends Promise<infer T> ? T : never);
+    vi.mocked(dbDeleteRoundMatchesByRound).mockResolvedValue(undefined);
+
+    const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
     });
     expect(result.data?.eventTournamentId).toBe(TEST_IDS.EVENT_TOURNAMENT_ID);
     expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);

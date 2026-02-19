@@ -56,10 +56,11 @@ List of miscellaneous TODOs for the project.
 
 ## In progress
 
-- Should do a general testing of RBAC for events to make sure they match my expectations.
-  - Right now normal participants/members of events can only view information about individual matches and matches in tournaments, but cannot record them. They should be able to record matches where they are involved. They should also be able to edit/delete matches and tournament matches where they are involved, but that is it. They can't record things when they are not involved.
+-
 
 ## Needs testing
+
+-
 
 ## Completed
 

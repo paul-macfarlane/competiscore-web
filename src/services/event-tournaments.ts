@@ -2512,3 +2512,75 @@ export async function generateNextEventSwissRound(
     };
   });
 }
+
+export async function deleteSwissCurrentRound(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  const parsed = eventTournamentIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { eventTournamentId } = parsed.data;
+
+  const tournamentData = await dbGetTournamentById(eventTournamentId);
+  if (!tournamentData) {
+    return { error: "Tournament not found" };
+  }
+
+  if (tournamentData.tournamentType !== TournamentType.SWISS) {
+    return { error: "This action is only for Swiss tournaments" };
+  }
+
+  if (tournamentData.status !== TournamentStatus.IN_PROGRESS) {
+    return { error: "Tournament is not in progress" };
+  }
+
+  const participation = await getEventParticipant(
+    tournamentData.eventId,
+    userId,
+  );
+  if (!participation) {
+    return { error: "You are not a participant in this event" };
+  }
+
+  if (
+    !canPerformEventAction(participation.role, EventAction.CREATE_TOURNAMENTS)
+  ) {
+    return { error: "You do not have permission to manage tournaments" };
+  }
+
+  const bracket = await dbGetBracket(eventTournamentId);
+  if (bracket.length === 0) {
+    return { error: "No rounds exist yet" };
+  }
+
+  const currentRound = Math.max(...bracket.map((m) => m.round));
+  if (currentRound <= 1) {
+    return { error: "Cannot delete the first round" };
+  }
+
+  const roundMatches = bracket.filter((m) => m.round === currentRound);
+  const hasRecordedMatches = roundMatches.some(
+    (m) =>
+      !m.isBye && (m.winnerId !== null || m.isDraw || m.eventMatchId !== null),
+  );
+  if (hasRecordedMatches) {
+    return {
+      error: "Cannot delete round with recorded matches",
+    };
+  }
+
+  await dbDeleteRoundMatchesByRound(eventTournamentId, currentRound);
+
+  return {
+    data: {
+      eventTournamentId,
+      eventId: tournamentData.eventId,
+    },
+  };
+}

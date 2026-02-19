@@ -62,6 +62,7 @@ import {
   addEventTournamentPartnership,
   createEventTournament,
   deleteEventTournament,
+  deleteSwissCurrentRound,
   forfeitEventTournamentMatch,
   generateEventBracket,
   generateNextEventSwissRound,
@@ -751,6 +752,19 @@ export async function generateNextEventSwissRoundAction(
   if (!userId) return { error: "Unauthorized" };
 
   const result = await generateNextEventSwissRound(userId, input);
+  if (result.data) {
+    revalidatePath(`/events/${result.data.eventId}`);
+  }
+  return result;
+}
+
+export async function deleteSwissCurrentRoundAction(
+  input: unknown,
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  const userId = await getSessionUserId();
+  if (!userId) return { error: "Unauthorized" };
+
+  const result = await deleteSwissCurrentRound(userId, input);
   if (result.data) {
     revalidatePath(`/events/${result.data.eventId}`);
   }
