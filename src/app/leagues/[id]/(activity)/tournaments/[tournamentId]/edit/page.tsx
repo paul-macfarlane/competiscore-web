@@ -70,6 +70,11 @@ export default async function EditTournamentPage({ params }: PageProps) {
           name={tournament.name}
           description={tournament.description}
           logo={tournament.logo}
+          status={tournament.status}
+          tournamentType={tournament.tournamentType}
+          seedingType={tournament.seedingType}
+          totalRounds={tournament.totalRounds ?? null}
+          placementPointConfig={tournament.placementPointConfig ?? null}
         />
       </div>
     </div>

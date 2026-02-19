@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import { SimpleIconSelector } from "@/components/icon-selector";
@@ -21,12 +22,17 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  SEEDING_TYPE_LABELS,
+  SeedingType,
   TOURNAMENT_ICON_OPTIONS,
+  TOURNAMENT_TYPE_LABELS,
   TournamentStatus,
   TournamentType,
 } from "@/lib/shared/constants";
 import {
   MAX_BEST_OF,
+  MAX_SWISS_ROUNDS,
+  MIN_SWISS_ROUNDS,
   TOURNAMENT_DESCRIPTION_MAX_LENGTH,
   TOURNAMENT_NAME_MAX_LENGTH,
 } from "@/services/constants";
@@ -36,7 +42,7 @@ import { Plus, Trash2, Trophy } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -46,8 +52,12 @@ const editFormSchema = updateEventTournamentSchema.pick({
   name: true,
   description: true,
   logo: true,
+  tournamentType: true,
+  seedingType: true,
+  swissRounds: true,
   bestOf: true,
   roundBestOf: true,
+  placementPointConfig: true,
 });
 
 type EditFormValues = z.input<typeof editFormSchema>;
@@ -60,8 +70,11 @@ type EditEventTournamentFormProps = {
   logo: string | null;
   status: string;
   tournamentType: string;
+  seedingType: string;
+  totalRounds: number | null;
   bestOf: number;
   roundBestOf: string | null;
+  placementPointConfig: string | null;
 };
 
 export function EditEventTournamentForm({
@@ -72,8 +85,11 @@ export function EditEventTournamentForm({
   logo,
   status,
   tournamentType,
+  seedingType,
+  totalRounds,
   bestOf,
   roundBestOf,
+  placementPointConfig,
 }: EditEventTournamentFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -95,6 +111,18 @@ export function EditEventTournamentForm({
       }))
     : [];
 
+  const parsedPlacementPoints = (() => {
+    if (!placementPointConfig) return [];
+    try {
+      return JSON.parse(placementPointConfig) as Array<{
+        placement: number;
+        points: number;
+      }>;
+    } catch {
+      return [];
+    }
+  })();
+
   const [showPerRound, setShowPerRound] = useState(initialOverrides.length > 0);
   const [roundOverrides, setRoundOverrides] =
     useState<{ round: string; bestOf: string }[]>(initialOverrides);
@@ -105,11 +133,23 @@ export function EditEventTournamentForm({
       name,
       description: description || "",
       logo: logo || undefined,
+      tournamentType: tournamentType as TournamentType,
+      seedingType: seedingType as SeedingType,
+      swissRounds: totalRounds ?? undefined,
       bestOf,
       roundBestOf: parsedRoundBestOf,
+      placementPointConfig: parsedPlacementPoints,
     },
     mode: "onChange",
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "placementPointConfig",
+  });
+
+  const watchedTournamentType = form.watch("tournamentType");
+  const isSwiss = watchedTournamentType === TournamentType.SWISS;
 
   const updateRoundBestOfValue = (
     overrides: { round: string; bestOf: string }[],
@@ -130,9 +170,16 @@ export function EditEventTournamentForm({
 
   const onSubmit = (values: EditFormValues) => {
     startTransition(async () => {
+      const payload = isDraft
+        ? values
+        : {
+            name: values.name,
+            description: values.description,
+            logo: values.logo,
+          };
       const result = await updateEventTournamentAction(
         { eventTournamentId: tournamentId },
-        values,
+        payload,
       );
       if (result.error) {
         if (result.fieldErrors) {
@@ -232,7 +279,122 @@ export function EditEventTournamentForm({
           )}
         />
 
-        {isDraft && tournamentType !== TournamentType.SWISS && (
+        {isDraft && (
+          <FormField
+            control={form.control}
+            name="tournamentType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tournament Format</FormLabel>
+                <Select
+                  onValueChange={(val) => {
+                    field.onChange(val);
+                    if (val === TournamentType.SWISS) {
+                      form.setValue("seedingType", undefined);
+                    } else {
+                      form.setValue("seedingType", SeedingType.RANDOM);
+                      form.setValue("swissRounds", undefined);
+                    }
+                  }}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(TOURNAMENT_TYPE_LABELS).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {isSwiss
+                    ? "Participants play a fixed number of rounds against opponents with similar scores. No one is eliminated."
+                    : "Lose and you're out. Last one standing wins."}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {isDraft && !isSwiss && (
+          <FormField
+            control={form.control}
+            name="seedingType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Seeding</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? SeedingType.RANDOM}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(SEEDING_TYPE_LABELS).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {field.value === SeedingType.RANDOM
+                    ? "Participants will be randomly placed in the bracket."
+                    : "You assign seed numbers to control bracket placement."}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {isDraft && isSwiss && (
+          <FormField
+            control={form.control}
+            name="swissRounds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Number of Rounds (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={MIN_SWISS_ROUNDS}
+                    max={MAX_SWISS_ROUNDS}
+                    placeholder="Auto-calculated"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(
+                        value === "" ? undefined : parseInt(value, 10),
+                      );
+                    }}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Leave blank to auto-calculate based on participant count
+                  (log2). Typically 3-7 rounds.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {isDraft && !isSwiss && (
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -380,6 +542,93 @@ export function EditEventTournamentForm({
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {isDraft && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">
+                Placement Points (Optional)
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Points awarded based on final tournament placement
+              </p>
+            </div>
+
+            {fields.map((field, index) => (
+              <div key={field.id} className="flex items-end gap-2">
+                <FormField
+                  control={form.control}
+                  name={`placementPointConfig.${index}.placement`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      {index === 0 && <FormLabel>Placement</FormLabel>}
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="Place"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? "" : parseInt(value, 10),
+                            );
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`placementPointConfig.${index}.points`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      {index === 0 && <FormLabel>Points</FormLabel>}
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="Points"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? "" : parseFloat(value),
+                            );
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                append({ placement: fields.length + 1, points: 0 })
+              }
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add Placement
+            </Button>
           </div>
         )}
 

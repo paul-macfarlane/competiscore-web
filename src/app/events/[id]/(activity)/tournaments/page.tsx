@@ -14,6 +14,7 @@ import { auth } from "@/lib/server/auth";
 import {
   EventParticipantRole,
   EventStatus,
+  ParticipantType,
   TOURNAMENT_STATUS_LABELS,
   TournamentStatus,
 } from "@/lib/shared/constants";
@@ -242,7 +243,16 @@ async function TournamentsContent({
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{tournament.participantCount} teams</span>
+                    <span>
+                      {tournament.participantCount}{" "}
+                      {tournament.participantType === ParticipantType.TEAM
+                        ? tournament.participantCount !== 1
+                          ? "teams"
+                          : "team"
+                        : tournament.participantCount !== 1
+                          ? "participants"
+                          : "participant"}
+                    </span>
                   </div>
                   {tournament.status === TournamentStatus.COMPLETED &&
                     tournament.placementPointConfig && (
