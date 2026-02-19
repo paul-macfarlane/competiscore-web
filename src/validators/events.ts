@@ -687,9 +687,19 @@ export const updateEventTournamentSchema = z.object({
     )
     .optional(),
   logo: z.string().optional(),
+  tournamentType: z
+    .enum([TournamentType.SINGLE_ELIMINATION, TournamentType.SWISS])
+    .optional(),
   seedingType: z.enum(["manual", "random"]).optional(),
+  swissRounds: z
+    .number()
+    .int()
+    .min(MIN_SWISS_ROUNDS, `Minimum ${MIN_SWISS_ROUNDS} rounds`)
+    .max(MAX_SWISS_ROUNDS, `Maximum ${MAX_SWISS_ROUNDS} rounds`)
+    .optional(),
   bestOf: bestOfValueSchema.optional(),
   roundBestOf: roundBestOfSchema,
+  placementPointConfig: placementPointConfigSchema.optional(),
   startDate: z
     .union([z.string(), z.date()])
     .pipe(z.coerce.date())

@@ -218,7 +218,11 @@ export async function updateTournament(
 
   const isDraft = tournamentData.status === TournamentStatus.DRAFT;
   const hasDraftOnlyFields =
-    data.seedingType !== undefined || data.startDate !== undefined;
+    data.seedingType !== undefined ||
+    data.startDate !== undefined ||
+    data.tournamentType !== undefined ||
+    data.placementPointConfig !== undefined ||
+    data.swissRounds !== undefined;
 
   if (!isDraft && hasDraftOnlyFields) {
     return {
@@ -241,13 +245,50 @@ export async function updateTournament(
     }
   }
 
+  let seedingTypeToApply: Tournament["seedingType"] | undefined;
+  let totalRoundsToApply: number | null | undefined;
+  let tournamentTypeToApply: Tournament["tournamentType"] | undefined;
+
+  if (isDraft) {
+    const newTournamentType =
+      data.tournamentType ?? tournamentData.tournamentType;
+    const isNowSwiss = newTournamentType === TournamentType.SWISS;
+    const formatChanged = data.tournamentType !== undefined;
+
+    tournamentTypeToApply = data.tournamentType as
+      | Tournament["tournamentType"]
+      | undefined;
+
+    if (isNowSwiss) {
+      seedingTypeToApply = SeedingType.RANDOM as Tournament["seedingType"];
+    } else {
+      seedingTypeToApply = data.seedingType as
+        | Tournament["seedingType"]
+        | undefined;
+    }
+
+    if (data.swissRounds !== undefined && isNowSwiss) {
+      totalRoundsToApply = data.swissRounds;
+    } else if (formatChanged) {
+      totalRoundsToApply = null;
+    }
+  }
+
   const updated = await dbUpdateTournament(tournamentId, {
     name: data.name,
     description: data.description,
     logo: data.logo,
     ...(isDraft && {
-      seedingType: data.seedingType as Tournament["seedingType"],
+      tournamentType: tournamentTypeToApply,
+      seedingType: seedingTypeToApply,
       startDate: data.startDate,
+      totalRounds: totalRoundsToApply,
+      placementPointConfig:
+        data.placementPointConfig !== undefined
+          ? data.placementPointConfig.length > 0
+            ? JSON.stringify(data.placementPointConfig)
+            : null
+          : undefined,
     }),
   });
 

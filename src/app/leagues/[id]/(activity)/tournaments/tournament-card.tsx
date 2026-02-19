@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TournamentWithDetails } from "@/db/tournaments";
 import {
+  ParticipantType,
   TOURNAMENT_STATUS_LABELS,
   TournamentStatus,
 } from "@/lib/shared/constants";
@@ -79,8 +80,14 @@ export function TournamentCard({ tournament, leagueId }: TournamentCardProps) {
           <span>{tournament.gameType.name}</span>
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            {tournament.participantCount} participant
-            {tournament.participantCount !== 1 ? "s" : ""}
+            {tournament.participantCount}{" "}
+            {tournament.participantType === ParticipantType.TEAM
+              ? tournament.participantCount !== 1
+                ? "teams"
+                : "team"
+              : tournament.participantCount !== 1
+                ? "participants"
+                : "participant"}
           </span>
           {tournament.startDate && (
             <span>

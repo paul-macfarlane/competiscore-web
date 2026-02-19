@@ -183,6 +183,7 @@ export async function updateTournament(
       | "description"
       | "logo"
       | "seedingType"
+      | "tournamentType"
       | "startDate"
       | "status"
       | "totalRounds"

@@ -176,6 +176,7 @@ export async function updateEventTournament(
       | "description"
       | "logo"
       | "seedingType"
+      | "tournamentType"
       | "startDate"
       | "status"
       | "totalRounds"

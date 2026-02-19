@@ -80,7 +80,14 @@ export const updateTournamentSchema = z.object({
     )
     .optional(),
   logo: tournamentLogoSchema,
+  tournamentType: z.enum(["single_elimination", "swiss"]).optional(),
   seedingType: z.enum(["manual", "random"]).optional(),
+  swissRounds: z
+    .number()
+    .int()
+    .min(MIN_SWISS_ROUNDS, `Minimum ${MIN_SWISS_ROUNDS} rounds`)
+    .max(MAX_SWISS_ROUNDS, `Maximum ${MAX_SWISS_ROUNDS} rounds`)
+    .optional(),
   placementPointConfig: placementPointConfigSchema.optional(),
   startDate: z
     .union([z.string(), z.date()])

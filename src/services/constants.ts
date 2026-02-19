@@ -44,12 +44,13 @@ export const MAX_SWISS_ROUNDS = 20;
 export const EVENT_NAME_MAX_LENGTH = 100;
 export const EVENT_DESCRIPTION_MAX_LENGTH = 500;
 export const MAX_EVENTS_PER_USER = 5;
-export const MAX_EVENT_GAME_TYPES = 20;
-export const MAX_EVENT_TEAMS = 50;
+export const MAX_EVENT_GAME_TYPES = 100;
+export const MAX_EVENT_TEAMS = 10;
 export const MAX_EVENT_TEAM_NAME_MAX_LENGTH = 100;
-export const MAX_EVENT_TEAM_MEMBERS = 20;
-export const MAX_EVENT_PARTICIPANTS = 100;
-export const MAX_EVENT_PLACEHOLDER_PARTICIPANTS = 100;
+export const MAX_EVENT_TEAM_MEMBERS = 100;
+export const MAX_EVENT_PARTICIPANTS = MAX_EVENT_TEAMS * MAX_EVENT_TEAM_MEMBERS;
+export const MAX_EVENT_PLACEHOLDER_PARTICIPANTS =
+  MAX_EVENT_TEAMS * MAX_EVENT_TEAM_MEMBERS;
 
 export const EVENT_TEAM_COLORS = [
   { value: "red", label: "Red", bg: "#dc2626", text: "white" },
