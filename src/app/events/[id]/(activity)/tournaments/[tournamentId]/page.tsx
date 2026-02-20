@@ -128,6 +128,12 @@ export default async function EventTournamentDetailPage({ params }: Props) {
     })
     .map((p) => p.id);
   const isInProgress = tournament.status === TournamentStatus.IN_PROGRESS;
+  const hasMatchesPlayed =
+    bracket?.some(
+      (m) =>
+        !m.isBye &&
+        (m.winnerId !== null || m.isDraw || m.eventMatchId !== null),
+    ) ?? false;
   const h2hConfig =
     tournament.gameType.category === GameCategory.HEAD_TO_HEAD
       ? parseH2HConfig(tournament.gameType.config)
@@ -503,6 +509,7 @@ export default async function EventTournamentDetailPage({ params }: Props) {
             isTeamTournament={isTeamTournament}
             isCompleted={tournament.status === TournamentStatus.COMPLETED}
             config={h2hConfig!}
+            hasMatchesPlayed={hasMatchesPlayed}
           />
         ) : (
           <Card>
@@ -521,6 +528,7 @@ export default async function EventTournamentDetailPage({ params }: Props) {
                 config={h2hConfig}
                 bestOf={tournament.bestOf}
                 roundBestOf={tournament.roundBestOf}
+                hasMatchesPlayed={hasMatchesPlayed}
               />
             </CardContent>
           </Card>

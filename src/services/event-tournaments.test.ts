@@ -9,6 +9,7 @@ import {
   countEventTournamentsByEventId as dbCountTournaments,
   createEventTournamentRoundMatches as dbCreateRoundMatches,
   createEventTournament as dbCreateTournament,
+  deleteAllEventTournamentRoundMatches as dbDeleteAllRoundMatches,
   deleteEventTournamentRoundMatchesByRound as dbDeleteRoundMatchesByRound,
   deleteEventTournament as dbDeleteTournament,
   getEventTournamentBracket as dbGetBracket,
@@ -50,6 +51,7 @@ import {
   getEventTournaments,
   recordEventTournamentMatchResult,
   removeEventTournamentParticipant,
+  reseedEventTournament,
   setEventParticipantSeeds,
   undoEventTournamentMatchResult,
   updateEventTournament,
@@ -105,6 +107,7 @@ vi.mock("@/db/event-tournaments", () => ({
   checkIndividualInEventTournament: vi.fn(),
   checkIndividualInEventTournamentPartnership: vi.fn(),
   createEventTournamentRoundMatches: vi.fn(),
+  deleteAllEventTournamentRoundMatches: vi.fn(),
   deleteEventTournamentRoundMatchesByRound: vi.fn(),
   getEventTournamentBracket: vi.fn(),
   getEventTournamentRoundMatchById: vi.fn(),
@@ -2548,6 +2551,184 @@ describe("deleteSwissCurrentRound", () => {
     vi.mocked(dbDeleteRoundMatchesByRound).mockResolvedValue(undefined);
 
     const result = await deleteSwissCurrentRound(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.data?.eventTournamentId).toBe(TEST_IDS.EVENT_TOURNAMENT_ID);
+    expect(result.data?.eventId).toBe(TEST_IDS.EVENT_ID);
+  });
+});
+
+describe("reseedEventTournament", () => {
+  const P1_ID = "b53e4567-e89b-12d3-a456-426614174000";
+  const P2_ID = "b53e4567-e89b-12d3-a456-426614174001";
+  const MATCH1_ID = "c53e4567-e89b-12d3-a456-426614174000";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns validation error for invalid input", async () => {
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {});
+    expect(result.error).toBe("Validation failed");
+  });
+
+  it("returns error if tournament not found", async () => {
+    vi.mocked(dbGetTournamentById).mockResolvedValue(undefined);
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Tournament not found");
+  });
+
+  it("returns error if tournament not in progress", async () => {
+    mockTournament({ status: "draft" });
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Tournament must be in progress to re-seed");
+  });
+
+  it("returns error if user lacks permission", async () => {
+    mockInProgressTournament();
+    mockParticipantMember();
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe(
+      "You do not have permission to manage tournaments",
+    );
+  });
+
+  it("returns error if matches have been played", async () => {
+    mockInProgressTournament();
+    mockOrganizerMember();
+    vi.mocked(dbGetBracket).mockResolvedValue([
+      {
+        id: MATCH1_ID,
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: P1_ID,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as ReturnType<typeof dbGetBracket> extends Promise<infer T> ? T : never);
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {
+      eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+    });
+    expect(result.error).toBe("Cannot re-seed after matches have been played");
+  });
+
+  it("successfully reseeds a single elimination tournament", async () => {
+    mockInProgressTournament();
+    mockOrganizerMember();
+    mockParticipants(4);
+    vi.mocked(dbGetBracket).mockResolvedValue([
+      {
+        id: MATCH1_ID,
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as ReturnType<typeof dbGetBracket> extends Promise<infer T> ? T : never);
+    vi.mocked(dbDeleteAllRoundMatches).mockResolvedValue(undefined);
+    vi.mocked(dbBulkUpdateSeeds).mockResolvedValue(undefined);
+    vi.mocked(dbCreateRoundMatches).mockResolvedValue([
+      {
+        id: "new-match-1",
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 1,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        participant1Wins: 0,
+        participant2Wins: 0,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "new-match-2",
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 1,
+        position: 2,
+        participant1Id: P1_ID,
+        participant2Id: P2_ID,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        participant1Wins: 0,
+        participant2Wins: 0,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "new-match-3",
+        eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
+        round: 2,
+        position: 1,
+        participant1Id: null,
+        participant2Id: null,
+        winnerId: null,
+        isDraw: false,
+        eventMatchId: null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null,
+        participant2Score: null,
+        participant1Wins: 0,
+        participant2Wins: 0,
+        nextMatchId: null,
+        nextMatchSlot: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as unknown as ReturnType<typeof dbCreateRoundMatches> extends Promise<
+      infer T
+    >
+      ? T
+      : never);
+    vi.mocked(dbUpdateRoundMatch).mockResolvedValue(undefined as never);
+    vi.mocked(dbUpdateTournament).mockResolvedValue(undefined as never);
+
+    const result = await reseedEventTournament(TEST_IDS.USER_ID, {
       eventTournamentId: TEST_IDS.EVENT_TOURNAMENT_ID,
     });
     expect(result.data?.eventTournamentId).toBe(TEST_IDS.EVENT_TOURNAMENT_ID);

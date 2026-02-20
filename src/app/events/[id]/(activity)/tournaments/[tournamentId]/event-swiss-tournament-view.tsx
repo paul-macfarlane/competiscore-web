@@ -43,7 +43,7 @@ import {
   computeSwissStandings,
   getSwissRanking,
 } from "@/lib/shared/swiss-pairing";
-import { Trash2, Undo2 } from "lucide-react";
+import { Shuffle, Trash2, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -52,6 +52,7 @@ import {
   deleteSwissCurrentRoundAction,
   generateNextEventSwissRoundAction,
   recordEventTournamentMatchResultAction,
+  reseedEventTournamentAction,
   undoEventTournamentMatchResultAction,
 } from "../../../actions";
 import { EditSwissPairingsDialog } from "./edit-swiss-pairings-dialog";
@@ -128,6 +129,7 @@ type Props = {
   isTeamTournament: boolean;
   isCompleted: boolean;
   config: H2HConfig;
+  hasMatchesPlayed?: boolean;
 };
 
 function getParticipantName(
@@ -211,6 +213,7 @@ export function EventSwissTournamentView({
   isTeamTournament,
   isCompleted,
   config,
+  hasMatchesPlayed,
 }: Props) {
   const router = useRouter();
   const [selectedMatch, setSelectedMatch] = useState<BracketMatch | null>(null);
@@ -310,6 +313,20 @@ export function EventSwissTournamentView({
     });
   };
 
+  const handleReseed = () => {
+    startTransition(async () => {
+      const result = await reseedEventTournamentAction({
+        eventTournamentId,
+      });
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Tournament re-seeded");
+        router.refresh();
+      }
+    });
+  };
+
   const tournamentMatch: TournamentMatchProps | undefined = selectedMatch
     ? {
         tournamentMatchId: selectedMatch.id,
@@ -360,9 +377,40 @@ export function EventSwissTournamentView({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Standings</span>
-            <Badge variant="outline">
-              Round {currentRound} of {totalRounds}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {canManage && !hasMatchesPlayed && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isPending}>
+                      <Shuffle className="mr-1 h-3 w-3" />
+                      Re-seed
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Re-seed Tournament?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will randomize all pairings and regenerate the
+                        first round. All current matchups will be replaced with
+                        new ones.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleReseed}
+                        disabled={isPending}
+                      >
+                        {isPending ? "Re-seeding..." : "Re-seed"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Badge variant="outline">
+                Round {currentRound} of {totalRounds}
+              </Badge>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>

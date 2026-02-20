@@ -12,6 +12,7 @@ import {
   countEventTournamentsByEventId as dbCountTournaments,
   createEventTournamentRoundMatches as dbCreateRoundMatches,
   createEventTournament as dbCreateTournament,
+  deleteAllEventTournamentRoundMatches as dbDeleteAllRoundMatches,
   deleteEventTournamentRoundMatchesByRound as dbDeleteRoundMatchesByRound,
   deleteEventTournament as dbDeleteTournament,
   getEventTournamentBracket as dbGetBracket,
@@ -83,6 +84,7 @@ import {
   generateEventBracketSchema,
   recordEventTournamentMatchResultSchema,
   removeEventTournamentParticipantSchema,
+  reseedEventTournamentSchema,
   setEventParticipantSeedsSchema,
   undoEventTournamentMatchResultSchema,
   updateEventTournamentSchema,
@@ -2583,4 +2585,224 @@ export async function deleteSwissCurrentRound(
       eventId: tournamentData.eventId,
     },
   };
+}
+
+export async function reseedEventTournament(
+  userId: string,
+  input: unknown,
+): Promise<ServiceResult<{ eventTournamentId: string; eventId: string }>> {
+  const parsed = reseedEventTournamentSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: "Validation failed",
+      fieldErrors: formatZodErrors(parsed.error),
+    };
+  }
+
+  const { eventTournamentId } = parsed.data;
+
+  const tournamentData = await dbGetTournamentById(eventTournamentId);
+  if (!tournamentData) {
+    return { error: "Tournament not found" };
+  }
+
+  if (tournamentData.status !== TournamentStatus.IN_PROGRESS) {
+    return { error: "Tournament must be in progress to re-seed" };
+  }
+
+  const participation = await getEventParticipant(
+    tournamentData.eventId,
+    userId,
+  );
+  if (!participation) {
+    return { error: "You are not a participant in this event" };
+  }
+
+  if (
+    !canPerformEventAction(participation.role, EventAction.CREATE_TOURNAMENTS)
+  ) {
+    return { error: "You do not have permission to manage tournaments" };
+  }
+
+  const bracket = await dbGetBracket(eventTournamentId);
+  const hasMatchesPlayed = bracket.some(
+    (m) =>
+      !m.isBye && (m.winnerId !== null || m.isDraw || m.eventMatchId !== null),
+  );
+  if (hasMatchesPlayed) {
+    return { error: "Cannot re-seed after matches have been played" };
+  }
+
+  const participants = await dbGetParticipants(eventTournamentId);
+  const isSwiss = tournamentData.tournamentType === TournamentType.SWISS;
+
+  if (isSwiss) {
+    return withTransaction(async (tx) => {
+      await dbDeleteAllRoundMatches(eventTournamentId, tx);
+
+      const participantNames = participants.map((p) => ({
+        id: p.id,
+        name: getEventParticipantName(p),
+      }));
+
+      const round1 = generateSwissRound1(participantNames);
+
+      const roundMatchData = round1.pairings.map((pairing, i) => ({
+        eventTournamentId,
+        round: 1,
+        position: i + 1,
+        participant1Id: pairing.participant1Id,
+        participant2Id: pairing.participant2Id as string | null,
+        winnerId: null as string | null,
+        eventMatchId: null as string | null,
+        isBye: false,
+        isForfeit: false,
+        participant1Score: null as number | null,
+        participant2Score: null as number | null,
+        nextMatchId: null as string | null,
+        nextMatchSlot: null as number | null,
+      }));
+
+      if (round1.byeParticipantId) {
+        roundMatchData.push({
+          eventTournamentId,
+          round: 1,
+          position: roundMatchData.length + 1,
+          participant1Id: round1.byeParticipantId,
+          participant2Id: null,
+          winnerId: round1.byeParticipantId,
+          eventMatchId: null as string | null,
+          isBye: true,
+          isForfeit: false,
+          participant1Score: null as number | null,
+          participant2Score: null as number | null,
+          nextMatchId: null as string | null,
+          nextMatchSlot: null as number | null,
+        });
+      }
+
+      await dbCreateRoundMatches(roundMatchData, tx);
+
+      return {
+        data: {
+          eventTournamentId,
+          eventId: tournamentData.eventId,
+        },
+      };
+    });
+  }
+
+  return withTransaction(async (tx) => {
+    await dbDeleteAllRoundMatches(eventTournamentId, tx);
+
+    const shuffled = [...participants];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const seedUpdates = shuffled.map((p, i) => ({
+      id: p.id,
+      seed: i + 1,
+    }));
+    await dbBulkUpdateSeeds(seedUpdates, tx);
+    const seededParticipants = shuffled.map((p, i) => ({
+      ...p,
+      seed: i + 1,
+    }));
+
+    const bracketSlots = generateSingleEliminationBracket(
+      seededParticipants.length,
+    );
+    const totalRounds = Math.max(...bracketSlots.map((s) => s.round));
+
+    const seedToParticipant = new Map<number, EventTournamentParticipant>();
+    for (const p of seededParticipants) {
+      if (p.seed !== null) {
+        seedToParticipant.set(p.seed, p);
+      }
+    }
+
+    const roundMatchData = bracketSlots.map((slot) => ({
+      eventTournamentId,
+      round: slot.round,
+      position: slot.position,
+      participant1Id: slot.seed1
+        ? (seedToParticipant.get(slot.seed1)?.id ?? null)
+        : null,
+      participant2Id: slot.seed2
+        ? (seedToParticipant.get(slot.seed2)?.id ?? null)
+        : null,
+      winnerId: null as string | null,
+      eventMatchId: null as string | null,
+      isBye: slot.isBye,
+      isForfeit: false,
+      participant1Score: null as number | null,
+      participant2Score: null as number | null,
+      nextMatchId: null as string | null,
+      nextMatchSlot: slot.nextPosition?.slot ?? null,
+    }));
+
+    const createdMatches = await dbCreateRoundMatches(roundMatchData, tx);
+
+    const positionToMatch = new Map<string, EventTournamentRoundMatch>();
+    for (const m of createdMatches) {
+      positionToMatch.set(`${m.round}-${m.position}`, m);
+    }
+
+    for (const slot of bracketSlots) {
+      if (slot.nextPosition) {
+        const currentMatch = positionToMatch.get(
+          `${slot.round}-${slot.position}`,
+        );
+        const nextMatch = positionToMatch.get(
+          `${slot.nextPosition.round}-${slot.nextPosition.position}`,
+        );
+        if (currentMatch && nextMatch) {
+          await dbUpdateRoundMatch(
+            currentMatch.id,
+            {
+              nextMatchId: nextMatch.id,
+              nextMatchSlot: slot.nextPosition.slot,
+            },
+            tx,
+          );
+          positionToMatch.set(`${slot.round}-${slot.position}`, {
+            ...currentMatch,
+            nextMatchId: nextMatch.id,
+            nextMatchSlot: slot.nextPosition.slot,
+          });
+        }
+      }
+    }
+
+    for (const rm of createdMatches) {
+      if (rm.isBye) {
+        const winnerId = rm.participant1Id ?? rm.participant2Id;
+        if (winnerId) {
+          await dbUpdateRoundMatch(rm.id, { winnerId }, tx);
+          const updatedMatch = positionToMatch.get(
+            `${rm.round}-${rm.position}`,
+          );
+          if (updatedMatch) {
+            await advanceWinner(
+              eventTournamentId,
+              updatedMatch,
+              winnerId,
+              positionToMatch,
+              tx,
+            );
+          }
+        }
+      }
+    }
+
+    await dbUpdateTournament(eventTournamentId, { totalRounds }, tx);
+
+    return {
+      data: {
+        eventTournamentId,
+        eventId: tournamentData.eventId,
+      },
+    };
+  });
 }

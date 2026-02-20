@@ -5,6 +5,17 @@ import {
   TournamentMatchProps,
 } from "@/components/record-h2h-match-form";
 import { TeamColorBadge } from "@/components/team-color-badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,13 +28,14 @@ import {
 import { H2HConfig } from "@/lib/shared/game-templates";
 import { ParticipantOption } from "@/lib/shared/participant-options";
 import { cn } from "@/lib/shared/utils";
-import { Pencil, Trophy, Undo2 } from "lucide-react";
+import { Pencil, Shuffle, Trophy, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
   recordEventTournamentMatchResultAction,
+  reseedEventTournamentAction,
   undoEventTournamentMatchResultAction,
 } from "../../../actions";
 
@@ -76,6 +88,7 @@ type Props = {
   config?: H2HConfig;
   bestOf: number;
   roundBestOf: string | null;
+  hasMatchesPlayed?: boolean;
 };
 
 function getRoundBestOf(
@@ -127,14 +140,17 @@ export function EventTournamentBracketView({
   totalRounds,
   canManage,
   userParticipantIds = [],
+  tournamentId,
   isTeamTournament,
   config,
   bestOf: defaultBestOf,
   roundBestOf,
+  hasMatchesPlayed,
 }: Props) {
   const router = useRouter();
   const [selectedMatch, setSelectedMatch] = useState<BracketMatch | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isReseeding, startReseedTransition] = useTransition();
 
   const rounds: Map<number, BracketMatch[]> = new Map();
   for (const match of bracket) {
@@ -167,6 +183,20 @@ export function EventTournamentBracketView({
 
   const handleCancel = () => {
     setDialogOpen(false);
+  };
+
+  const handleReseed = () => {
+    startReseedTransition(async () => {
+      const result = await reseedEventTournamentAction({
+        eventTournamentId: tournamentId,
+      });
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Bracket re-seeded");
+        router.refresh();
+      }
+    });
   };
 
   const tournamentMatch: TournamentMatchProps | undefined = selectedMatch
@@ -223,6 +253,36 @@ export function EventTournamentBracketView({
 
   return (
     <>
+      {canManage && !hasMatchesPlayed && (
+        <div className="mb-4 flex justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isReseeding}>
+                <Shuffle className="mr-1 h-3 w-3" />
+                Re-seed Bracket
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Re-seed Bracket?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will randomize all seeds and regenerate the bracket. All
+                  current matchups will be replaced with new ones.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleReseed}
+                  disabled={isReseeding}
+                >
+                  {isReseeding ? "Re-seeding..." : "Re-seed"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
       <div className="flex gap-6 overflow-x-auto pb-4">
         {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => {
           const matches = rounds.get(round) ?? [];

@@ -799,6 +799,10 @@ export const generateEventBracketSchema = z.object({
   eventTournamentId: uuidSchema,
 });
 
+export const reseedEventTournamentSchema = z.object({
+  eventTournamentId: uuidSchema,
+});
+
 export const recordEventTournamentMatchResultSchema = z.object({
   tournamentMatchId: uuidSchema,
   winningSide: z.enum(["side1", "side2", "draw"]).optional(),
