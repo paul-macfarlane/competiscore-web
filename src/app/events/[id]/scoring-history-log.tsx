@@ -33,7 +33,7 @@ function getEntryHref(entry: EnrichedPointEntry): string | null {
     return `/events/${entry.eventId}/tournaments/${entry.eventTournamentId}`;
   }
   if (entry.eventDiscretionaryAwardId) {
-    return `/events/${entry.eventId}/discretionary`;
+    return `/events/${entry.eventId}/discretionary/${entry.eventDiscretionaryAwardId}`;
   }
   return null;
 }
@@ -99,7 +99,10 @@ export function ScoringHistoryLog({ log }: ScoringHistoryLogProps) {
                   {entry.points}
                 </span>
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {formatDistanceToNow(entry.createdAt, { addSuffix: true })}
+                  {formatDistanceToNow(
+                    entry.discretionaryAwardedAt ?? entry.createdAt,
+                    { addSuffix: true },
+                  )}
                 </span>
                 {getEntryHref(entry) && (
                   <Link

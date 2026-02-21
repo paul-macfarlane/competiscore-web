@@ -33,8 +33,6 @@ List of miscellaneous TODOs for the project.
 - Score label should be able to be adjusted on a game type even after being created, there is no harm in changing that.
 - For H2H and Free for all game types we should display the score labels on the settings page for that game type. This applies to both leagues and events
 - Best score matches could be configurable such that you can say only allow X submissions per user. This applies to both events and leagues.
-- It would be nice to set a date and time for awarding discretionary points, instead of those just being awarded at the time of creation.
--
 
 ### Small Tech Debt
 
@@ -48,3 +46,15 @@ List of miscellaneous TODOs for the project.
 - A user guide on the app itself inside of the app.
 - Need to investigate storage options for game type configuration. The JSON is a bit hard to manage as we keep adjusting it.
 - We may not actually need a home page for leagues. Want to think through what is hear and what is needed.
+
+## In Progress
+
+-
+
+## Needs Testing
+
+-
+
+## Completed
+
+Nothing goes here. Once testing is complete, we just delete the item.

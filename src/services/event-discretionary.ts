@@ -38,7 +38,8 @@ export async function createDiscretionaryAward(
     };
   }
 
-  const { eventId, name, description, points, recipients } = parsed.data;
+  const { eventId, name, description, points, awardedAt, recipients } =
+    parsed.data;
 
   const participant = await dbGetEventParticipant(eventId, userId);
   if (!participant) {
@@ -71,6 +72,7 @@ export async function createDiscretionaryAward(
         name,
         description,
         points,
+        awardedAt: awardedAt ?? new Date(),
         createdByUserId: userId,
       },
       tx,
@@ -163,6 +165,9 @@ export async function updateDiscretionaryAward(
           description: updateData.description,
         }),
         ...(updateData.points !== undefined && { points: updateData.points }),
+        ...(updateData.awardedAt !== undefined && {
+          awardedAt: updateData.awardedAt,
+        }),
       },
       tx,
     );

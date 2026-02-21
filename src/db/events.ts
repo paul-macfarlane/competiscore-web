@@ -2224,6 +2224,7 @@ export async function getEventDiscretionaryAwards(
       name: eventDiscretionaryAward.name,
       description: eventDiscretionaryAward.description,
       points: eventDiscretionaryAward.points,
+      awardedAt: eventDiscretionaryAward.awardedAt,
       createdByUserId: eventDiscretionaryAward.createdByUserId,
       createdAt: eventDiscretionaryAward.createdAt,
       updatedAt: eventDiscretionaryAward.updatedAt,
@@ -2273,6 +2274,7 @@ export async function getEventDiscretionaryAwards(
     name: award.name,
     description: award.description,
     points: award.points,
+    awardedAt: award.awardedAt,
     createdByUserId: award.createdByUserId,
     createdAt: award.createdAt,
     updatedAt: award.updatedAt,
@@ -2289,7 +2291,10 @@ export async function getEventDiscretionaryAwards(
 export async function updateDiscretionaryAward(
   awardId: string,
   data: Partial<
-    Pick<EventDiscretionaryAward, "name" | "description" | "points">
+    Pick<
+      EventDiscretionaryAward,
+      "name" | "description" | "points" | "awardedAt"
+    >
   >,
   dbOrTx: DBOrTx = db,
 ): Promise<EventDiscretionaryAward> {
@@ -2317,6 +2322,7 @@ export type EnrichedPointEntry = {
   outcome: string;
   points: number;
   createdAt: Date;
+  discretionaryAwardedAt: Date | null;
   eventTeamId: string | null;
   teamName: string | null;
   teamColor: string | null;
@@ -2363,6 +2369,7 @@ export async function getEnrichedEventPointEntries(
       eventHighScoreGameTypeId: eventHighScoreSession.eventGameTypeId,
       eventTournamentId: eventPointEntry.eventTournamentId,
       eventDiscretionaryAwardId: eventPointEntry.eventDiscretionaryAwardId,
+      discretionaryAwardedAt: eventDiscretionaryAward.awardedAt,
     })
     .from(eventPointEntry)
     .leftJoin(eventTeam, eq(eventPointEntry.eventTeamId, eventTeam.id))
@@ -2381,7 +2388,7 @@ export async function getEnrichedEventPointEntries(
     )
     .where(eq(eventPointEntry.eventId, eventId))
     .orderBy(
-      sql`COALESCE(${eventMatch.playedAt}, ${eventHighScoreSession.closedAt}, ${eventTournament.completedAt}, ${eventDiscretionaryAward.createdAt}, ${eventPointEntry.createdAt})`,
+      sql`COALESCE(${eventMatch.playedAt}, ${eventHighScoreSession.closedAt}, ${eventTournament.completedAt}, ${eventDiscretionaryAward.awardedAt}, ${eventPointEntry.createdAt})`,
     );
 
   if (entries.length === 0) return [];

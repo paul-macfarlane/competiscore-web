@@ -15,6 +15,7 @@ import { EventParticipantRole, EventStatus } from "@/lib/shared/constants";
 import { getDiscretionaryAwards } from "@/services/event-discretionary";
 import { getEvent } from "@/services/events";
 import { idParamSchema } from "@/validators/shared";
+import { formatDistanceToNow } from "date-fns";
 import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -157,7 +158,7 @@ async function DiscretionaryContent({
                   </span>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {award.recipientTeams.map((team) => (
                     <TeamColorBadge
@@ -167,6 +168,12 @@ async function DiscretionaryContent({
                     />
                   ))}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Awarded{" "}
+                  {formatDistanceToNow(new Date(award.awardedAt), {
+                    addSuffix: true,
+                  })}
+                </p>
               </CardContent>
               <CardFooter>
                 <Button variant="outline" size="sm" className="w-full" asChild>

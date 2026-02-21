@@ -5,6 +5,10 @@ import { TeamColorBadge } from "@/components/team-color-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  DateTimePicker,
+  formatLocalDateTime,
+} from "@/components/ui/datetime-picker";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -19,17 +23,17 @@ import {
   DISCRETIONARY_AWARD_DESCRIPTION_MAX_LENGTH,
   DISCRETIONARY_AWARD_NAME_MAX_LENGTH,
 } from "@/services/constants";
-import {
-  UpdateDiscretionaryAwardInput,
-  updateDiscretionaryAwardSchema,
-} from "@/validators/events";
+import { updateDiscretionaryAwardSchema } from "@/validators/events";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { updateDiscretionaryAwardAction } from "../../../../actions";
+
+type FormValues = z.input<typeof updateDiscretionaryAwardSchema>;
 
 type TeamOption = {
   id: string;
@@ -45,6 +49,7 @@ interface EditDiscretionaryFormProps {
     name: string;
     description: string;
     points: number;
+    awardedAt: Date;
     recipientTeamIds: string[];
   };
 }
@@ -58,12 +63,13 @@ export function EditDiscretionaryForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<UpdateDiscretionaryAwardInput>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(updateDiscretionaryAwardSchema),
     defaultValues: {
       name: defaultValues.name,
       description: defaultValues.description,
       points: defaultValues.points,
+      awardedAt: formatLocalDateTime(defaultValues.awardedAt),
       recipients: defaultValues.recipientTeamIds.map((id) => ({
         eventTeamId: id,
       })),
@@ -101,14 +107,14 @@ export function EditDiscretionaryForm({
     form.setValue("recipients", [], { shouldValidate: true });
   };
 
-  const onSubmit = (values: UpdateDiscretionaryAwardInput) => {
+  const onSubmit = (values: FormValues) => {
     startTransition(async () => {
       const result = await updateDiscretionaryAwardAction({ awardId }, values);
 
       if (result.error) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
-            form.setError(field as keyof UpdateDiscretionaryAwardInput, {
+            form.setError(field as keyof FormValues, {
               message,
             });
           });
@@ -185,6 +191,28 @@ export function EditDiscretionaryForm({
               </FormControl>
               <FormDescription>
                 Each selected team will receive this many points
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="awardedAt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time Awarded</FormLabel>
+              <FormControl>
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) =>
+                    field.onChange(date ? formatLocalDateTime(date) : undefined)
+                  }
+                />
+              </FormControl>
+              <FormDescription>
+                When the award was given. Defaults to now if not set.
               </FormDescription>
               <FormMessage />
             </FormItem>

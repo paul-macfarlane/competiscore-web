@@ -146,6 +146,7 @@ async function EditDiscretionaryContent({
           name: award.name,
           description: award.description,
           points: award.points,
+          awardedAt: award.awardedAt,
           recipientTeamIds: award.recipientTeams.map((t) => t.id),
         }}
       />

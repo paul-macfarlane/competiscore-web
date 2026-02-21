@@ -961,6 +961,7 @@ export const createDiscretionaryAwardSchema = z.object({
       `Description must be at most ${DISCRETIONARY_AWARD_DESCRIPTION_MAX_LENGTH} characters`,
     ),
   points: z.number("A number is required"),
+  awardedAt: z.union([z.string(), z.date()]).pipe(z.coerce.date()).optional(),
   recipients: z
     .array(discretionaryAwardRecipientSchema)
     .min(1, "At least one recipient is required")
@@ -969,10 +970,6 @@ export const createDiscretionaryAwardSchema = z.object({
       `At most ${MAX_DISCRETIONARY_AWARD_RECIPIENTS} recipients allowed`,
     ),
 });
-
-export type CreateDiscretionaryAwardInput = z.infer<
-  typeof createDiscretionaryAwardSchema
->;
 
 export const updateDiscretionaryAwardSchema = z.object({
   name: z
@@ -992,6 +989,7 @@ export const updateDiscretionaryAwardSchema = z.object({
     )
     .optional(),
   points: z.number("A number is required").optional(),
+  awardedAt: z.union([z.string(), z.date()]).pipe(z.coerce.date()).optional(),
   recipients: z
     .array(discretionaryAwardRecipientSchema)
     .min(1, "At least one recipient is required")
@@ -1001,10 +999,6 @@ export const updateDiscretionaryAwardSchema = z.object({
     )
     .optional(),
 });
-
-export type UpdateDiscretionaryAwardInput = z.infer<
-  typeof updateDiscretionaryAwardSchema
->;
 
 export const discretionaryAwardIdSchema = z.object({
   awardId: uuidSchema,

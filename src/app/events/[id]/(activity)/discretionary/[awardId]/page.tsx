@@ -13,7 +13,7 @@ import { auth } from "@/lib/server/auth";
 import { EventParticipantRole, EventStatus } from "@/lib/shared/constants";
 import { getDiscretionaryAwards } from "@/services/event-discretionary";
 import { getEvent } from "@/services/events";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -159,11 +159,14 @@ async function DetailContent({
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground">
-            Awarded by {award.createdBy.name}{" "}
-            {formatDistanceToNow(new Date(award.createdAt), {
-              addSuffix: true,
-            })}
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <div>
+              Awarded by {award.createdBy.name}{" "}
+              {formatDistanceToNow(new Date(award.awardedAt), {
+                addSuffix: true,
+              })}
+            </div>
+            <div>{format(new Date(award.awardedAt), "PPP 'at' p")}</div>
           </div>
         </CardContent>
       </Card>

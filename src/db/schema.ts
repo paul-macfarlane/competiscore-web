@@ -1753,6 +1753,7 @@ export const eventDiscretionaryAward = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull(),
     points: real("points").notNull(),
+    awardedAt: timestamp("awarded_at").defaultNow().notNull(),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

@@ -117,7 +117,7 @@ function getEntryHref(
     return `/events/${eventId}/tournaments/${entry.eventTournamentId}`;
   }
   if (entry.eventDiscretionaryAwardId) {
-    return `/events/${eventId}/discretionary`;
+    return `/events/${eventId}/discretionary/${entry.eventDiscretionaryAwardId}`;
   }
   return null;
 }

@@ -59,6 +59,7 @@ const mockAward = {
   name: "Cookie Bonus",
   description: "Bought cookies for everyone",
   points: 5,
+  awardedAt: new Date(),
   createdByUserId: TEST_IDS.USER_ID,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -153,6 +154,29 @@ describe("createDiscretionaryAward", () => {
     expect(result.data?.name).toBe("Cookie Bonus");
     expect(result.data?.points).toBe(5);
   });
+
+  it("creates award with explicit awardedAt", async () => {
+    const customDate = new Date("2025-06-15T14:00:00Z");
+    const awardWithDate = { ...mockAward, awardedAt: customDate };
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockOrganizerMember as never,
+    );
+    vi.mocked(dbEvents.getEventById).mockResolvedValue(
+      mockActiveEvent as never,
+    );
+    vi.mocked(dbEvents.createDiscretionaryAward).mockResolvedValue(
+      awardWithDate as never,
+    );
+    vi.mocked(dbEvents.createEventPointEntries).mockResolvedValue([]);
+
+    const result = await createDiscretionaryAward(TEST_IDS.USER_ID, {
+      ...validCreateInput,
+      awardedAt: "2025-06-15T14:00:00Z",
+    });
+
+    expect(result.data).toBeDefined();
+    expect(result.data?.awardedAt).toEqual(customDate);
+  });
 });
 
 describe("updateDiscretionaryAward", () => {
@@ -236,6 +260,32 @@ describe("updateDiscretionaryAward", () => {
 
     expect(result.data).toBeDefined();
     expect(result.data?.name).toBe("Updated Bonus");
+  });
+
+  it("updates awardedAt successfully", async () => {
+    const newDate = new Date("2025-07-01T10:00:00Z");
+    const updatedAward = { ...mockAward, awardedAt: newDate };
+    vi.mocked(dbEvents.getDiscretionaryAwardById).mockResolvedValue(
+      mockAward as never,
+    );
+    vi.mocked(dbEvents.getEventParticipant).mockResolvedValue(
+      mockOrganizerMember as never,
+    );
+    vi.mocked(dbEvents.getEventById).mockResolvedValue(
+      mockActiveEvent as never,
+    );
+    vi.mocked(dbEvents.updateDiscretionaryAward).mockResolvedValue(
+      updatedAward as never,
+    );
+
+    const result = await updateDiscretionaryAward(
+      TEST_IDS.USER_ID,
+      { awardId: TEST_IDS.EVENT_DISCRETIONARY_AWARD_ID },
+      { awardedAt: "2025-07-01T10:00:00Z" },
+    );
+
+    expect(result.data).toBeDefined();
+    expect(result.data?.awardedAt).toEqual(newDate);
   });
 
   it("re-creates point entries when points change", async () => {

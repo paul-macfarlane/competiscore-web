@@ -512,6 +512,7 @@ Organizers can award ad-hoc bonus (or penalty) points to teams outside of normal
 - Name (required, max 100 characters)
 - Description (required, max 500 characters)
 - Points value (positive for bonuses, negative for penalties — supports decimals)
+- Date & time awarded (defaults to now, backdating allowed — reflects when the achievement happened, not when the organizer entered it)
 - Recipients: One or more teams (up to 50)
 
 **How it works:**
@@ -522,6 +523,8 @@ Organizers can award ad-hoc bonus (or penalty) points to teams outside of normal
 - When an award is edited (points or recipients changed), existing point entries are deleted and re-created
 - Deleting an award cascades to remove its point entries from the leaderboard
 - All participants can view discretionary awards
+- The awarded date is used for timeline ordering in the metrics dashboard and scoring history log
+- Scoring history log and points-over-time chart link directly to the specific award detail page
 
 _Future: Support awarding discretionary points to individual participants (resolved to their team) in addition to direct team selection._
 

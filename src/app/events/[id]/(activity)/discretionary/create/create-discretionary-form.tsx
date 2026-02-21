@@ -5,6 +5,10 @@ import { TeamColorBadge } from "@/components/team-color-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  DateTimePicker,
+  formatLocalDateTime,
+} from "@/components/ui/datetime-picker";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -19,17 +23,17 @@ import {
   DISCRETIONARY_AWARD_DESCRIPTION_MAX_LENGTH,
   DISCRETIONARY_AWARD_NAME_MAX_LENGTH,
 } from "@/services/constants";
-import {
-  CreateDiscretionaryAwardInput,
-  createDiscretionaryAwardSchema,
-} from "@/validators/events";
+import { createDiscretionaryAwardSchema } from "@/validators/events";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { createDiscretionaryAwardAction } from "../../../actions";
+
+type FormValues = z.input<typeof createDiscretionaryAwardSchema>;
 
 type TeamOption = {
   id: string;
@@ -49,7 +53,7 @@ export function CreateDiscretionaryForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CreateDiscretionaryAwardInput>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(createDiscretionaryAwardSchema),
     defaultValues: {
       eventId,
@@ -57,6 +61,7 @@ export function CreateDiscretionaryForm({
       description: "",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       points: "" as any,
+      awardedAt: formatLocalDateTime(new Date()),
       recipients: [],
     },
     mode: "onChange",
@@ -92,14 +97,14 @@ export function CreateDiscretionaryForm({
     form.setValue("recipients", [], { shouldValidate: true });
   };
 
-  const onSubmit = (values: CreateDiscretionaryAwardInput) => {
+  const onSubmit = (values: FormValues) => {
     startTransition(async () => {
       const result = await createDiscretionaryAwardAction(values);
 
       if (result.error) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
-            form.setError(field as keyof CreateDiscretionaryAwardInput, {
+            form.setError(field as keyof FormValues, {
               message,
             });
           });
@@ -176,6 +181,28 @@ export function CreateDiscretionaryForm({
               </FormControl>
               <FormDescription>
                 Each selected team will receive this many points
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="awardedAt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time Awarded</FormLabel>
+              <FormControl>
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) =>
+                    field.onChange(date ? formatLocalDateTime(date) : undefined)
+                  }
+                />
+              </FormControl>
+              <FormDescription>
+                When the award was given. Defaults to now if not set.
               </FormDescription>
               <FormMessage />
             </FormItem>

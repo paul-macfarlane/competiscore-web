@@ -24,6 +24,7 @@ function makeEntry(
     outcome: "win",
     points: 3,
     createdAt: new Date("2025-01-01T00:00:00Z"),
+    discretionaryAwardedAt: null,
     eventTeamId: TEST_IDS.EVENT_TEAM_ID,
     teamName: "Team A",
     teamColor: "red",

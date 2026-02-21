@@ -1,0 +1,1 @@
+ALTER TABLE "event_discretionary_award" ADD COLUMN "awarded_at" timestamp DEFAULT now() NOT NULL;
