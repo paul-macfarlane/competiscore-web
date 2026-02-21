@@ -178,6 +178,13 @@ export type EventIndividualHighScoreEntry = {
   teamName: string | null;
   teamColor: string | null;
   bestScore: number;
+  submissionCount: number;
+  scoreHistory: {
+    score: number;
+    achievedAt: Date;
+    entryId?: string;
+    sessionOpen?: boolean;
+  }[];
   members?: HighScoreEntryMemberDetail[];
 };
 
@@ -1270,6 +1277,7 @@ export async function getHighScoreSessionById(
 
 export async function getOpenHighScoreSessions(
   eventId: string,
+  options?: { gameTypeId?: string },
   dbOrTx: DBOrTx = db,
 ): Promise<EventHighScoreSession[]> {
   return await dbOrTx
@@ -1279,6 +1287,9 @@ export async function getOpenHighScoreSessions(
       and(
         eq(eventHighScoreSession.eventId, eventId),
         eq(eventHighScoreSession.status, HighScoreSessionStatus.OPEN),
+        options?.gameTypeId
+          ? eq(eventHighScoreSession.eventGameTypeId, options.gameTypeId)
+          : undefined,
       ),
     )
     .orderBy(desc(eventHighScoreSession.openedAt));
@@ -1772,6 +1783,7 @@ export async function getEventGameTypeLeaderboard(
 export async function getEventHighScoreIndividualLeaderboard(
   eventId: string,
   gameTypeId: string,
+  sessionId: string,
   options: {
     limit: number;
     offset: number;
@@ -1791,6 +1803,7 @@ export async function getEventHighScoreIndividualLeaderboard(
     return _getPairHighScoreLeaderboard(
       eventId,
       gameTypeId,
+      sessionId,
       { limit, offset, scoreOrder },
       dbOrTx,
     );
@@ -1808,6 +1821,7 @@ export async function getEventHighScoreIndividualLeaderboard(
   const baseConditions = and(
     eq(eventHighScoreEntry.eventGameTypeId, gameTypeId),
     sql`${eventHighScoreEntry.eventId} = ${eventId}`,
+    eq(eventHighScoreEntry.sessionId, sessionId),
   );
 
   const countResult = await dbOrTx
@@ -1824,6 +1838,7 @@ export async function getEventHighScoreIndividualLeaderboard(
   const results = await dbOrTx
     .select({
       bestScore: orderFn.as("best_score"),
+      submissionCount: sql<number>`count(*)`.as("submission_count"),
       userId: eventHighScoreEntry.userId,
       eventPlaceholderParticipantId:
         eventHighScoreEntry.eventPlaceholderParticipantId,
@@ -1846,27 +1861,24 @@ export async function getEventHighScoreIndividualLeaderboard(
     )
     .leftJoin(
       eventTeamMember,
-      or(
-        and(
-          eq(eventTeamMember.userId, eventHighScoreEntry.userId),
-          sql`${eventHighScoreEntry.userId} IS NOT NULL`,
-        ),
-        and(
-          eq(
-            eventTeamMember.eventPlaceholderParticipantId,
-            eventHighScoreEntry.eventPlaceholderParticipantId,
-          ),
-          sql`${eventHighScoreEntry.eventPlaceholderParticipantId} IS NOT NULL`,
-        ),
-      ),
-    )
-    .leftJoin(
-      eventTeam,
       and(
-        eq(eventTeamMember.eventTeamId, eventTeam.id),
-        eq(eventTeam.eventId, eventId),
+        or(
+          and(
+            eq(eventTeamMember.userId, eventHighScoreEntry.userId),
+            sql`${eventHighScoreEntry.userId} IS NOT NULL`,
+          ),
+          and(
+            eq(
+              eventTeamMember.eventPlaceholderParticipantId,
+              eventHighScoreEntry.eventPlaceholderParticipantId,
+            ),
+            sql`${eventHighScoreEntry.eventPlaceholderParticipantId} IS NOT NULL`,
+          ),
+        ),
+        sql`${eventTeamMember.eventTeamId} IN (SELECT id FROM event_team WHERE event_id = ${eventId})`,
       ),
     )
+    .leftJoin(eventTeam, eq(eventTeamMember.eventTeamId, eventTeam.id))
     .where(baseConditions)
     .groupBy(
       eventHighScoreEntry.userId,
@@ -1884,8 +1896,77 @@ export async function getEventHighScoreIndividualLeaderboard(
     .limit(limit)
     .offset(offset);
 
-  const entries: EventIndividualHighScoreEntry[] = results.map(
-    (row, index) => ({
+  // Fetch score history for participants on this page
+  const userIds = results
+    .map((r) => r.userId)
+    .filter((id): id is string => id !== null);
+  const placeholderIds = results
+    .map((r) => r.eventPlaceholderParticipantId)
+    .filter((id): id is string => id !== null);
+
+  const scoreOrderDir =
+    scoreOrder === "lowest_wins"
+      ? sql`${eventHighScoreEntry.score} ASC`
+      : sql`${eventHighScoreEntry.score} DESC`;
+
+  const historyConditions = and(
+    eq(eventHighScoreEntry.eventGameTypeId, gameTypeId),
+    sql`${eventHighScoreEntry.eventId} = ${eventId}`,
+    eq(eventHighScoreEntry.sessionId, sessionId),
+    or(
+      userIds.length > 0
+        ? inArray(eventHighScoreEntry.userId, userIds)
+        : undefined,
+      placeholderIds.length > 0
+        ? inArray(
+            eventHighScoreEntry.eventPlaceholderParticipantId,
+            placeholderIds,
+          )
+        : undefined,
+    ),
+  );
+
+  const historyRows =
+    userIds.length > 0 || placeholderIds.length > 0
+      ? await dbOrTx
+          .select({
+            id: eventHighScoreEntry.id,
+            score: eventHighScoreEntry.score,
+            achievedAt: eventHighScoreEntry.achievedAt,
+            userId: eventHighScoreEntry.userId,
+            eventPlaceholderParticipantId:
+              eventHighScoreEntry.eventPlaceholderParticipantId,
+            sessionStatus: eventHighScoreSession.status,
+          })
+          .from(eventHighScoreEntry)
+          .innerJoin(
+            eventHighScoreSession,
+            eq(eventHighScoreEntry.sessionId, eventHighScoreSession.id),
+          )
+          .where(historyConditions)
+          .orderBy(scoreOrderDir)
+      : [];
+
+  const historyMap = new Map<
+    string,
+    EventIndividualHighScoreEntry["scoreHistory"]
+  >();
+  for (const row of historyRows) {
+    const key = row.userId ?? row.eventPlaceholderParticipantId ?? "";
+    const list = historyMap.get(key) ?? [];
+    list.push({
+      score: Number(row.score),
+      achievedAt: row.achievedAt,
+      entryId: row.id,
+      sessionOpen: row.sessionStatus === HighScoreSessionStatus.OPEN,
+    });
+    historyMap.set(key, list);
+  }
+
+  const entries: EventIndividualHighScoreEntry[] = results.map((row, index) => {
+    const participantKey =
+      row.userId ?? row.eventPlaceholderParticipantId ?? "";
+    return {
       rank: offset + index + 1,
       user: row.userId
         ? {
@@ -1904,8 +1985,10 @@ export async function getEventHighScoreIndividualLeaderboard(
       teamName: row.teamName ?? null,
       teamColor: row.teamColor ?? null,
       bestScore: Number(row.bestScore),
-    }),
-  );
+      submissionCount: Number(row.submissionCount),
+      scoreHistory: historyMap.get(participantKey) ?? [],
+    };
+  });
 
   return { entries, total };
 }
@@ -1913,6 +1996,7 @@ export async function getEventHighScoreIndividualLeaderboard(
 async function _getPairHighScoreLeaderboard(
   eventId: string,
   gameTypeId: string,
+  sessionId: string,
   options: {
     limit: number;
     offset: number;
@@ -1926,54 +2010,105 @@ async function _getPairHighScoreLeaderboard(
   const baseConditions = and(
     eq(eventHighScoreEntry.eventGameTypeId, gameTypeId),
     sql`${eventHighScoreEntry.eventId} = ${eventId}`,
+    eq(eventHighScoreEntry.sessionId, sessionId),
     isNull(eventHighScoreEntry.userId),
     isNull(eventHighScoreEntry.eventPlaceholderParticipantId),
   );
-
-  const countResult = await dbOrTx
-    .select({ total: sql<number>`count(*)` })
-    .from(eventHighScoreEntry)
-    .where(baseConditions);
-
-  const total = Number(countResult[0]?.total ?? 0);
-  if (total === 0) return { entries: [], total: 0 };
 
   const orderDirection =
     scoreOrder === "lowest_wins"
       ? sql`${eventHighScoreEntry.score} ASC`
       : sql`${eventHighScoreEntry.score} DESC`;
 
-  const results = await dbOrTx
+  // Fetch ALL pair entries (no limit/offset) to group by pair combination
+  const allResults = await dbOrTx
     .select({
       entryId: eventHighScoreEntry.id,
       score: eventHighScoreEntry.score,
+      achievedAt: eventHighScoreEntry.achievedAt,
       teamName: eventTeam.name,
       teamColor: eventTeam.color,
+      sessionStatus: eventHighScoreSession.status,
     })
     .from(eventHighScoreEntry)
     .leftJoin(eventTeam, eq(eventHighScoreEntry.eventTeamId, eventTeam.id))
+    .innerJoin(
+      eventHighScoreSession,
+      eq(eventHighScoreEntry.sessionId, eventHighScoreSession.id),
+    )
     .where(baseConditions)
-    .orderBy(orderDirection)
-    .limit(limit)
-    .offset(offset);
+    .orderBy(orderDirection);
+
+  if (allResults.length === 0) return { entries: [], total: 0 };
 
   // Batch-fetch members for all pair entries
-  const entryIds = results.map((r) => r.entryId);
+  const allEntryIds = allResults.map((r) => r.entryId);
   const membersByEntryId = await getHighScoreEntryMembersByEntryIds(
-    entryIds,
+    allEntryIds,
     dbOrTx,
   );
 
-  const entries: EventIndividualHighScoreEntry[] = results.map(
-    (row, index) => ({
+  // Group by sorted member key to combine same pairs
+  type PairGroup = {
+    bestScore: number;
+    members: HighScoreEntryMemberDetail[];
+    teamName: string | null;
+    teamColor: string | null;
+    entryId: string;
+    submissionCount: number;
+    scoreHistory: EventIndividualHighScoreEntry["scoreHistory"];
+  };
+
+  const pairGroups = new Map<string, PairGroup>();
+
+  for (const row of allResults) {
+    const members = membersByEntryId.get(row.entryId) ?? [];
+    const memberKey = members
+      .map((m) => m.user?.id ?? m.placeholderParticipant?.id ?? "")
+      .sort()
+      .join("::");
+
+    const historyItem = {
+      score: Number(row.score),
+      achievedAt: row.achievedAt,
       entryId: row.entryId,
+      sessionOpen: row.sessionStatus === HighScoreSessionStatus.OPEN,
+    };
+
+    const existing = pairGroups.get(memberKey);
+    if (existing) {
+      existing.submissionCount++;
+      existing.scoreHistory.push(historyItem);
+    } else {
+      pairGroups.set(memberKey, {
+        bestScore: Number(row.score),
+        members,
+        teamName: row.teamName ?? null,
+        teamColor: row.teamColor ?? null,
+        entryId: row.entryId,
+        submissionCount: 1,
+        scoreHistory: [historyItem],
+      });
+    }
+  }
+
+  const sortedGroups = Array.from(pairGroups.values());
+  // Already sorted by best score since first entry per group is best (query was ordered)
+  const total = sortedGroups.length;
+  const pageGroups = sortedGroups.slice(offset, offset + limit);
+
+  const entries: EventIndividualHighScoreEntry[] = pageGroups.map(
+    (group, index) => ({
+      entryId: group.entryId,
       rank: offset + index + 1,
       user: null,
       placeholderParticipant: null,
-      teamName: row.teamName ?? null,
-      teamColor: row.teamColor ?? null,
-      bestScore: Number(row.score),
-      members: membersByEntryId.get(row.entryId) ?? [],
+      teamName: group.teamName,
+      teamColor: group.teamColor,
+      bestScore: group.bestScore,
+      submissionCount: group.submissionCount,
+      scoreHistory: group.scoreHistory,
+      members: group.members,
     }),
   );
 

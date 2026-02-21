@@ -1,39 +1,38 @@
 import { LeagueBreadcrumb } from "@/components/league-breadcrumb";
 import { PaginationNav } from "@/components/pagination-nav";
-import {
-  ParticipantData,
-  ParticipantDisplay,
-} from "@/components/participant-display";
-import { TeamColorBadge } from "@/components/team-color-badge";
+import { ScoreEntryRow } from "@/components/score-entry-row";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/server/auth";
-import { GameCategory } from "@/lib/shared/constants";
+import { EventParticipantRole, GameCategory } from "@/lib/shared/constants";
 import {
   isHighScorePartnership,
   parseHighScoreConfig,
 } from "@/lib/shared/game-config-parser";
-import { cn } from "@/lib/shared/utils";
 import { getEventGameType } from "@/services/event-game-types";
 import { getGameTypePointEntries } from "@/services/event-high-scores";
 import { getEventHighScoreLeaderboard } from "@/services/event-leaderboards";
 import { getEvent } from "@/services/events";
-import { Trophy } from "lucide-react";
+import { Plus, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
+
+import { DeleteHighScoreEntryButton } from "../../delete-high-score-entry-button";
 
 const ITEMS_PER_PAGE = 10;
 
 const paramsSchema = z.object({
   id: z.string().uuid(),
-  gameTypeId: z.string().uuid(),
+  sessionId: z.string().uuid(),
 });
 
 interface PageProps {
-  params: Promise<{ id: string; gameTypeId: string }>;
+  params: Promise<{ id: string; sessionId: string }>;
   searchParams: Promise<{ page?: string }>;
 }
 
@@ -47,9 +46,16 @@ export async function generateMetadata({
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { title: "Leaderboard" };
 
+  const leaderboardResult = await getEventHighScoreLeaderboard(
+    session.user.id,
+    parsed.data.sessionId,
+  );
+
+  if (!leaderboardResult.data) return { title: "Leaderboard" };
+
   const [eventResult, gameTypeResult] = await Promise.all([
-    getEvent(session.user.id, parsed.data.id),
-    getEventGameType(session.user.id, parsed.data.gameTypeId),
+    getEvent(session.user.id, leaderboardResult.data.eventId),
+    getEventGameType(session.user.id, leaderboardResult.data.gameTypeId),
   ]);
 
   const eventName = eventResult.data?.name ?? "Event";
@@ -61,7 +67,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function EventGameTypeLeaderboardPage({
+export default async function EventSessionLeaderboardPage({
   params,
   searchParams,
 }: PageProps) {
@@ -72,7 +78,7 @@ export default async function EventGameTypeLeaderboardPage({
   const parsed = paramsSchema.safeParse(rawParams);
   if (!parsed.success) notFound();
 
-  const { id: eventId, gameTypeId } = parsed.data;
+  const { sessionId } = parsed.data;
   const rawSearchParams = await searchParams;
   const page = Math.max(1, parseInt(rawSearchParams.page || "1", 10) || 1);
 
@@ -80,8 +86,7 @@ export default async function EventGameTypeLeaderboardPage({
     <div className="space-y-6">
       <Suspense fallback={<LeaderboardSkeleton />}>
         <LeaderboardContent
-          eventId={eventId}
-          gameTypeId={gameTypeId}
+          sessionId={sessionId}
           userId={session.user.id}
           page={page}
         />
@@ -91,28 +96,34 @@ export default async function EventGameTypeLeaderboardPage({
 }
 
 async function LeaderboardContent({
-  eventId,
-  gameTypeId,
+  sessionId,
   userId,
   page,
 }: {
-  eventId: string;
-  gameTypeId: string;
+  sessionId: string;
   userId: string;
   page: number;
 }) {
   const offset = (page - 1) * ITEMS_PER_PAGE;
 
-  const [eventResult, gameTypeResult, leaderboardResult, pointEntriesResult] =
-    await Promise.all([
-      getEvent(userId, eventId),
-      getEventGameType(userId, gameTypeId),
-      getEventHighScoreLeaderboard(userId, eventId, gameTypeId, {
-        limit: ITEMS_PER_PAGE,
-        offset,
-      }),
-      getGameTypePointEntries(userId, eventId, gameTypeId),
-    ]);
+  const leaderboardResult = await getEventHighScoreLeaderboard(
+    userId,
+    sessionId,
+    {
+      limit: ITEMS_PER_PAGE,
+      offset,
+    },
+  );
+
+  if (!leaderboardResult.data) notFound();
+
+  const { eventId, gameTypeId, isOpen } = leaderboardResult.data;
+
+  const [eventResult, gameTypeResult, pointEntriesResult] = await Promise.all([
+    getEvent(userId, eventId),
+    getEventGameType(userId, gameTypeId),
+    getGameTypePointEntries(userId, eventId, gameTypeId),
+  ]);
 
   if (eventResult.error || !eventResult.data) notFound();
   if (gameTypeResult.error || !gameTypeResult.data) notFound();
@@ -122,13 +133,14 @@ async function LeaderboardContent({
 
   if (gameType.category !== GameCategory.HIGH_SCORE) notFound();
 
-  const entries = leaderboardResult.data?.entries ?? [];
-  const total = leaderboardResult.data?.total ?? 0;
+  const entries = leaderboardResult.data.entries;
+  const total = leaderboardResult.data.total;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const hsConfig = parseHighScoreConfig(gameType.config);
   const isPairMode = isHighScorePartnership(hsConfig);
   const pointEntries = pointEntriesResult.data ?? [];
+  const isOrganizer = event.role === EventParticipantRole.ORGANIZER;
 
   // Build a map of teamName → total points for inline display
   const teamPointsMap = new Map<string, number>();
@@ -145,7 +157,7 @@ async function LeaderboardContent({
     const params = new URLSearchParams();
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
-    return `/events/${eventId}/best-scores/leaderboard/${gameTypeId}${qs ? `?${qs}` : ""}`;
+    return `/events/${eventId}/best-scores/leaderboard/${sessionId}${qs ? `?${qs}` : ""}`;
   };
 
   return (
@@ -161,12 +173,22 @@ async function LeaderboardContent({
         ]}
       />
 
-      <div>
-        <h2 className="text-2xl font-bold">{gameType.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          {isPairMode ? "Pair Leaderboard" : "Individual Leaderboard"} &middot;{" "}
-          {hsConfig.scoreDescription}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">{gameType.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {isPairMode ? "Pair Leaderboard" : "Individual Leaderboard"}{" "}
+            &middot; {hsConfig.scoreDescription}
+          </p>
+        </div>
+        {isOpen && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/events/${eventId}/best-scores/${sessionId}/submit`}>
+              <Plus className="mr-1 h-4 w-4" />
+              Submit Score
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -180,7 +202,7 @@ async function LeaderboardContent({
             <div className="flex flex-col items-center py-8 text-center">
               <Trophy className="mx-auto mb-4 h-12 w-12 opacity-50" />
               <p className="text-muted-foreground">
-                No scores recorded yet for this game type.
+                No scores recorded yet for this session.
               </p>
             </div>
           ) : (
@@ -189,7 +211,6 @@ async function LeaderboardContent({
                 const teamPoints = entry.teamName
                   ? teamPointsMap.get(entry.teamName)
                   : undefined;
-                // Only show points for the first (best) entry per team
                 const showPoints =
                   teamPoints !== undefined &&
                   entries.findIndex((e) => e.teamName === entry.teamName) ===
@@ -198,75 +219,26 @@ async function LeaderboardContent({
                 const entryKey =
                   entry.entryId ??
                   `${entry.user?.id ?? entry.placeholderParticipant?.id}-${index}`;
+                const canDeleteAny = isOrganizer;
+                const isOwnEntry = entry.user?.id === userId;
                 return (
-                  <div
+                  <ScoreEntryRow
                     key={entryKey}
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={cn(
-                          "w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold shrink-0",
-                          entry.rank === 1 &&
-                            "bg-rank-gold-bg text-rank-gold-text",
-                          entry.rank === 2 &&
-                            "bg-rank-silver-bg text-rank-silver-text",
-                          entry.rank === 3 &&
-                            "bg-rank-bronze-bg text-rank-bronze-text",
-                          entry.rank > 3 && "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {entry.rank}
-                      </span>
-                      <div className="min-w-0">
-                        {isPairEntry ? (
-                          <p className="text-sm font-medium truncate">
-                            {entry
-                              .members!.map(
-                                (m) =>
-                                  m.user?.name ??
-                                  m.placeholderParticipant?.displayName ??
-                                  "?",
-                              )
-                              .join(" & ")}
-                          </p>
-                        ) : (
-                          <ParticipantDisplay
-                            participant={
-                              {
-                                user: entry.user,
-                                placeholderMember: entry.placeholderParticipant,
-                              } as ParticipantData
-                            }
-                            showAvatar
-                            showUsername
-                            size="sm"
-                          />
-                        )}
-                        {entry.teamName &&
-                          (entry.teamColor ? (
-                            <TeamColorBadge
-                              name={entry.teamName}
-                              color={entry.teamColor}
-                            />
-                          ) : (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {entry.teamName}
-                            </p>
-                          ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {showPoints && (
-                        <span className="text-xs text-muted-foreground">
-                          +{teamPoints} pts
-                        </span>
-                      )}
-                      <span className="text-sm font-bold tabular-nums">
-                        {entry.bestScore}
-                      </span>
-                    </div>
-                  </div>
+                    entry={entry}
+                    isPairEntry={!!isPairEntry}
+                    teamPoints={teamPoints}
+                    showPoints={showPoints}
+                    historyActions={entry.scoreHistory.map((item) => {
+                      if (!item.entryId || !item.sessionOpen) return null;
+                      if (!canDeleteAny && !isOwnEntry) return null;
+                      return (
+                        <DeleteHighScoreEntryButton
+                          key={item.entryId}
+                          entryId={item.entryId}
+                        />
+                      );
+                    })}
+                  />
                 );
               })}
             </div>

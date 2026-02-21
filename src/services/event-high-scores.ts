@@ -554,13 +554,14 @@ export async function closeHighScoreSession(
 export async function getOpenSessions(
   userId: string,
   eventId: string,
+  options?: { gameTypeId?: string },
 ): Promise<ServiceResult<EventHighScoreSession[]>> {
   const participation = await dbGetEventParticipant(eventId, userId);
   if (!participation) {
     return { error: "You are not a participant in this event" };
   }
 
-  const sessions = await dbGetOpenHighScoreSessions(eventId);
+  const sessions = await dbGetOpenHighScoreSessions(eventId, options);
   return { data: sessions };
 }
 

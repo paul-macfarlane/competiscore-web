@@ -3,6 +3,7 @@ import {
   ParticipantData,
   ParticipantDisplay,
 } from "@/components/participant-display";
+import { ScoreEntryRow } from "@/components/score-entry-row";
 import { TeamColorBadge } from "@/components/team-color-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PointEntryWithTeam } from "@/db/events";
+import { EventIndividualHighScoreEntry, PointEntryWithTeam } from "@/db/events";
 import { EventGameType, EventHighScoreSession } from "@/db/schema";
 import { auth } from "@/lib/server/auth";
 import {
@@ -25,7 +26,10 @@ import {
   ParticipantType,
   ScoreOrder,
 } from "@/lib/shared/constants";
-import { parseHighScoreConfig } from "@/lib/shared/game-config-parser";
+import {
+  isHighScorePartnership,
+  parseHighScoreConfig,
+} from "@/lib/shared/game-config-parser";
 import { getEventGameTypes } from "@/services/event-game-types";
 import {
   SessionEntryWithTeam,
@@ -258,6 +262,81 @@ async function HighScoresContent({
   );
 }
 
+function groupSessionEntries(
+  entries: SessionEntryWithTeam[],
+  scoreOrder: ScoreOrder,
+  isPair: boolean,
+): { entry: EventIndividualHighScoreEntry; historyEntryIds: string[] }[] {
+  const sorted = [...entries].sort((a, b) =>
+    scoreOrder === ScoreOrder.LOWEST_WINS
+      ? a.score - b.score
+      : b.score - a.score,
+  );
+
+  type Group = {
+    bestScore: number;
+    user: SessionEntryWithTeam["user"];
+    placeholderParticipant: SessionEntryWithTeam["placeholderParticipant"];
+    teamName: string | null;
+    teamColor: string | null;
+    members: SessionEntryWithTeam["members"];
+    submissionCount: number;
+    scoreHistory: { score: number; achievedAt: Date }[];
+    historyEntryIds: string[];
+  };
+
+  const groups = new Map<string, Group>();
+
+  for (const entry of sorted) {
+    let key: string;
+    if (isPair && entry.members && entry.members.length > 0) {
+      key = entry.members
+        .map((m) => m.user?.id ?? m.placeholderParticipant?.id ?? "")
+        .sort()
+        .join("::");
+    } else {
+      key = entry.userId ?? entry.eventPlaceholderParticipantId ?? entry.id;
+    }
+
+    const existing = groups.get(key);
+    if (existing) {
+      existing.submissionCount++;
+      existing.scoreHistory.push({
+        score: entry.score,
+        achievedAt: entry.achievedAt,
+      });
+      existing.historyEntryIds.push(entry.id);
+    } else {
+      groups.set(key, {
+        bestScore: entry.score,
+        user: entry.user,
+        placeholderParticipant: entry.placeholderParticipant,
+        teamName: entry.teamName,
+        teamColor: entry.teamColor,
+        members: entry.members,
+        submissionCount: 1,
+        scoreHistory: [{ score: entry.score, achievedAt: entry.achievedAt }],
+        historyEntryIds: [entry.id],
+      });
+    }
+  }
+
+  return Array.from(groups.values()).map((group, index) => ({
+    entry: {
+      rank: index + 1,
+      user: group.user,
+      placeholderParticipant: group.placeholderParticipant,
+      teamName: group.teamName,
+      teamColor: group.teamColor,
+      bestScore: group.bestScore,
+      submissionCount: group.submissionCount,
+      scoreHistory: group.scoreHistory,
+      members: group.members,
+    },
+    historyEntryIds: group.historyEntryIds,
+  }));
+}
+
 function OpenSessionCard({
   session,
   eventId,
@@ -276,8 +355,11 @@ function OpenSessionCard({
   const gameType = gameTypeMap.get(session.eventGameTypeId);
   const hsConfig = gameType ? parseHighScoreConfig(gameType.config) : null;
   const entries = sessionEntriesMap.get(session.id) ?? [];
-  const displayEntries = entries.slice(0, 5);
-  const hasMore = entries.length > 5;
+  const isPair = hsConfig ? isHighScorePartnership(hsConfig) : false;
+  const scoreOrder = hsConfig?.scoreOrder ?? ScoreOrder.HIGHEST_WINS;
+  const grouped = groupSessionEntries(entries, scoreOrder, isPair);
+  const displayGroups = grouped.slice(0, 5);
+  const hasMore = grouped.length > 5;
 
   return (
     <Card>
@@ -340,82 +422,41 @@ function OpenSessionCard({
           </div>
         </div>
 
-        {displayEntries.length > 0 && (
+        {displayGroups.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">
-              Submitted Scores ({entries.length})
+              Scores ({entries.length} submissions)
               {hsConfig && (
                 <span className="ml-1 font-normal">
                   &middot; {hsConfig.scoreDescription}
                 </span>
               )}
             </h4>
-            {displayEntries.map((entry) => {
-              const canDelete = isOrganizer || entry.userId === userId;
+            {displayGroups.map(({ entry, historyEntryIds }, index) => {
               const isPairEntry = entry.members && entry.members.length > 0;
-              const pairLabel = isPairEntry
-                ? entry
-                    .members!.map(
-                      (m) =>
-                        m.user?.name ??
-                        m.placeholderParticipant?.displayName ??
-                        "?",
-                    )
-                    .join(" & ")
-                : null;
+              const entryKey =
+                entry.user?.id ??
+                entry.placeholderParticipant?.id ??
+                `group-${index}`;
               return (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {isPairEntry ? (
-                      <span className="text-sm font-medium truncate">
-                        {pairLabel}
-                      </span>
-                    ) : (
-                      <ParticipantDisplay
-                        participant={
-                          {
-                            user: entry.user,
-                            placeholderMember: entry.placeholderParticipant,
-                          } as ParticipantData
-                        }
-                        showAvatar
-                        size="sm"
-                      />
-                    )}
-                    {entry.teamName &&
-                      (entry.teamColor ? (
-                        <TeamColorBadge
-                          name={entry.teamName}
-                          color={entry.teamColor}
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          ({entry.teamName})
-                        </span>
-                      ))}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-semibold tabular-nums">
-                      {entry.score}
-                      {hsConfig && (
-                        <span className="text-xs text-muted-foreground font-normal ml-1">
-                          {hsConfig.scoreDescription}
-                        </span>
-                      )}
-                    </span>
-                    {canDelete && (
-                      <DeleteHighScoreEntryButton entryId={entry.id} />
-                    )}
-                  </div>
-                </div>
+                <ScoreEntryRow
+                  key={entryKey}
+                  entry={entry}
+                  isPairEntry={!!isPairEntry}
+                  historyActions={historyEntryIds.map((id) => {
+                    const originalEntry = entries.find((e) => e.id === id);
+                    const canDelete =
+                      isOrganizer || originalEntry?.userId === userId;
+                    return canDelete ? (
+                      <DeleteHighScoreEntryButton key={id} entryId={id} />
+                    ) : null;
+                  })}
+                />
               );
             })}
             {hasMore && (
               <p className="text-xs text-muted-foreground text-center">
-                +{entries.length - 5} more scores
+                +{grouped.length - 5} more participants
               </p>
             )}
           </div>
@@ -424,7 +465,7 @@ function OpenSessionCard({
       <CardFooter>
         <Button variant="outline" size="sm" className="w-full" asChild>
           <Link
-            href={`/events/${eventId}/best-scores/leaderboard/${session.eventGameTypeId}`}
+            href={`/events/${eventId}/best-scores/leaderboard/${session.id}`}
           >
             View Leaderboard
           </Link>
@@ -594,7 +635,7 @@ function ClosedSessionCard({
       <CardFooter>
         <Button variant="outline" size="sm" className="w-full" asChild>
           <Link
-            href={`/events/${eventId}/best-scores/leaderboard/${session.eventGameTypeId}`}
+            href={`/events/${eventId}/best-scores/leaderboard/${session.id}`}
           >
             View Leaderboard
           </Link>

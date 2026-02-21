@@ -18,6 +18,7 @@ import {
   getEventParticipant as dbGetEventParticipant,
   getEventParticipants as dbGetEventParticipants,
   getEventTeamMembersWithTeamNames as dbGetEventTeamMembersWithTeamNames,
+  getHighScoreSessionById as dbGetHighScoreSessionById,
   getPointEntriesForMatch as dbGetPointEntriesForMatch,
   getPointEntriesForMatches as dbGetPointEntriesForMatches,
 } from "@/db/events";
@@ -206,12 +207,25 @@ export async function getEventGameTypeLeaderboard(
 
 export async function getEventHighScoreLeaderboard(
   userId: string,
-  eventId: string,
-  gameTypeId: string,
+  sessionId: string,
   options: { limit?: number; offset?: number } = {},
 ): Promise<
-  ServiceResult<{ entries: EventIndividualHighScoreEntry[]; total: number }>
+  ServiceResult<{
+    entries: EventIndividualHighScoreEntry[];
+    total: number;
+    sessionId: string;
+    eventId: string;
+    gameTypeId: string;
+    isOpen: boolean;
+  }>
 > {
+  const session = await dbGetHighScoreSessionById(sessionId);
+  if (!session) {
+    return { error: "Session not found" };
+  }
+
+  const { eventId, eventGameTypeId: gameTypeId } = session;
+
   const participation = await dbGetEventParticipant(eventId, userId);
   if (!participation) {
     return { error: "You are not a participant in this event" };
@@ -239,7 +253,16 @@ export async function getEventHighScoreLeaderboard(
   const result = await dbGetEventHighScoreIndividualLeaderboard(
     eventId,
     gameTypeId,
+    sessionId,
     { limit, offset, scoreOrder, isPair },
   );
-  return { data: result };
+  return {
+    data: {
+      ...result,
+      sessionId,
+      eventId,
+      gameTypeId,
+      isOpen: session.status === "open",
+    },
+  };
 }
