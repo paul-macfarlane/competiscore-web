@@ -473,8 +473,10 @@ _Future: Match editing (modify results after recording, with point recalculation
 High scores in events work through a session-based flow:
 
 1. **Organizer opens a session** for a specific high score game type, optionally configuring placement point awards
-2. **Participants submit their own scores** to the open session. Organizers can submit scores on behalf of any participant.
+2. **Participants submit their own scores** to the open session. Organizers can submit scores on behalf of any participant. Participants can submit multiple scores to the same session.
 3. **Organizer closes the session** — scores are ranked and placement points (if configured) are awarded to the submitters' teams
+
+**Session-Based Leaderboards:** Leaderboards are organized per-session, not per-game-type. Each session has its own leaderboard page. Multiple submissions from the same participant are collapsed into a single entry showing their best score, with a submission count badge (e.g., "3 scores"). Clicking an entry expands it to reveal the full score history with timestamps and individual deletion options.
 
 **Group/Pair Entries:** When the game type has `groupSize > 1`, scores must be submitted as a group. All members must be on the same team. Group entries display as "Name1 & Name2" on the session view and leaderboard. When placement points are awarded, each member of the group receives individual attribution in the point entry.
 
@@ -528,7 +530,7 @@ _Future: Support awarding discretionary points to individual participants (resol
 The event leaderboard shows:
 
 - Teams ranked by total accumulated points
-- Per-game-type leaderboards for high score game types (individual-based, showing participant name and team)
+- Per-session leaderboards for high score game types (individual-based, showing participant name and team, with multiple submissions collapsed to best score)
 - Historical events preserved for reference after completion
 
 ### 8.13 Event Metrics Dashboard

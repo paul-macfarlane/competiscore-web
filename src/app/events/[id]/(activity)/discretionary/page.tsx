@@ -110,10 +110,10 @@ async function DiscretionaryContent({
         ]}
       />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Discretionary Awards</h1>
         {isOrganizer && event.status === EventStatus.ACTIVE && (
-          <Button asChild>
+          <Button asChild className="shrink-0">
             <Link href={`/events/${eventId}/discretionary/create`}>
               <Plus className="mr-2 h-4 w-4" />
               Award Points
@@ -171,7 +171,7 @@ async function DiscretionaryContent({
                   ))}
                 </div>
               </CardContent>
-              <CardFooter className="flex items-center justify-between">
+              <CardFooter className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-xs text-muted-foreground">
                   Awarded by {award.createdBy.name}{" "}
                   {formatDistanceToNow(new Date(award.createdAt), {

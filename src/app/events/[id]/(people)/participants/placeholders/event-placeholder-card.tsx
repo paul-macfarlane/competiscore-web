@@ -152,13 +152,13 @@ export function EventPlaceholderCard({
   return (
     <>
       <Card>
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+        <CardContent className="flex items-center justify-between gap-2 p-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
               <User className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div>
-              <p className="font-medium">{placeholder.displayName}</p>
+            <div className="min-w-0">
+              <p className="font-medium truncate">{placeholder.displayName}</p>
               <div className="flex gap-1 mt-1">
                 {isRetired && <Badge variant="secondary">Retired</Badge>}
                 {placeholder.linkedUserId && (
@@ -167,14 +167,15 @@ export function EventPlaceholderCard({
               </div>
             </div>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-wrap gap-1 sm:gap-2 shrink-0">
             {isRetired ? (
               !placeholder.linkedUserId && (
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
                   onClick={handleRestore}
                   disabled={isSubmitting}
+                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                 >
                   <RotateCcw className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Restore</span>
@@ -183,37 +184,40 @@ export function EventPlaceholderCard({
             ) : (
               <>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
                   onClick={() => setEditDialogOpen(true)}
+                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                 >
                   <Edit className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Edit</span>
                 </Button>
                 {linkableParticipants && linkableParticipants.length > 0 && (
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="outline"
                     onClick={() => setLinkDialogOpen(true)}
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                   >
                     <Link2 className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Link</span>
                   </Button>
                 )}
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
                   onClick={() => setRetireDialogOpen(true)}
+                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                 >
                   <Archive className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Retire</span>
                 </Button>
                 {!hasActivity && (
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="outline"
                     onClick={() => setDeleteDialogOpen(true)}
-                    className="text-destructive hover:text-destructive"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3 text-destructive hover:text-destructive"
                   >
                     <Trash className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Delete</span>

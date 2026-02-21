@@ -52,8 +52,8 @@ export function ScoreEntryRow({
             {entry.rank}
           </span>
           <div className="min-w-0">
-            {isPairEntry ? (
-              <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
+              {isPairEntry ? (
                 <span className="text-sm font-medium truncate">
                   {entry
                     .members!.map(
@@ -64,33 +64,31 @@ export function ScoreEntryRow({
                     )
                     .join(" & ")}
                 </span>
-                {entry.teamName &&
-                  (entry.teamColor ? (
-                    <TeamColorBadge
-                      name={entry.teamName}
-                      color={entry.teamColor}
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      ({entry.teamName})
-                    </span>
-                  ))}
-              </div>
-            ) : (
-              <ParticipantDisplay
-                participant={
-                  {
-                    user: entry.user,
-                    placeholderMember: entry.placeholderParticipant,
-                  } as ParticipantData
-                }
-                showAvatar
-                showUsername
-                teamName={entry.teamName ?? undefined}
-                teamColor={entry.teamColor}
-                size="sm"
-              />
-            )}
+              ) : (
+                <ParticipantDisplay
+                  participant={
+                    {
+                      user: entry.user,
+                      placeholderMember: entry.placeholderParticipant,
+                    } as ParticipantData
+                  }
+                  showAvatar
+                  showUsername
+                  size="sm"
+                />
+              )}
+              {entry.teamName &&
+                (entry.teamColor ? (
+                  <TeamColorBadge
+                    name={entry.teamName}
+                    color={entry.teamColor}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    ({entry.teamName})
+                  </span>
+                ))}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

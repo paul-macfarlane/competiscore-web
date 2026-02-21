@@ -388,14 +388,14 @@ function OpenSessionCard({
         {session.description && (
           <p className="text-sm text-muted-foreground">{session.description}</p>
         )}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted-foreground">
             Opened{" "}
             {formatDistanceToNow(new Date(session.openedAt), {
               addSuffix: true,
             })}
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
               <a href={`/events/${eventId}/best-scores/${session.id}/submit`}>
                 Submit Score
@@ -541,8 +541,8 @@ function ClosedSessionCard({
         {session.description && (
           <p className="text-sm text-muted-foreground">{session.description}</p>
         )}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
             {session.closedAt && (
               <span>
                 Closed{" "}
@@ -554,7 +554,7 @@ function ClosedSessionCard({
             <span className="ml-2">&middot; {entries.length} scores</span>
           </div>
           {isOrganizer && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ReopenSessionDialog
                 sessionId={session.id}
                 hasPointConfig={!!session.placementPointConfig}

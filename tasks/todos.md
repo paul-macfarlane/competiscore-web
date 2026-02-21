@@ -11,7 +11,7 @@ List of miscellaneous TODOs for the project.
 - DEFER: Investigate ways to clean up/condense/remove the "Reporting" section in leagues.
 - DEFER: Events server, events db, events validators, etc, should be broken up and not just in 1 file. Events service alreadt does this, but the other layers, like validators and db, need to be updated.
 - DEFER: A user guide on the app itself inside of the app.
-- NEW: The ability to add "notes" to matches, high scores, and tournaments. Could be a nice touch
+- DEFER: The ability to add "notes" to matches, high scores, and tournaments. Could be a nice touch
 
 ### Events
 
