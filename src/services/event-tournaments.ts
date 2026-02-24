@@ -295,6 +295,7 @@ export async function updateEventTournament(
 
   const isDraft = tournamentData.status === TournamentStatus.DRAFT;
   const isInProgress = tournamentData.status === TournamentStatus.IN_PROGRESS;
+  const isCompleted = tournamentData.status === TournamentStatus.COMPLETED;
   const isSwissTournament =
     tournamentData.tournamentType === TournamentType.SWISS;
   const hasDraftOnlyFields =
@@ -375,7 +376,7 @@ export async function updateEventTournament(
     totalRoundsToApply = data.swissRounds;
   }
 
-  const updated = await dbUpdateTournament(eventTournamentId, {
+  const updatePayload = {
     name: data.name,
     description: data.description,
     logo: data.logo,
@@ -400,7 +401,29 @@ export async function updateEventTournament(
         roundConfig: data.roundConfig ? JSON.stringify(data.roundConfig) : null,
       }),
     }),
-  });
+  };
+
+  const needsPointRecalculation =
+    isCompleted && data.placementPointConfig !== undefined;
+
+  let updated: EventTournament | undefined;
+
+  if (needsPointRecalculation) {
+    updated =
+      (await withTransaction(async (tx) => {
+        const result = await dbUpdateTournament(
+          eventTournamentId,
+          updatePayload,
+          tx,
+        );
+        if (!result) return null;
+        await deleteEventPointEntriesForTournament(eventTournamentId, tx);
+        await awardTournamentPlacementPoints(result, tx);
+        return result;
+      })) ?? undefined;
+  } else {
+    updated = await dbUpdateTournament(eventTournamentId, updatePayload);
+  }
 
   if (!updated) {
     return { error: "Failed to update tournament" };

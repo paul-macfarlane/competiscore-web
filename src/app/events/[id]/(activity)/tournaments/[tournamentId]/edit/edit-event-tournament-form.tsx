@@ -103,6 +103,7 @@ export function EditEventTournamentForm({
   const [isPending, startTransition] = useTransition();
   const isDraft = status === TournamentStatus.DRAFT;
   const isInProgress = status === TournamentStatus.IN_PROGRESS;
+  const isCompleted = status === TournamentStatus.COMPLETED;
 
   const parsedRoundBestOf: Record<string, number> | undefined = (() => {
     if (!roundBestOf) return undefined;
@@ -207,10 +208,12 @@ export function EditEventTournamentForm({
             name: values.name,
             description: values.description,
             logo: values.logo,
+            ...((isInProgress || isCompleted) && {
+              placementPointConfig: values.placementPointConfig,
+            }),
             ...(isInProgress && {
               bestOf: values.bestOf,
               roundBestOf: values.roundBestOf,
-              placementPointConfig: values.placementPointConfig,
               ...(isSwiss && { swissRounds: values.swissRounds }),
             }),
           };
@@ -589,7 +592,7 @@ export function EditEventTournamentForm({
           </div>
         )}
 
-        {(isDraft || isInProgress) && (
+        {(isDraft || isInProgress || isCompleted) && (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium">
