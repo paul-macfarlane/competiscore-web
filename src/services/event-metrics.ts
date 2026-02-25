@@ -15,6 +15,7 @@ import {
 import { ServiceResult } from "./shared";
 
 export type TimelineEntryDetail = {
+  teamId: string | null;
   teamName: string | null;
   category: string;
   outcome: string;
@@ -155,6 +156,7 @@ function buildCumulativeTimeline(
       index: i + 1,
       label: `#${i + 1}`,
       detail: {
+        teamId: entry.eventTeamId,
         teamName: entry.teamName,
         category: categoryLabel,
         outcome: outcomeLabel,

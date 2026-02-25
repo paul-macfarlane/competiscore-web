@@ -61,9 +61,6 @@ export function PointsTimelineChart({
 
   const dismissPopover = useCallback(() => setSelected(null), []);
 
-  // Render dots for the first team's line only (one dot per data point)
-  const firstTeamId = teams[0]?.eventTeamId;
-
   const maxValue = Math.max(
     ...timeline.flatMap((point) =>
       teams.map((t) => (point[t.eventTeamId] as number) ?? 0),
@@ -104,22 +101,23 @@ export function PointsTimelineChart({
                   dataKey={team.eventTeamId}
                   stroke={getTeamColorHex(team.teamColor)}
                   strokeWidth={2}
-                  dot={
-                    team.eventTeamId === firstTeamId
-                      ? (props: {
-                          cx?: number;
-                          cy?: number;
-                          index?: number;
-                          payload?: CumulativeTimelinePoint;
-                        }) => (
-                          <ClickableDot
-                            {...props}
-                            key={props.index}
-                            onDotClick={handleDotClick}
-                          />
-                        )
-                      : false
-                  }
+                  dot={(props: {
+                    cx?: number;
+                    cy?: number;
+                    index?: number;
+                    payload?: CumulativeTimelinePoint;
+                  }) => {
+                    const detail = props.payload?.detail as TimelineEntryDetail;
+                    if (detail?.teamId !== team.eventTeamId) return <g />;
+                    return (
+                      <ClickableDot
+                        {...props}
+                        key={props.index}
+                        teamColor={getTeamColorHex(team.teamColor)}
+                        onDotClick={handleDotClick}
+                      />
+                    );
+                  }}
                   activeDot={false}
                   name={team.eventTeamId}
                 />
@@ -144,12 +142,14 @@ function ClickableDot({
   cx,
   cy,
   payload,
+  teamColor,
   onDotClick,
 }: {
   cx?: number;
   cy?: number;
   index?: number;
   payload?: CumulativeTimelinePoint;
+  teamColor: string;
   onDotClick: (
     dataPoint: CumulativeTimelinePoint,
     cx: number,
@@ -164,7 +164,7 @@ function ClickableDot({
       cy={cy}
       r={4}
       fill="var(--background)"
-      stroke="var(--muted-foreground)"
+      stroke={teamColor}
       strokeWidth={2}
       className="cursor-pointer"
       onClick={(e) => {
